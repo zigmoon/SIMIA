@@ -270,7 +270,6 @@ const ui = {
   agentToggle: document.querySelector("#agent-toggle"),
   imageToggle: document.querySelector("#image-toggle"),
   imageEngine: document.querySelector("#image-engine"),
-  imageModelChip: document.querySelector("#image-model-chip"),
   settingImage: document.querySelector("#setting-image"),
   imagePicker: document.querySelector("#image-picker"),
   infoToggle: document.querySelector("#info-toggle"),
@@ -2106,10 +2105,19 @@ function setImageMode(active) {
 }
 
 /* Le moteur d'image est distinct du modele de texte : sans affichage dedie on
-   ne sait jamais ce qui va dessiner. Il apparait dans la barre du haut, dans la
-   zone de saisie quand le mode image est actif, et dans les parametres. */
+   ne sait jamais ce qui va dessiner. Il apparait dans la barre du haut et dans
+   les parametres, en libelle court pour ne pas concurrencer le modele de texte. */
 function activeImagePack() {
   return state.imagePacks.find(pack => pack.id === state.imagePackId) || null;
+}
+
+/* Nom court : "SD 1.5 · Gravure SIMIA" devient "Gravure SIMIA". Le nom complet
+   reste dans l'infobulle et dans les parametres. */
+function shortImageName(pack) {
+  if (!pack) return "";
+  const parts = String(pack.name || "").split("·");
+  const tail = (parts.length > 1 ? parts[parts.length - 1] : parts[0]).trim();
+  return tail.replace(/^Stable Diffusion\b/i, "SD");
 }
 
 function renderImageEngineUi() {
@@ -2117,12 +2125,11 @@ function renderImageEngineUi() {
   const ready = Boolean(pack && pack.local);
   const stepsLabel = localizedText("pas", "steps", "pasos", "ステップ");
   const meta = pack ? `${pack.px} px · ${pack.steps} ${stepsLabel}` : "";
-  const key = localizedText("IMAGE", "IMAGE", "IMAGEN", "画像");
 
   if (ui.imageEngine) {
     ui.imageEngine.hidden = !ready;
     if (ready) {
-      ui.imageEngine.innerHTML = `<span class="engine-chip-key">${escapeHtml(key)}</span><b>${escapeHtml(pack.name)}</b>`;
+      ui.imageEngine.innerHTML = `<svg class="engine-chip-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><b>${escapeHtml(shortImageName(pack))}</b>`;
       ui.imageEngine.title = localizedText(
         `Moteur d'images : ${pack.name} (${meta}). Cliquez pour changer.`,
         `Image engine: ${pack.name} (${meta}). Click to change.`,
@@ -2131,11 +2138,6 @@ function renderImageEngineUi() {
       );
       ui.imageEngine.setAttribute("aria-label", ui.imageEngine.title);
     }
-  }
-
-  if (ui.imageModelChip) {
-    ui.imageModelChip.hidden = !ready || !state.imageMode;
-    if (!ui.imageModelChip.hidden) ui.imageModelChip.textContent = `${pack.name} · ${meta}`;
   }
 
   if (ui.settingImage) {
@@ -5015,7 +5017,9 @@ function applyLanguage() {
   document.querySelector("[data-i18n='personalAssistant']").textContent = text.personalAssistant;
   document.querySelector("[data-i18n='localModel']").textContent = text.localModel;
   document.querySelector("[data-i18n='chooseModel']").textContent = text.chooseModel;
-  ui.webllm.textContent = state.useWebLLM ? text.active : text.download;
+  ui.webllm.textContent = NATIVE
+    ? localizedText("Modèle natif actif", "Native model active", "Modelo nativo activo", "ネイティブモデル有効")
+    : state.useWebLLM ? text.active : text.download;
   ui.exportSettings.textContent = text.exportSettings;
   ui.exportConversations.textContent = text.exportConversations;
   document.querySelector("#export-title").textContent = text.exportTitle;
