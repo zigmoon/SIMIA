@@ -110,15 +110,21 @@ Chaque paquet contient `simia-desktop`, `web/`, `vendor/`, `models/*.json` et
 
 ## Ce que l'interface affiche
 
-Le moteur d'image est distinct du modèle de texte, donc il est visible à trois
-endroits :
+Le moteur d'image est distinct du modèle de texte, donc il est visible à deux
+endroits — et **pas** dans la barre de saisie, où il encombrait :
 
 | Emplacement | Affichage |
 |---|---|
-| Barre du haut | pastille violette `IMAGE · SDXL Turbo` (+ infobulle avec la résolution et les pas) |
-| Zone de saisie | `SDXL Turbo · 1024 px · 4 pas`, uniquement quand le mode Image est actif |
-| Paramètres | bloc **MOTEUR D'IMAGE** avec la description du pack |
-| Légende d'une image générée | `SDXL Turbo · 1024×1024 · 4 pas` |
+| Barre du haut | pastille compacte : icône image + nom court (`Gravure SIMIA`), infobulle avec le nom complet, la résolution et les pas |
+| Paramètres | bloc **MOTEUR D'IMAGE** : nom complet, résolution, pas et description |
+| Légende d'une image générée | `SD 1.5 · Gravure SIMIA · 512×512 · 24 pas` |
+
+Le nom court se déduit du libellé du pack : `SD 1.5 · Gravure SIMIA` devient
+`Gravure SIMIA`, `Stable Diffusion 1.5` devient `SD 1.5`. La pastille reprend la
+palette du site (neutres + vert accent), pas une couleur propre.
+
+En dessous de 560 px de large, seule l'icône reste visible : le nom serait
+illisible, l'infobulle et `aria-label` portent l'information.
 
 La pastille et le bloc des paramètres ouvrent directement la bibliothèque sur
 l'onglet **Image**. En version web, tout cela reste masqué : il n'y a pas de
