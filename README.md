@@ -45,13 +45,12 @@ messages : les poids des modèles sont téléchargés une fois depuis un CDN, pu
 l'inférence se fait sur le processeur graphique de la machine. Le réseau peut être
 coupé, SIMIA continue de répondre.
 
-Le même code d'interface sert les deux versions, et c'est la seule différence
-d'exécution :
+Le même code d'interface sert les deux versions ; seule l'exécution diffère :
 
 | | Version bureau | Version web |
 |---|---|---|
 | Moteur | `llama.cpp` et `stable-diffusion.cpp` en natif (Vulkan, D3D12, Metal, CPU) | WebGPU, via WebLLM, dans l'onglet |
-| Systèmes | Windows 10/11, macOS 13+ (Intel et Apple Silicon), Linux x86_64 | Chrome et Edge avec WebGPU |
+| Systèmes | Windows 10/11, macOS 12+ (Intel et Apple Silicon), Linux x86_64 | Chrome et Edge avec WebGPU |
 | Modèles de texte | tout le catalogue, jusqu'à 9,7 Go | uniquement sous **1,9 Go** (mémoire du navigateur) |
 | Génération d'images | 7 packs, jusqu'à 1024 px, aucun filtre de contenu | — |
 | Installation | archive à décompresser, aucun installateur | aucune |
@@ -66,10 +65,14 @@ d'exécution :
 | Lecture de documents | PDF, Word, OpenDocument, CSV, texte ; citations dans la réponse | ✅ | ✅ |
 | Génération d'images | Stable Diffusion local, 512 et 1024 px, style maison « Gravure SIMIA » | — | ✅ |
 | Atelier de code | éditeur, exécution JavaScript et Python dans un Worker isolé, relecture par l'IA | ✅ | ✅ |
-| Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | ✅ |
+| Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | — |
 | Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
 | Quatre langues | français, anglais, espagnol, japonais | ✅ | ✅ |
 | Hors ligne | après le premier téléchargement des poids, aucune connexion requise | ✅ | ✅ |
+
+> L'agent web s'appuie sur un relais PHP (`agent-api.php`) déployé sur le site.
+> La version bureau sert l'interface localement et n'a pas ce relais : le bouton
+> correspondant n'y est pas affiché, plutôt que d'échouer à chaque clic.
 
 ## Confidentialité
 

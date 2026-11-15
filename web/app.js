@@ -5013,7 +5013,9 @@ function applyLanguage() {
   ui.exportToggle.textContent = text.export;
   ui.purgeToggle.textContent = text.purge;
   if (ui.infoToggle) ui.infoToggle.textContent = localizedText("Information", "Information", "Información");
-  document.querySelector(".local-note").textContent = text.localNote;
+  document.querySelector(".local-note").textContent = NATIVE
+    ? localizedText("Vos données restent sur cet ordinateur.", "Your data stays on this computer.", "Tus datos se quedan en este ordenador.", "データはこのPCに残ります。")
+    : text.localNote;
   document.querySelector("[data-i18n='personalAssistant']").textContent = text.personalAssistant;
   document.querySelector("[data-i18n='localModel']").textContent = text.localModel;
   document.querySelector("[data-i18n='chooseModel']").textContent = text.chooseModel;
@@ -5079,6 +5081,17 @@ function applyLanguage() {
       : state.language === "ja"
         ? ["AIはブラウザ内で動作", "データは一切送信されない", "会話はここに残る"]
         : ["The AI runs in your browser", "No data is sent anywhere", "Your conversations stay here"];
+  if (NATIVE) {
+    // En version bureau, rien ne tourne dans le navigateur : la fenetre n'est
+    // qu'un affichage du moteur natif.
+    welcomeSteps[0] = localizedText("L'IA tourne sur votre machine", "The AI runs on your machine", "La IA se ejecuta en tu equipo", "AIはこのPC上で動作");
+    document.querySelector("#welcome-copy").textContent = localizedText(
+      "Votre assistant personnel, sans compte et sans serveur : tout se passe sur votre ordinateur.",
+      "Your personal assistant, with no account and no server: everything runs on your computer.",
+      "Tu asistente personal, sin cuenta y sin servidor: todo se ejecuta en tu ordenador.",
+      "アカウントもサーバーも不要。すべてこのPC上で動作します。",
+    );
+  }
   document.querySelectorAll(".welcome-steps span").forEach((node, index) => { if (welcomeSteps[index]) node.textContent = welcomeSteps[index]; });
   document.querySelector(".welcome-steps").setAttribute("aria-label", localizedText("Les trois points clés de SIMIA", "SIMIA's three key points", "Los tres puntos clave de SIMIA", "SIMIAの3つのポイント"));
   renderInfoContent();
@@ -6260,6 +6273,13 @@ if (IMAGE) loadImagePacks();
 renderActiveConversation();
 applyLanguage();
 if (NATIVE) renderNativeStatus();
+// Le lanceur ne relaie pas agent-api.php : sans relais, l'agent web echouerait
+// a chaque clic. Le bouton est retire plutot que laisse en erreur.
+if (NATIVE) {
+  state.agentMode = false;
+  if (ui.agentToggle) ui.agentToggle.hidden = true;
+  setAgentMode(false);
+}
 initCodeWorkspace();
 loadStoredDocuments().then(restored => {
   if (!restored) return;
