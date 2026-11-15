@@ -126,6 +126,31 @@ moteur d'image dans un navigateur.
 
 Pour ajouter un jeu d'images, voir [models/image/catalog.json](models/image/catalog.json).
 
+## Première publication sur GitHub
+
+1. Sur github.com, créer un dépôt **vide** nommé `SIMIA` sous le compte `zigmoon` :
+   ni README, ni `.gitignore`, ni licence (ils entreraient en conflit avec ce qui
+   est déjà prêt ici).
+2. Depuis `SIMIA-desktop` :
+
+```powershell
+# pousse la branche main ; Git Credential Manager demande la connexion une fois
+git push -u origin main
+
+# puis, pour déclencher la compilation des 4 paquets et créer la release :
+powershell -NoProfile -File tools\publish.ps1 -Tag v0.9.0
+```
+
+`publish.ps1` enchaîne : synchronisation de `web/`, commit si nécessaire, push,
+tag annoté et push du tag. Le workflow démarre alors et dépose les archives dans
+l'onglet **Releases** (`https://github.com/zigmoon/SIMIA/releases`).
+
+Pour une simple mise à jour de code, sans nouvelle version :
+
+```powershell
+powershell -NoProfile -File tools\publish.ps1 -Message "Corrige le libelle du modele"
+```
+
 ## Développement de l'interface
 
 Il y a **deux copies** de l'interface, et c'est volontaire :
