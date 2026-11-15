@@ -3,16 +3,100 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SIMIA — votre IA, chez vous</title>
-<meta name="description" content="SIMIA est un assistant IA local-first : il tourne sur votre machine, garde vos conversations et ne dépend d'aucun compte. Version web légère ou application de bureau complète pour Windows, macOS et Linux.">
+<title>SIMIA — assistant IA local, privé et hors ligne (Windows, macOS, Linux)</title>
+<meta name="description" content="Téléchargez SIMIA : assistant IA local-first pour Windows, macOS et Linux, ou version web dans le navigateur. Conversations, documents et génération d'images sans compte, sans serveur et sans télémétrie. 32 modèles de texte au catalogue, jusqu'à 9,7 Go.">
+<meta name="keywords" content="SIMIA, assistant IA local, IA hors ligne, IA privée sans compte, télécharger IA locale, application IA Windows, application IA macOS, application IA Linux, génération d'images locale, stable diffusion local, llama.cpp, WebGPU, Zigmoon">
+<meta name="author" content="Zigmoon">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <link rel="canonical" href="https://app.zigmoon.com/SIMIA/desktop/">
-<meta property="og:title" content="SIMIA — votre IA, chez vous">
-<meta property="og:description" content="Assistant IA local-first. Version web dans le navigateur, ou application de bureau pour Windows, macOS et Linux.">
+<link rel="alternate" hreflang="fr" href="https://app.zigmoon.com/SIMIA/desktop/">
+<link rel="alternate" hreflang="x-default" href="https://app.zigmoon.com/SIMIA/desktop/">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="SIMIA — assistant IA local, privé et hors ligne">
+<meta property="og:description" content="Assistant IA local-first. Conversations, documents et images générées sur votre machine. Version web dans le navigateur, ou application de bureau pour Windows, macOS et Linux.">
+<meta property="og:url" content="https://app.zigmoon.com/SIMIA/desktop/">
+<meta property="og:site_name" content="SIMIA by Zigmoon">
+<meta property="og:image" content="https://app.zigmoon.com/SIMIA/icon.svg">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SIMIA — assistant IA local, privé et hors ligne">
+<meta name="twitter:description" content="Version web ou application de bureau Windows, macOS et Linux. Aucun compte, aucune donnée envoyée.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.github.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script>document.documentElement.classList.add("js");</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://app.zigmoon.com/SIMIA/#software",
+      "name": "SIMIA",
+      "alternateName": "SIMIA par Zigmoon",
+      "url": "https://app.zigmoon.com/SIMIA/desktop/",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Assistant IA local-first",
+      "operatingSystem": ["Windows 10", "Windows 11", "macOS 12+", "Linux x86_64", "Web"],
+      "softwareVersion": "0.9.0",
+      "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie.",
+      "inLanguage": ["fr", "en", "es", "ja"],
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+      "featureList": [
+        "Conversations avec des modèles de langage exécutés en local",
+        "Analyse de documents PDF, Word, OpenDocument et texte",
+        "Génération d'images locale avec Stable Diffusion",
+        "Atelier de code avec exécution JavaScript et Python",
+        "Recherche web assistée et dictée vocale",
+        "Export et import des conversations en JSON"
+      ],
+      "author": { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" },
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/latest",
+      "sameAs": ["https://github.com/zigmoon/SIMIA"]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://app.zigmoon.com/SIMIA/desktop/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Quelle différence entre la version web et la version desktop de SIMIA ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "La version web exécute le modèle dans le navigateur via WebGPU, ce qui la limite aux modèles sous 1,9 Go. La version desktop lance le moteur directement sur le GPU de la machine, sans plafond de navigateur : elle accède aux modèles de code les plus gros et à la génération d'images jusqu'à 1024 px." }
+        },
+        {
+          "@type": "Question",
+          "name": "Faut-il une carte graphique puissante pour utiliser SIMIA ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Pas obligatoirement. Une carte récente accélère énormément les réponses et une RTX 2060 suffit pour la génération d'images, mais SIMIA retombe automatiquement sur le processeur." }
+        },
+        {
+          "@type": "Question",
+          "name": "Où sont stockés les modèles de SIMIA ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Chaque modèle est téléchargé une seule fois depuis un CDN puis conservé dans le dossier models/ de l'application. Vous pouvez les supprimer ou les déplacer à tout moment." }
+        },
+        {
+          "@type": "Question",
+          "name": "La génération d'images est-elle filtrée dans SIMIA ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "SIMIA n'applique aucun filtre de contenu : il exécute les modèles ouverts que vous choisissez, sans modération ajoutée. À vous d'en faire un usage responsable et conforme à la loi de votre pays." }
+        },
+        {
+          "@type": "Question",
+          "name": "Pourquoi les paquets SIMIA ne sont-ils pas signés ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Les versions sont produites par GitHub Actions à partir du code source. Sur macOS il faut autoriser l'application au premier lancement, sur Windows SmartScreen demande une confirmation. Aucun droit administrateur n'est requis." }
+        }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "SIMIA", "item": "https://app.zigmoon.com/SIMIA/" },
+        { "@type": "ListItem", "position": 2, "name": "Version desktop", "item": "https://app.zigmoon.com/SIMIA/desktop/" }
+      ]
+    }
+  ]
+}
+</script>
 <style>
   :root{
     --ink:#1d2522; --muted:#6e7771; --line:#e7e6df; --paper:#f6f5f1;
@@ -47,6 +131,65 @@
   .nav nav a{text-decoration:none; font-size:14px; font-weight:600; color:var(--muted); transition:color .15s}
   .nav nav a:hover{color:var(--ink)}
   .nav .cta{margin-left:8px}
+
+  /* ---------- mega-menu Modeles ---------- */
+  .mega{position:relative}
+  .mega-trigger{
+    display:inline-flex; align-items:center; gap:5px; cursor:pointer;
+    border:0; background:transparent; padding:0; color:var(--muted);
+    font:600 14px Manrope,sans-serif; transition:color .15s;
+  }
+  .mega-trigger:hover,.mega-trigger[aria-expanded="true"]{color:var(--ink)}
+  .mega-trigger svg{width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s}
+  .mega-trigger[aria-expanded="true"] svg{transform:rotate(180deg)}
+  .mega-trigger-mobile{display:none}
+
+  .mega-panel{
+    position:absolute; top:calc(100% + 18px); left:50%; z-index:60;
+    width:min(920px,calc(100vw - 40px)); transform:translateX(-50%);
+    border:1px solid var(--line); border-radius:16px; background:var(--surface);
+    box-shadow:0 28px 70px rgba(29,37,34,.18); overflow:hidden;
+  }
+  .mega-panel[hidden]{display:none}
+  .mega-panel::before{
+    content:""; position:absolute; top:-7px; left:50%; width:12px; height:12px;
+    transform:translateX(-50%) rotate(45deg); background:var(--surface);
+    border-left:1px solid var(--line); border-top:1px solid var(--line);
+  }
+  .mega-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:22px 22px 18px}
+  .mega-col{display:flex; flex-direction:column; gap:2px; min-width:0}
+  .mega-title{
+    margin:0 0 8px; padding:0 10px;
+    font:700 9.5px "DM Mono",monospace; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--dim);
+  }
+  .mega-item{
+    display:grid; grid-template-columns:1fr auto; align-items:center;
+    gap:2px 8px; padding:8px 10px; border-radius:9px;
+    text-decoration:none; transition:background .13s, color .13s;
+  }
+  .mega-item:hover{background:#f2f8e6}
+  .mega-name{font-size:13.5px; font-weight:800; letter-spacing:-.01em; color:var(--ink)}
+  .mega-desc{grid-column:1; font-size:11.5px; color:var(--muted); line-height:1.35}
+  .mega-tag{
+    grid-column:2; grid-row:1 / span 2; align-self:center; flex:none;
+    padding:2px 7px; border-radius:20px;
+    font:700 8.5px "DM Mono",monospace; letter-spacing:.05em; text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .mega-tag.both{background:#eaf2dc; color:#4c6b1f}
+  .mega-tag.desk{background:#eceff1; color:#4a5a63}
+  .mega-tag.soon{background:#f6edd8; color:#8a6d2f}
+  .mega-item.compact{grid-template-columns:1fr}
+  .mega-item.compact .mega-desc{grid-column:1}
+  .mega-foot{
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;
+    padding:13px 22px; border-top:1px solid var(--line); background:#fafbf6;
+    font-size:12px; color:var(--muted);
+  }
+  .mega-foot b{color:var(--ink)}
+  .mega-foot a{font-weight:800; font-size:12.5px; text-decoration:none; color:#4c6b1f}
+  .mega-foot a:hover{text-decoration:underline}
 
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:9px;
@@ -170,6 +313,28 @@
   .dl .files a small{font:500 11px "DM Mono",monospace; color:var(--dim); text-transform:none; letter-spacing:0}
   .tag-soon{font:700 9px "DM Mono",monospace; letter-spacing:.08em; text-transform:uppercase; color:#8a6d2f; background:#f6edd8; padding:3px 8px; border-radius:999px}
 
+  /* ---------- versions publiees (GitHub) ---------- */
+  .releases{margin-top:26px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
+  .releases-head{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:16px 22px; border-bottom:1px solid var(--line); background:#fafbf6}
+  .releases-head h3{margin:0; font-size:15px; letter-spacing:-.01em}
+  .releases-head a{font-size:12.5px; font-weight:800; text-decoration:none; color:#4c6b1f}
+  .releases-head a:hover{text-decoration:underline}
+  .releases-body{padding:18px 22px}
+  .releases-loading{margin:0; font-size:13px; color:var(--muted)}
+  .release-latest{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:14px}
+  .release-pill{display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; background:var(--accent); color:var(--accent-ink); font:800 12px "DM Mono",monospace}
+  .release-date{font-size:12.5px; color:var(--muted)}
+  .release-assets{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; margin-bottom:16px}
+  .release-asset{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border:1px solid #e2e5dc; border-radius:9px; background:#fdfcf8; text-decoration:none; font-size:12.5px; font-weight:700; transition:background .15s, border-color .15s}
+  .release-asset:hover{background:#f2f8e6; border-color:#c2d39a}
+  .release-asset small{font:500 10.5px "DM Mono",monospace; color:var(--dim); white-space:nowrap}
+  .release-list{display:grid; gap:6px; margin:0; padding:14px 0 0; border-top:1px solid var(--line); list-style:none}
+  .release-row{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; font-size:12.5px; color:var(--muted)}
+  .release-row a{font-weight:800; text-decoration:none; color:var(--ink)}
+  .release-row a:hover{text-decoration:underline}
+  .releases-offline{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
+  .releases-offline a{color:var(--ink); font-weight:800}
+
   .models{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
   .model{
     border:1px solid var(--line); border-radius:11px; background:var(--surface);
@@ -240,7 +405,36 @@
     .downloads{grid-template-columns:1fr}
     .models{grid-template-columns:repeat(2,1fr)}
     .privacy{grid-template-columns:1fr; gap:28px}
-    .nav nav{display:none}
+
+    /* Menu mobile : le bouton ouvre la navigation, puis "Modeles" deplie le panneau. */
+    .nav{position:relative; gap:10px}
+    .nav .brand{order:1}
+    .nav nav{margin-left:0}
+    .mega-trigger-mobile{display:inline-flex; order:2; margin-left:auto; padding:8px 12px; border:1px solid #d5d9d2; border-radius:8px; background:transparent; color:var(--ink); font-size:13px}
+    .nav .cta{order:3; margin-left:0}
+    .nav nav{
+      display:none; position:absolute; top:calc(100% + 10px); left:0; right:0; z-index:70;
+      flex-direction:column; align-items:stretch; gap:2px;
+      padding:10px; border:1px solid var(--line); border-radius:14px;
+      background:var(--surface); box-shadow:0 24px 60px rgba(29,37,34,.2);
+    }
+    .nav.nav-open nav{display:flex}
+    .nav nav > a{padding:12px; border-radius:8px; font-size:15px}
+    .nav nav > a:hover{background:#f4f8ef}
+    .mega{position:static}
+    .mega > .mega-trigger{width:100%; justify-content:space-between; padding:12px; border-radius:8px; font-size:15px}
+    .mega > .mega-trigger:hover{background:#f4f8ef}
+    .mega-panel{
+      position:static; transform:none; width:auto; margin:4px 0 6px;
+      border-radius:12px; box-shadow:none;
+    }
+    .mega-panel::before{display:none}
+    .mega-grid{grid-template-columns:1fr; gap:14px; padding:14px}
+    .mega-tag{grid-row:auto}
+    .mega-foot{padding:12px 14px}
+  }
+  @media (min-width:961px){
+    .mega-trigger-mobile{display:none}
   }
   @media (max-width:560px){
     .hero{padding:52px 0 44px}
@@ -256,13 +450,89 @@
 <header>
   <div class="wrap nav">
     <a class="brand" href="#top"><i>S</i> SIMIA</a>
-    <nav>
+    <nav id="primary-nav">
       <a href="#versions">Versions</a>
       <a href="#telecharger">Télécharger</a>
-      <a href="#modeles">Modèles</a>
+      <div class="mega">
+        <button class="mega-trigger" id="mega-trigger" type="button" aria-expanded="false" aria-controls="mega-panel" aria-haspopup="true">
+          Modèles
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+
+        <div class="mega-panel" id="mega-panel" hidden>
+          <div class="mega-grid">
+            <div class="mega-col">
+              <p class="mega-title">Conversation</p>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Qwen 3.5 2B</span>
+                <span class="mega-desc">Généraliste · ~1,2 Go</span>
+                <span class="mega-tag both">Web + bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Gemma 2 2B</span>
+                <span class="mega-desc">Documents · ~1,2 Go</span>
+                <span class="mega-tag both">Web + bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Qwen 2.5 Coder 3B</span>
+                <span class="mega-desc">Code · ~2,0 Go</span>
+                <span class="mega-tag desk">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">SmolVLM2 500M</span>
+                <span class="mega-desc">Images et vidéos · ~1,0 Go</span>
+                <span class="mega-tag both">Web + bureau</span>
+              </a>
+            </div>
+
+            <div class="mega-col">
+              <p class="mega-title">Génération d'images</p>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Gravure SIMIA</span>
+                <span class="mega-desc">Style maison · LoRA 6 Mo</span>
+                <span class="mega-tag soon">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">SDXL Turbo</span>
+                <span class="mega-desc">1024 px en 6 s · ~3,7 Go</span>
+                <span class="mega-tag soon">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">SD-Turbo</span>
+                <span class="mega-desc">512 px en 1,2 s · ~1,7 Go</span>
+                <span class="mega-tag soon">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Z-Image Turbo</span>
+                <span class="mega-desc">1024 px · ~5,6 Go</span>
+                <span class="mega-tag soon">Bureau</span>
+              </a>
+            </div>
+
+            <div class="mega-col">
+              <p class="mega-title">Options</p>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">Atelier de code</span><span class="mega-desc">Éditeur + exécution JS et Python</span></a>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">Agent web</span><span class="mega-desc">Recherche assistée dans la conversation</span></a>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">Documents</span><span class="mega-desc">PDF, Word, OpenDocument, CSV</span></a>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">Dictée vocale</span><span class="mega-desc">Saisie au micro, dans le navigateur</span></a>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">4 langues</span><span class="mega-desc">Français, anglais, espagnol, japonais</span></a>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">Export JSON</span><span class="mega-desc">Sauvegarde et reprise des conversations</span></a>
+            </div>
+          </div>
+
+          <div class="mega-foot">
+            <span><b>32</b> modèles de texte · <b>7</b> packs d'image · filtres par usage</span>
+            <a href="#modeles">Voir le catalogue complet →</a>
+          </div>
+        </div>
+      </div>
       <a href="#confidentialite">Confidentialité</a>
       <a href="#faq">FAQ</a>
     </nav>
+    <button class="mega-trigger mega-trigger-mobile" id="mega-trigger-mobile" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
+      Menu
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
     <a class="btn btn-primary btn-sm cta" href="https://app.zigmoon.com/SIMIA/">Ouvrir la version web</a>
   </div>
 </header>
@@ -313,7 +583,7 @@
 
   <div class="stats">
     <div class="wrap stats-grid">
-      <div class="stat"><b>33</b><span>modèles au catalogue</span></div>
+      <div class="stat"><b>32</b><span>modèles de texte</span></div>
       <div class="stat"><b>7</b><span>modèles d'image</span></div>
       <div class="stat"><b>0</b><span>donnée envoyée</span></div>
       <div class="stat"><b>3</b><span>systèmes supportés</span></div>
@@ -392,8 +662,8 @@
           </div>
           <p class="req">macOS 12 ou plus récent. La génération d'images est disponible sur les Mac Apple Silicon ; sur Mac Intel, la conversation et le code fonctionnent normalement.</p>
           <div class="files">
-            <a data-release="macos-arm64.zip" href="#" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.zip" href="#" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="#" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="#" download><span>Intel</span><small>x86_64</small></a>
           </div>
         </article>
 
@@ -415,6 +685,16 @@
       <p class="mono" style="margin-top:22px">
         Les paquets sont compilés automatiquement par GitHub Actions à chaque version publiée.
       </p>
+
+      <div class="releases reveal" id="releases">
+        <div class="releases-head">
+          <h3>Versions publiées</h3>
+          <a href="https://github.com/zigmoon/SIMIA/releases" target="_blank" rel="noopener">Toutes les versions sur GitHub →</a>
+        </div>
+        <div class="releases-body" id="releases-body">
+          <p class="releases-loading">Chargement des versions depuis GitHub…</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -527,10 +807,158 @@
      ------------------------------------------------------------------ */
   const RELEASE_BASE = "https://github.com/zigmoon/SIMIA/releases/latest/download";
   const RELEASE_PREFIX = "simia-";
+  const REPO_URL = "https://github.com/zigmoon/SIMIA";
+  const RELEASES_API = `https://api.github.com/repos/zigmoon/SIMIA/releases?per_page=6`;
 
   document.querySelectorAll("[data-release]").forEach(link => {
     link.href = `${RELEASE_BASE}/${RELEASE_PREFIX}${link.dataset.release}`;
   });
+
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]
+  ));
+
+  /* ---------- sous-menu « Modèles » ---------- */
+  const megaWrap = document.querySelector(".mega");
+  const megaTrigger = document.getElementById("mega-trigger");
+  const megaPanel = document.getElementById("mega-panel");
+  const navWrap = document.querySelector(".nav");
+  const navToggle = document.getElementById("mega-trigger-mobile");
+  // Survol uniquement sur pointeur fin : au doigt, le clic suffit.
+  const hoverCapable = window.matchMedia("(hover:hover) and (pointer:fine)").matches;
+
+  const setMega = open => {
+    if (!megaTrigger || !megaPanel) return;
+    megaTrigger.setAttribute("aria-expanded", String(open));
+    megaPanel.hidden = !open;
+  };
+  const closeNav = () => {
+    navWrap?.classList.remove("nav-open");
+    navToggle?.setAttribute("aria-expanded", "false");
+  };
+
+  megaTrigger?.addEventListener("click", event => {
+    // Sur un ecran avec survol, le clic souris ne doit pas refermer ce que le
+    // survol vient d'ouvrir. Au clavier (detail = 0) et au doigt, on bascule.
+    if (event.detail > 0 && hoverCapable) {
+      setMega(true);
+      return;
+    }
+    setMega(megaPanel.hidden);
+  });
+  navToggle?.addEventListener("click", () => {
+    const open = !navWrap.classList.contains("nav-open");
+    navWrap.classList.toggle("nav-open", open);
+    navToggle.setAttribute("aria-expanded", String(open));
+    if (!open) setMega(false);
+  });
+
+  document.addEventListener("click", event => {
+    if (megaPanel && !megaPanel.hidden && !megaWrap.contains(event.target)) setMega(false);
+    if (navWrap?.classList.contains("nav-open") && !navWrap.contains(event.target)) closeNav();
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    if (megaPanel && !megaPanel.hidden) {
+      setMega(false);
+      megaTrigger?.focus();
+    }
+    closeNav();
+  });
+  megaPanel?.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
+    setMega(false);
+    closeNav();
+  }));
+  navWrap?.querySelectorAll("nav > a").forEach(link => link.addEventListener("click", closeNav));
+
+  if (megaWrap && hoverCapable) {
+    let hoverTimer;
+    megaWrap.addEventListener("mouseenter", () => {
+      clearTimeout(hoverTimer);
+      setMega(true);
+    });
+    megaWrap.addEventListener("mouseleave", () => {
+      hoverTimer = setTimeout(() => setMega(false), 240);
+    });
+  }
+
+  /* ---------- versions publiées, lues sur l'API GitHub ---------- */
+  const releasesBody = document.getElementById("releases-body");
+
+  const relativeDate = iso => {
+    if (!iso) return "";
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "";
+    const days = Math.round((Date.now() - date.getTime()) / 86400000);
+    if (days <= 0) return "aujourd'hui";
+    if (days === 1) return "hier";
+    if (days < 30) return `il y a ${days} jours`;
+    return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  };
+
+  const formatSize = bytes => {
+    if (!bytes) return "";
+    if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1).replace(".", ",")} Go`;
+    return `${Math.round(bytes / 1024 ** 2)} Mo`;
+  };
+
+  const assetLabel = name => {
+    if (name.includes("windows")) return "Windows";
+    if (name.includes("macos-arm64")) return "macOS Apple Silicon";
+    if (name.includes("macos-x64")) return "macOS Intel";
+    if (name.includes("linux")) return "Linux";
+    return name;
+  };
+
+  const releasesFallback = message => {
+    if (!releasesBody) return;
+    releasesBody.innerHTML = `<p class="releases-offline">${message} Les paquets sont sur
+      <a href="${REPO_URL}/releases" target="_blank" rel="noopener">la page Releases de GitHub</a>
+      et se mettent à jour à chaque version.</p>`;
+  };
+
+  async function loadReleases() {
+    if (!releasesBody) return;
+    try {
+      const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+      if (response.status === 404) {
+        releasesFallback("Aucune version publiée pour le moment.");
+        return;
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const all = await response.json();
+      const releases = (Array.isArray(all) ? all : []).filter(item => !item.draft);
+      if (!releases.length) {
+        releasesFallback("Aucune version publiée pour le moment.");
+        return;
+      }
+
+      const latest = releases[0];
+      const assets = (latest.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name));
+      const assetLinks = assets.map(asset => `<a class="release-asset" href="${asset.browser_download_url}" download>
+          <span>${escapeHtml(assetLabel(asset.name))}</span><small>${formatSize(asset.size)}</small>
+        </a>`).join("");
+
+      const previous = releases.slice(1).map(release => `<li class="release-row">
+          <a href="${release.html_url}" target="_blank" rel="noopener">${escapeHtml(release.tag_name || release.name)}</a>
+          <span>${relativeDate(release.published_at)}</span>
+        </li>`).join("");
+
+      releasesBody.innerHTML = `
+        <div class="release-latest">
+          <span class="release-pill">${escapeHtml(latest.tag_name || latest.name)}</span>
+          <span class="release-date">publiée ${relativeDate(latest.published_at)}</span>
+        </div>
+        ${assetLinks
+          ? `<div class="release-assets">${assetLinks}</div>`
+          : `<p class="releases-offline">Cette version n'a pas encore de paquet joint : la compilation est peut-être en cours.</p>`}
+        ${previous ? `<ul class="release-list">${previous}</ul>` : ""}`;
+    } catch {
+      releasesFallback("Le chargement automatique est indisponible (limite de l'API GitHub ou hors ligne).");
+    }
+  }
+
+  loadReleases();
 
   // Apparition douce au défilement. Ce qui est déjà visible s'affiche tout de
   // suite, et un filet de sécurité révèle le reste si l'observateur ne réagit pas.

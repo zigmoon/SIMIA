@@ -1,10 +1,160 @@
-# SIMIA Desktop
+<div align="center">
 
-Application de bureau de SIMIA : la même interface que le site, servie localement,
-avec l'inférence exécutée en natif par `llama.cpp` (Vulkan / D3D12 sur Windows,
-Metal sur macOS, Vulkan sur Linux, repli CPU automatique).
+<img src="web/icon.svg" width="84" height="84" alt="SIMIA, assistant IA local" />
 
-## Pourquoi cette architecture
+# SIMIA
+
+**Assistant IA local, privé et hors ligne — Windows, macOS et Linux**
+
+Conversation, génération d'images et atelier de code dans une seule interface,
+exécutés sur votre propre machine. Pas de compte, pas de clé API, pas de serveur :
+vos phrases ne quittent pas l'ordinateur.
+
+[![Dernière version](https://img.shields.io/github/v/release/zigmoon/SIMIA?style=flat-square&label=version&color=4c6b1f)](https://github.com/zigmoon/SIMIA/releases/latest)
+[![Compilation Windows, macOS, Linux](https://github.com/zigmoon/SIMIA/actions/workflows/build.yml/badge.svg)](https://github.com/zigmoon/SIMIA/actions/workflows/build.yml)
+[![Windows | macOS | Linux](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-x64%20%26%20arm64-4c6b1f?style=flat-square)](#télécharger)
+
+[**Télécharger**](#télécharger) · [**Essayer dans le navigateur**](https://app.zigmoon.com/SIMIA/) · [**Site officiel**](https://app.zigmoon.com/SIMIA/desktop/) · [**Modèles**](#les-modèles)
+
+</div>
+
+---
+
+## Sommaire
+
+- [Qu'est-ce que SIMIA ?](#quest-ce-que-simia)
+- [Ce que SIMIA sait faire](#ce-que-simia-sait-faire)
+- [Confidentialité](#confidentialité)
+- [Télécharger](#télécharger)
+- [Versions publiées](#versions-publiées)
+- [Les modèles](#les-modèles)
+- [Architecture](#architecture)
+- [Utilisation](#utilisation)
+- [Questions fréquentes](#questions-fréquentes)
+- [Licence et mentions légales](#licence-et-mentions-légales)
+
+## Qu'est-ce que SIMIA
+
+**SIMIA est un espace de travail IA qui tourne entièrement en local.** Trois
+outils réunis dans une seule page : une conversation avec un modèle de langage,
+un générateur d'images Stable Diffusion, et un atelier de code capable
+d'exécuter le JavaScript et le Python que l'assistant écrit.
+
+Rien n'est envoyé à un serveur. Ni compte, ni clé API, ni abonnement, ni limite de
+messages : les poids des modèles sont téléchargés une fois depuis un CDN, puis
+l'inférence se fait sur le processeur graphique de la machine. Le réseau peut être
+coupé, SIMIA continue de répondre.
+
+Le même code d'interface sert les deux versions, et c'est la seule différence
+d'exécution :
+
+| | Version bureau | Version web |
+|---|---|---|
+| Moteur | `llama.cpp` et `stable-diffusion.cpp` en natif (Vulkan, D3D12, Metal, CPU) | WebGPU, via WebLLM, dans l'onglet |
+| Systèmes | Windows 10/11, macOS 13+ (Intel et Apple Silicon), Linux x86_64 | Chrome et Edge avec WebGPU |
+| Modèles de texte | tout le catalogue, jusqu'à 9,7 Go | uniquement sous **1,9 Go** (mémoire du navigateur) |
+| Génération d'images | 7 packs, jusqu'à 1024 px, aucun filtre de contenu | — |
+| Installation | archive à décompresser, aucun installateur | aucune |
+| Stockage | disque, à côté de l'exécutable | cache du navigateur |
+
+## Ce que SIMIA sait faire
+
+| Fonction | Détail | Web | Bureau |
+|---|---|:--:|:--:|
+| Conversation | modèle de langage local, réponse en flux, historique, export JSON | ✅ | ✅ |
+| Choix du modèle | plus de 30 modèles de texte, filtrés par usage (généraliste, documents, code, raisonnement, vision) | ✅ | ✅ |
+| Lecture de documents | PDF, Word, OpenDocument, CSV, texte ; citations dans la réponse | ✅ | ✅ |
+| Génération d'images | Stable Diffusion local, 512 et 1024 px, style maison « Gravure SIMIA » | — | ✅ |
+| Atelier de code | éditeur, exécution JavaScript et Python dans un Worker isolé, relecture par l'IA | ✅ | ✅ |
+| Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | ✅ |
+| Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
+| Quatre langues | français, anglais, espagnol, japonais | ✅ | ✅ |
+| Hors ligne | après le premier téléchargement des poids, aucune connexion requise | ✅ | ✅ |
+
+## Confidentialité
+
+- **Aucun compte.** Pas d'e-mail, pas de mot de passe, pas de profil.
+- **Aucune télémétrie.** SIMIA n'envoie ni usage, ni erreur, ni identifiant.
+- **Aucun serveur d'inférence.** Le modèle tourne sur votre GPU ; le trafic réseau
+  se limite au téléchargement des poids depuis le CDN et aux pages que vous
+  demandez explicitement à l'agent web.
+- **Stockage local.** Les conversations restent dans le navigateur ou sur le
+  disque, et s'exportent en JSON quand vous voulez.
+
+## Télécharger
+
+Les archives sont compilées par GitHub Actions à chaque étiquette `v*` et
+publiées dans [Releases](https://github.com/zigmoon/SIMIA/releases). Le lien
+`latest` pointe toujours sur la version la plus récente.
+
+| Système | Matériel | Archive |
+|---|---|---|
+| Windows | x86_64 | [simia-windows-x64.zip](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64.zip) |
+| macOS | Apple Silicon (M1 et plus) | [simia-macos-arm64.tar.gz](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-arm64.tar.gz) |
+| macOS | Intel | [simia-macos-x64.tar.gz](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-x64.tar.gz) |
+| Linux | x86_64 | [simia-linux-x64.tar.gz](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-linux-x64.tar.gz) |
+
+Décompressez l'archive, puis lancez `simia-desktop` (ou `simia-desktop.exe`).
+Les moteurs et l'interface sont inclus ; les poids des modèles se téléchargent
+depuis l'application, au premier choix. Sur macOS et Linux, rendez le fichier
+exécutable si l'archive a perdu le droit : `chmod +x simia-desktop`.
+
+> **macOS** : le binaire n'est pas signé, Gatekeeper le met en quarantaine.
+> `xattr -dr com.apple.quarantine simia-macos-arm64/` puis relancez.
+> **Windows** : SmartScreen affiche un avertissement à la première ouverture,
+> faute de signature de code.
+
+## Versions publiées
+
+<!-- versions:start -->
+| Version | Date | Windows | macOS ARM | macOS Intel | Linux |
+|---|---|---|---|---|---|
+| _Aucune version publiée pour le moment._ | | | | | |
+<!-- versions:end -->
+
+Le tableau ci-dessus est régénéré automatiquement par le workflow à chaque
+étiquette, et la page [Releases](https://github.com/zigmoon/SIMIA/releases)
+reste la source de vérité. La version web, elle, n'a pas de numéro : elle est
+servie directement depuis la branche `main`.
+
+## Les modèles
+
+Deux catalogues, tous deux en JSON, versionnés dans le dépôt :
+
+| Fichier | Contenu |
+|---|---|
+| [models/catalog.json](models/catalog.json) | modèle de texte : identifiant, taille, quantification, licence, URL du CDN, gabarit de prompt |
+| [models/image/catalog.json](models/image/catalog.json) | packs d'images : fichiers, résolution, pas de diffusion, LoRA de style |
+
+Les packs d'images mesurés sur une RTX 2060 6 Go, à chaud :
+
+| Pack | Taille | Résolution | Temps / image | Licence |
+|---|---|---|---|---|
+| SDXS 512 | 651 Mo | 512 px | 0,3 s | Apache-2.0 |
+| SD-Turbo Q4 | 1,72 Go | 512 px | 1,2 s | Stability Community |
+| SD 1.5 Q4 | 1,46 Go | 512 px | ~2 s | CreativeML OpenRAIL-M |
+| **Gravure SIMIA** | 1,46 Go + LoRA 6 Mo | 512 px | ~2 s | CreativeML OpenRAIL-M |
+| SDXL Turbo | 3,67 Go | 1024 px | 6,1 s (15 s à froid) | Stability Community |
+| SDXL base | 3,67 Go | 1024 px | 57,3 s | CreativeML OpenRAIL++-M |
+| Z-Image Turbo | 5,57 Go | 1024 px | 37,5 s | Apache-2.0 |
+
+**Gravure SIMIA** est un LoRA entraîné sur cette machine à partir de 32 planches
+botaniques du domaine public (*Curtis's Botanical Magazine*, *Edwards's Botanical
+Register*). Il se pose sur SD 1.5 et donne au modèle un trait de gravure au
+burin. La chaîne d'entraînement complète est dans [tools/lora/](tools/lora/).
+
+Aucun filtre de contenu n'est appliqué côté SIMIA : ce que le modèle accepte de
+dessiner, SIMIA le dessine. Les licences ci-dessus, elles, continuent de
+s'appliquer à l'usage des images produites.
+
+## Architecture
+
+L'application de bureau n'est pas une réécriture : c'est la même interface que le
+site, servie localement, avec l'inférence exécutée en natif par `llama.cpp`
+(Vulkan / D3D12 sur Windows, Metal sur macOS, Vulkan sur Linux, repli CPU
+automatique).
+
+### Pourquoi cette architecture
 
 Le site SIMIA exécute les modèles dans le navigateur via WebGPU. En natif, le même
 `app.js` continue de fonctionner : le lanceur injecte `window.__SIMIA_NATIVE__`
@@ -98,8 +248,8 @@ officielles :
 | Cible | llama.cpp | stable-diffusion.cpp | Archive |
 |---|---|---|---|
 | `windows-x64` | win-vulkan-x64 | win-vulkan-x64 | `simia-windows-x64.zip` |
-| `macos-arm64` | macos-arm64 | Darwin arm64 | `simia-macos-arm64.zip` |
-| `macos-x64` | macos-x64 | **aucun binaire** | `simia-macos-x64.zip` |
+| `macos-arm64` | macos-arm64 | Darwin arm64 | `simia-macos-arm64.tar.gz` |
+| `macos-x64` | macos-x64 | **aucun binaire** | `simia-macos-x64.tar.gz` |
 | `linux-x64` | ubuntu-vulkan-x64 | Ubuntu x86_64 vulkan | `simia-linux-x64.tar.gz` |
 
 Sur macOS Intel, la génération d'images est simplement masquée : le bouton
@@ -261,3 +411,57 @@ Pour entraîner votre propre style, voir [tools/lora/README.md](tools/lora/READM
 - Signer le binaire Windows (SmartScreen) et le `.dmg` macOS (notarisation Apple).
 - Remplacer le mode `--app` par une WebView embarquée si l'on veut un exécutable
   unique sans dépendre de Chrome/Edge installé.
+
+## Questions fréquentes
+
+**SIMIA a-t-il besoin d'Internet ?**
+Une fois les poids d'un modèle téléchargés, non. Le premier téléchargement se fait
+depuis un CDN ; ensuite l'application fonctionne réseau coupé. Seul l'agent web
+demande une connexion, et seulement quand vous l'utilisez.
+
+**Quelle configuration faut-il ?**
+8 Go de mémoire suffisent pour les modèles sous 2 Go. Pour la génération
+d'images, comptez 6 Go de VRAM (mesures faites sur une RTX 2060 6 Go). Sans GPU
+compatible, `llama.cpp` bascule sur le processeur : plus lent, mais fonctionnel.
+
+**Quelle différence avec ChatGPT ou Claude ?**
+Aucune donnée ne sort de la machine, il n'y a pas de compte à créer et pas de
+quota. En contrepartie, les modèles embarqués sont bien plus petits : quelques
+milliards de paramètres au lieu de plusieurs centaines, donc moins de culture
+générale et plus d'erreurs sur les sujets pointus.
+
+**Pourquoi la version web limite-t-elle les modèles à 1,9 Go ?**
+Un onglet ne dispose que d'une fraction de la mémoire du GPU, et un dépassement
+fait planter l'onglet sans message utile. La version bureau n'a pas cette limite :
+elle charge le modèle sur le GPU de la machine.
+
+**Les images générées sont-elles filtrées ?**
+Non. SIMIA ne filtre rien lui-même. Les licences des modèles (CreativeML
+OpenRAIL-M, Stability Community) s'appliquent à l'usage des images produites, et
+certaines interdisent un usage commercial ; elles sont rappelées dans le
+catalogue.
+
+**Où sont stockées mes conversations ?**
+Dans le navigateur (IndexedDB) pour la version web, dans le profil de
+l'application pour la version bureau. L'export JSON permet de les sauvegarder ou
+de les déplacer.
+
+## Licence et mentions légales
+
+Le code de SIMIA est publié ici à titre de source visible ; aucun fichier
+`LICENSE` n'accompagne encore le dépôt, donc tous droits réservés par défaut.
+Les composants tiers conservent leurs licences respectives :
+
+| Composant | Licence |
+|---|---|
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) | MIT |
+| [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) | MIT |
+| [WebLLM](https://github.com/mlc-ai/web-llm) | Apache-2.0 |
+| Modèles de texte et d'images | voir la colonne `license` des catalogues |
+
+Le LoRA « Gravure SIMIA » et son jeu d'entraînement (planches botaniques du
+domaine public) sont fournis avec le projet.
+
+Site et application web : <https://app.zigmoon.com/SIMIA/> — hébergement LWS,
+serveurs en France. Les mentions légales complètes (éditeur, hébergeur, données
+personnelles) sont dans l'interface, section **Mentions légales**.

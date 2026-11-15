@@ -5,30 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: https://unpkg.com https://esm.run https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob: https:; connect-src 'self' data: blob: https://unpkg.com https://esm.run https://cdn.jsdelivr.net https://raw.githubusercontent.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://*.xethub.hf.co; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="theme-color" content="#f6f5f1">
-  <meta name="description" content="SIMIA is a local-first AI workspace. Run selected AI models in your browser and keep conversations on your device.">
-  <meta name="keywords" content="local AI, browser AI, WebLLM, private AI chat, offline AI assistant, SIMIA, Zigmoon">
-  <meta name="author" content="Zigmoon">  <meta name="application-name" content="SIMIA">
-  <meta name="robots" content="index, follow">
+  <title>SIMIA — assistant IA local, privé et hors ligne</title>
+  <meta name="description" content="SIMIA est un assistant IA local-first : discutez avec de vrais modèles de langage, analysez des documents et générez des images sans compte ni serveur. Fonctionne dans le navigateur et en application de bureau pour Windows, macOS et Linux.">
+  <meta name="keywords" content="assistant IA local, IA hors ligne, IA privée, chatbot sans compte, IA dans le navigateur, WebGPU, WebLLM, llama.cpp, stable-diffusion.cpp, génération d'images locale, assistant IA français, SIMIA, Zigmoon">
+  <meta name="author" content="Zigmoon">
+  <meta name="application-name" content="SIMIA">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="googlebot" content="index, follow">
   <link rel="canonical" href="https://app.zigmoon.com/SIMIA/">
-  <link rel="alternate" hreflang="en" href="https://app.zigmoon.com/SIMIA/">
   <link rel="alternate" hreflang="fr" href="https://app.zigmoon.com/SIMIA/">
+  <link rel="alternate" hreflang="en" href="https://app.zigmoon.com/SIMIA/">
   <link rel="alternate" hreflang="es" href="https://app.zigmoon.com/SIMIA/">
   <link rel="alternate" hreflang="ja" href="https://app.zigmoon.com/SIMIA/">
   <link rel="alternate" hreflang="x-default" href="https://app.zigmoon.com/SIMIA/">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="SIMIA - Local-first AI workspace">
-  <meta property="og:description" content="Run selected AI models in your browser and keep conversations on your device.">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="SIMIA — assistant IA local, privé et hors ligne">
+  <meta property="og:description" content="Discutez avec de vrais modèles de langage, analysez vos documents et générez des images sans compte ni serveur. Dans le navigateur ou en application de bureau Windows, macOS et Linux.">
   <meta property="og:url" content="https://app.zigmoon.com/SIMIA/">
   <meta property="og:site_name" content="SIMIA by Zigmoon">
   <meta property="og:image" content="https://app.zigmoon.com/SIMIA/icon.svg">
-  <meta property="og:image:alt" content="SIMIA local-first AI workspace">
+  <meta property="og:image:alt" content="Logo SIMIA, assistant IA local-first">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="SIMIA - Local-first AI workspace">
-  <meta name="twitter:description" content="Run selected AI models in your browser and keep conversations on your device.">
+  <meta name="twitter:title" content="SIMIA — assistant IA local, privé et hors ligne">
+  <meta name="twitter:description" content="Assistant IA local-first : conversations, documents et images générées sur votre machine, sans compte ni serveur.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <title>SIMIA - Local assistant</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js" referrerpolicy="no-referrer"></script>
   <script type="application/ld+json">
@@ -36,16 +40,63 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "SIMIA",
+    "alternateName": "SIMIA par Zigmoon",
     "url": "https://app.zigmoon.com/SIMIA/",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web",
-    "description": "A local-first AI workspace that runs selected AI models in the browser.",
+    "applicationCategory": "UtilitiesApplication",
+    "applicationSubCategory": "Assistant IA local-first",
+    "operatingSystem": ["Web", "Windows 10", "Windows 11", "macOS 12+", "Linux x86_64"],
+    "browserRequirements": "Chrome ou Edge avec WebGPU pour la version web",
+    "softwareVersion": "1.0",
+    "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie.",
+    "inLanguage": ["fr", "en", "es", "ja"],
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "featureList": [
+      "Conversations avec des modèles de langage exécutés en local",
+      "Analyse de documents PDF, Word, OpenDocument et texte",
+      "Génération d'images locale avec Stable Diffusion",
+      "Atelier de code avec exécution JavaScript et Python",
+      "Recherche web assistée et dictée vocale",
+      "Export et import des conversations en JSON"
+    ],
     "author": { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" },
-    "inLanguage": ["en", "fr", "es", "ja"]
+    "publisher": { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" },
+    "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/latest",
+    "sameAs": ["https://github.com/zigmoon/SIMIA"]
   }
   </script>
 </head>
 <body>
+  <noscript>
+    <div style="max-width:720px;margin:0 auto;padding:40px 20px;font-family:system-ui,sans-serif;line-height:1.6;color:#1d2522">
+      <h1>SIMIA — assistant IA local, privé et hors ligne</h1>
+      <p>
+        SIMIA est un espace de travail IA <strong>local-first</strong> : les modèles de langage,
+        l'analyse de documents et la génération d'images s'exécutent sur votre machine.
+        Aucun compte, aucun serveur, aucune télémétrie. JavaScript est nécessaire pour
+        utiliser l'application.
+      </p>
+      <h2>Ce que SIMIA sait faire</h2>
+      <ul>
+        <li>Conversations avec des modèles de langage exécutés en local</li>
+        <li>Analyse de documents PDF, Word, OpenDocument, CSV et texte</li>
+        <li>Génération d'images locale avec Stable Diffusion</li>
+        <li>Atelier de code avec exécution JavaScript et Python</li>
+        <li>Recherche web assistée et dictée vocale</li>
+        <li>Export et import des conversations au format JSON</li>
+      </ul>
+      <h2>Deux versions</h2>
+      <ul>
+        <li><strong>Version web</strong> : dans le navigateur (Chrome ou Edge avec WebGPU), modèles jusqu'à 1,9 Go.</li>
+        <li><strong>Version desktop</strong> : Windows, macOS et Linux, catalogue complet jusqu'à 9,7 Go et génération d'images 1024 px.</li>
+      </ul>
+      <p>
+        <a href="https://app.zigmoon.com/SIMIA/desktop/">Télécharger l'application de bureau</a> ·
+        <a href="https://github.com/zigmoon/SIMIA">Code source sur GitHub</a> ·
+        <a href="https://github.com/zigmoon/SIMIA/releases">Versions publiées</a>
+      </p>
+    </div>
+  </noscript>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Main navigation">
       <div class="brand"><span class="brand-mark"><img src="simia-logo.svg" alt=""></span><span>SIMIA</span></div>
