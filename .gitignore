@@ -1,0 +1,34 @@
+# Binaires des moteurs : le CI les telecharge depuis les releases officielles,
+# et les archives les embarquent. Rien a versionner.
+vendor/
+
+# Poids des modeles : plusieurs gigaoctets, servis par le CDN ou le serveur.
+models/*.gguf
+models/*.part
+models/image/**/*.gguf
+models/image/**/*.part
+# VAE externe de Z-Image (310 Mo), place a la main.
+models/image/*.safetensors
+# Etat d'execution : dernier pack d'images choisi.
+models/image/selected.json
+# Poids annexes (TTS Kokoro, upscaler ESRGAN) : non references par le code.
+models/tts/
+models/upscale/
+*.pth
+*.onnx
+*.ckpt
+
+# Compilation Rust.
+launcher/target/
+
+# Journaux et divers.
+*.log
+*.err
+*.tmp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Systeme.
+.vscode/
+.idea/

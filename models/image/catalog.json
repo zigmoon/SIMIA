@@ -1,0 +1,101 @@
+{
+  "version": 2,
+  "packs": [
+    {
+      "id": "sd-turbo",
+      "name": "SD-Turbo",
+      "mode": "checkpoint",
+      "size": "~1,72 GB",
+      "license": "Stability Community",
+      "note": "Le meilleur compromis sous 2 Go : un seul fichier entierement en VRAM, 4 pas, environ 1,2 s par image en 512 px (2,2 s en 768). Version distillee de SD 2.1, plus fidele au prompt que SD 1.5 a petit nombre de pas.",
+      "steps": 4,
+      "cfg": 1.0,
+      "px": 512,
+      "recommended": true,
+      "model": "sdturbo/sd_turbo_q4_0.gguf",
+      "url": "https://huggingface.co/samoudi/sd-turbo-gguf/resolve/main/sd_turbo_q4_0.gguf"
+    },
+    {
+      "id": "sdxs-512",
+      "name": "SDXS 512",
+      "mode": "checkpoint",
+      "size": "~651 MB",
+      "license": "Apache-2.0",
+      "note": "Le plus leger de la selection : 651 Mo, un seul pas, 0,3 s par image une fois le modele charge. Style simple, ideal pour croquer une idee tres vite.",
+      "steps": 1,
+      "cfg": 1.0,
+      "px": 512,
+      "model": "sdxs/sdxs-512-tinySDdistilled_Q8_0.gguf",
+      "url": "https://huggingface.co/concedo/sdxs-512-tinySDdistilled-GGUF/resolve/main/sdxs-512-tinySDdistilled_Q8_0.gguf"
+    },
+    {
+      "id": "sd15-q4",
+      "name": "Stable Diffusion 1.5",
+      "mode": "checkpoint",
+      "size": "~1,46 GB",
+      "license": "CreativeML OpenRAIL-M",
+      "note": "Le classique : 1,46 Go en VRAM, 512 px, 20 pas, environ 2 s par image. Plus de latitude de reglage (CFG 7) et une immense bibliotheque de styles.",
+      "steps": 20,
+      "cfg": 7.0,
+      "px": 512,
+      "model": "sd15/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+      "url": "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf"
+    },
+    {
+      "id": "sd15-simia",
+      "name": "SD 1.5 · Gravure SIMIA",
+      "mode": "checkpoint",
+      "size": "~1,46 GB + 7 Mo",
+      "license": "CreativeML OpenRAIL-M",
+      "note": "Notre propre LoRA, entraine sur cette machine a partir de 32 planches botaniques du domaine public (Curtis's Botanical Magazine, Edwards's Botanical Register). Il se pose sur SD 1.5 et ne pese que quelques mega-octets : gravure botanique, 24 pas, CFG 7. Le jeton de style est ajoute automatiquement au prompt.",
+      "steps": 24,
+      "cfg": 7.0,
+      "px": 512,
+      "model": "sd15/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+      "lora": "simia-gravure.safetensors",
+      "loraWeight": 1.4,
+      "promptPrefix": "s1mia vintage botanical engraving plate",
+      "loraUrl": "https://app.zigmoon.com/SIMIA/models/image/loras/simia-gravure.safetensors"
+    },
+    {
+      "id": "sdxl-turbo",
+      "name": "SDXL Turbo",
+      "mode": "checkpoint",
+      "size": "~3,67 GB",
+      "license": "Stability Community",
+      "note": "Le grand frere de SD-Turbo : 1024 px en 4 pas, environ 6 s sur une RTX 2060 une fois le modele charge (15 s au premier appel). Aucun filtre de contenu n'est applique par SIMIA. Telecharge depuis le CDN au premier usage.",
+      "steps": 4,
+      "cfg": 1.0,
+      "px": 1024,
+      "model": "sdxl/stable-diffusion-xl-1.0-turbo-Q4_0.gguf",
+      "url": "https://huggingface.co/gpustack/stable-diffusion-xl-1.0-turbo-GGUF/resolve/main/stable-diffusion-xl-1.0-turbo-Q4_0.gguf"
+    },
+    {
+      "id": "sdxl-base",
+      "name": "SDXL base 1.0",
+      "mode": "checkpoint",
+      "size": "~3,67 GB",
+      "license": "CreativeML OpenRAIL++-M",
+      "note": "La base SDXL complete : 1024 px, CFG 7, 25 pas, environ 57 s sur une RTX 2060. Plus fidele au prompt que la version Turbo, sans filtre de contenu cote SIMIA. Telecharge depuis le CDN.",
+      "steps": 25,
+      "cfg": 7.0,
+      "px": 1024,
+      "model": "sdxl/stable-diffusion-xl-base-1.0-Q4_0.gguf",
+      "url": "https://huggingface.co/gpustack/stable-diffusion-xl-base-1.0-GGUF/resolve/main/stable-diffusion-xl-base-1.0-Q4_0.gguf"
+    },
+    {
+      "id": "z-image-turbo",
+      "name": "Z-Image Turbo",
+      "mode": "zimage",
+      "size": "~5,57 GB",
+      "license": "Apache-2.0",
+      "note": "Le plus recent et le plus beau : 1024 px en 8 pas, environ 37 s. Trois fichiers, places manuellement dans models/image/.",
+      "steps": 8,
+      "cfg": 1.0,
+      "px": 1024,
+      "diffusion": "z_image_turbo-Q3_K.gguf",
+      "llm": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "vae": "ae.safetensors"
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+name: build
+
+# Compile le lanceur pour les trois systemes et assemble un paquet pret a telecharger.
+# Les binaires llama.cpp et stable-diffusion.cpp viennent de leurs releases :
+# aucun compilateur C++ n'est necessaire.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Mise a jour : https://github.com/ggml-org/llama.cpp/releases
+  LLAMA_TAG: b12413
+  # Mise a jour : https://github.com/leejet/stable-diffusion.cpp/releases
+  SD_RELEASE_TAG: master-1104-5dcfa79
+  # `launcher/rust-toolchain.toml` impose la toolchain GNU de Windows pour les
+  # builds locaux sans MSVC. Cette variable la neutralise : les runners macOS et
+  # Linux utilisent leur toolchain native.
+  RUSTUP_TOOLCHAIN: stable
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            os: windows-latest
+            llama: llama-b12413-bin-win-vulkan-x64.zip
+            sd: sd-master-5dcfa79-bin-win-vulkan-x64.zip
+            archive: zip
+          - target: macos-arm64
+            os: macos-14
+            llama: llama-b12413-bin-macos-arm64.tar.gz
+            sd: sd-master-5dcfa79-bin-Darwin-macOS-26.7.2-arm64.zip
+            archive: tar.gz
+          - target: macos-x64
+            os: macos-13
+            llama: llama-b12413-bin-macos-x64.tar.gz
+            # Aucun binaire stable-diffusion.cpp pour macOS Intel :
+            # la generation d'images est simplement masquee dans l'application.
+            sd: ""
+            archive: tar.gz
+          - target: linux-x64
+            os: ubuntu-24.04
+            llama: llama-b12413-bin-ubuntu-vulkan-x64.tar.gz
+            sd: sd-master-5dcfa79-bin-Linux-Ubuntu-26.04-x86_64-vulkan.zip
+            archive: tar.gz
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verifier la presence de l'interface
+        shell: bash
+        run: |
+          if [ ! -f web/index.html ]; then
+            echo "::error::web/index.html absent. Lancez tools/sync-web.ps1 puis commitez web/."
+            exit 1
+          fi
+
+      - name: Outils Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: launcher
+
+      - name: Compiler le lanceur
+        working-directory: launcher
+        run: cargo build --release --locked
+
+      - name: Recuperer les moteurs
+        shell: bash
+        env:
+          LLAMA_ASSET: ${{ matrix.llama }}
+          SD_ASSET: ${{ matrix.sd }}
+        run: |
+          set -euo pipefail
+          tmp="$RUNNER_TEMP/sidecars"
+          mkdir -p "$tmp" "vendor/llama/${{ matrix.target }}" "vendor/sd/${{ matrix.target }}"
+
+          curl -fsSL -o "$tmp/llama.pkg" \
+            "https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_TAG}/${LLAMA_ASSET}"
+
+          if [ -n "${SD_ASSET}" ]; then
+            curl -fsSL -o "$tmp/sd.pkg" \
+              "https://github.com/leejet/stable-diffusion.cpp/releases/download/${SD_RELEASE_TAG}/${SD_ASSET}"
+          fi
+
+          extract() {
+            case "$1" in
+              *.zip) unzip -q -o "$1" -d "$2" ;;
+              *.tar.gz) tar -xzf "$1" -C "$2" ;;
+            esac
+          }
+
+          extract "$tmp/llama.pkg" "vendor/llama/${{ matrix.target }}"
+          if [ -n "${SD_ASSET}" ]; then
+            extract "$tmp/sd.pkg" "vendor/sd/${{ matrix.target }}"
+          fi
+
+          echo "--- moteurs presents ---"
+          find vendor -type f \( -name "llama-server*" -o -name "sd-server*" \) | sort
+
+      - name: Assembler le paquet
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="simia-${{ matrix.target }}"
+          stage="$RUNNER_TEMP/$name"
+          mkdir -p "$stage"
+
+          binary="simia-desktop"
+          if [ "${{ runner.os }}" = "Windows" ]; then binary="simia-desktop.exe"; fi
+          cp "launcher/target/release/$binary" "$stage/"
+
+          cp -r web "$stage/web"
+          mkdir -p "$stage/models/image/loras"
+          cp models/catalog.json models/versions.json "$stage/models/"
+          cp models/image/catalog.json "$stage/models/image/"
+          # Le LoRA maison est livre avec l'application : le style Gravure SIMIA
+          # fonctionne sans telechargement supplementaire.
+          if ls models/image/loras/*.safetensors >/dev/null 2>&1; then
+            cp models/image/loras/*.safetensors "$stage/models/image/loras/"
+          fi
+
+          cp -r vendor "$stage/vendor"
+          cp packaging/LISEZ-MOI.txt "$stage/"
+
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            (cd "$RUNNER_TEMP" && 7z a -tzip -mx=3 "$name.zip" "$name" > /dev/null)
+            echo "archive=$RUNNER_TEMP/$name.zip" >> "$GITHUB_ENV"
+          else
+            tar -czf "$RUNNER_TEMP/$name.tar.gz" -C "$RUNNER_TEMP" "$name"
+            echo "archive=$RUNNER_TEMP/$name.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+          du -sh "$RUNNER_TEMP/$name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simia-${{ matrix.target }}
+          path: ${{ env.archive }}
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publier la release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SIMIA ${{ github.ref_name }}
+          draft: false
+          generate_release_notes: true
+          files: dist/*

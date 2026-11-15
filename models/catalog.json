@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "baseUrl": "https://app.zigmoon.com/SIMIA/models/",
+  "note": "3 modeles principaux heberges sur le serveur (source=server, avec mirror CDN de secours), le reste en CDN HuggingFace.",
+  "models": [
+    { "id": "SmolLM2-135M-Instruct-Q4_K_M", "name": "SmolLM2 135M", "category": "Léger", "size": "~101 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf" },
+    { "id": "smollm2-360m-instruct-q8_0", "name": "SmolLM2 360M", "category": "Léger", "size": "~369 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" },
+    { "id": "qwen2.5-0.5b-instruct-q4_k_m", "name": "Qwen 2.5 0.5B", "category": "Léger", "size": "~469 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf" },
+    { "id": "tinyllama-1.1b-chat-v1.0.Q4_K_M", "name": "TinyLlama 1.1B", "category": "Léger", "size": "~638 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf" },
+
+    { "id": "Qwen3-0.6B-Q4_K_M", "name": "Qwen 3 0.6B", "category": "Généraliste", "size": "~378 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf" },
+    { "id": "Llama-3.2-1B-Instruct-Q4_K_M", "name": "Llama 3.2 1B", "category": "Généraliste", "size": "~770 MB", "license": "Llama 3.2", "source": "server", "mirror": "https://huggingface.co/unsloth/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" },
+    { "id": "Qwen3.5-0.8B-Q4_K_M", "name": "Qwen 3.5 0.8B", "category": "Généraliste", "size": "~508 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" },
+    { "id": "qwen2.5-1.5b-instruct-q4_k_m", "name": "Qwen 2.5 1.5B", "category": "Généraliste", "size": "~1.0 GB", "license": "Apache-2.0", "source": "server", "mirror": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf" },
+    { "id": "smollm2-1.7b-instruct-q4_k_m", "name": "SmolLM2 1.7B", "category": "Généraliste", "size": "~1.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" },
+    { "id": "Qwen3-1.7B-Q4_K_M", "name": "Qwen 3 1.7B", "category": "Généraliste", "size": "~1.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf" },
+    { "id": "Qwen3.5-2B-Q4_K_M", "name": "Qwen 3.5 2B", "category": "Généraliste", "size": "~1.2 GB", "license": "Apache-2.0", "source": "server", "recommended": true, "mirror": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf" },
+    { "id": "Llama-3.2-3B-Instruct-Q4_K_M", "name": "Llama 3.2 3B", "category": "Généraliste", "size": "~1.9 GB", "license": "Llama 3.2", "source": "cdn", "url": "https://huggingface.co/unsloth/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf" },
+    { "id": "Ministral-3-3B-Instruct-2512-Q4_K_M", "name": "Ministral 3 3B", "category": "Généraliste", "size": "~2.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/mistralai/Ministral-3-3B-Instruct-2512-GGUF/resolve/main/Ministral-3-3B-Instruct-2512-Q4_K_M.gguf" },
+
+    { "id": "gemma-3-1b-it-Q4_K_M", "name": "Gemma 3 1B", "category": "Écriture", "size": "~769 MB", "license": "Gemma", "source": "cdn", "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf" },
+    { "id": "gemma-2-2b-it-Q4_K_M", "name": "Gemma 2 2B", "category": "Écriture", "size": "~1.6 GB", "license": "Gemma", "source": "cdn", "url": "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf" },
+
+    { "id": "qwen2.5-coder-0.5b-instruct-q4_k_m", "name": "Qwen 2.5 Coder 0.5B", "category": "Code", "size": "~469 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf" },
+    { "id": "qwen2.5-coder-1.5b-instruct-q4_k_m", "name": "Qwen 2.5 Coder 1.5B", "category": "Code", "size": "~1.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf" },
+    { "id": "qwen2.5-coder-3b-instruct-q4_k_m", "name": "Qwen 2.5 Coder 3B", "category": "Code", "size": "~2.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/qwen2.5-coder-3b-instruct-q4_k_m.gguf" },
+    { "id": "qwen2.5-coder-7b-instruct-q4_k_m", "name": "Qwen 2.5 Coder 7B", "category": "Code", "size": "~4.4 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m.gguf" },
+    { "id": "qwen2.5-coder-14b-instruct-q4_k_m", "name": "Qwen 2.5 Coder 14B", "category": "Code", "size": "~8.4 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-14B-Instruct-GGUF/resolve/main/qwen2.5-coder-14b-instruct-q4_k_m.gguf" },
+    { "id": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M", "name": "DeepSeek Coder V2 Lite", "category": "Code", "size": "~9.7 GB", "license": "DeepSeek", "source": "cdn", "url": "https://huggingface.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf" },
+
+    { "id": "Qwen2.5-Math-1.5B-Instruct-Q4_K_M", "name": "Qwen 2.5 Math 1.5B", "category": "Maths", "size": "~940 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/bartowski/Qwen2.5-Math-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Math-1.5B-Instruct-Q4_K_M.gguf" },
+    { "id": "Ministral-3-3B-Reasoning-2512-Q4_K_M", "name": "Ministral 3 3B Reasoning", "category": "Maths", "size": "~2.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/mistralai/Ministral-3-3B-Reasoning-2512-GGUF/resolve/main/Ministral-3-3B-Reasoning-2512-Q4_K_M.gguf" },
+    { "id": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M", "name": "DeepSeek R1 7B", "category": "Maths", "size": "~4.4 GB", "license": "MIT", "source": "cdn", "url": "https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf" },
+
+    { "id": "OLMo-2-0425-1B-Instruct-Q4_K_M", "name": "OLMo 2 1B", "category": "Documents", "size": "~892 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/allenai/OLMo-2-0425-1B-Instruct-GGUF/resolve/main/OLMo-2-0425-1B-Instruct-Q4_K_M.gguf" },
+    { "id": "qwen2.5-3b-instruct-q4_k_m", "name": "Qwen 2.5 3B", "category": "Documents", "size": "~2.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf" },
+    { "id": "Phi-4-mini-instruct-Q4_K_M", "name": "Phi-4 mini", "category": "Documents", "size": "~2.3 GB", "license": "MIT", "source": "cdn", "url": "https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF/resolve/main/Phi-4-mini-instruct-Q4_K_M.gguf" },
+    { "id": "Phi-3.5-mini-instruct-Q4_K_M", "name": "Phi-3.5 mini", "category": "Documents", "size": "~2.2 GB", "license": "MIT", "source": "cdn", "url": "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf" },
+    { "id": "Qwen3-4B-Q4_K_M", "name": "Qwen 3 4B", "category": "Documents", "size": "~2.3 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf" },
+    { "id": "Qwen3.5-4B-Q4_K_M", "name": "Qwen 3.5 4B", "category": "Documents", "size": "~2.6 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf" },
+    { "id": "gemma-4-E2B-it-Q4_K_M", "name": "Gemma 4 E2B", "category": "Documents", "size": "~2.9 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf" },
+    { "id": "Qwen3.5-9B-Q4_K_M", "name": "Qwen 3.5 9B", "category": "Documents", "size": "~5.3 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf" }
+  ]
+}

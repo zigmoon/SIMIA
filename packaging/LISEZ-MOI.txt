@@ -1,0 +1,25 @@
+SIMIA Desktop
+=============
+
+Lancement
+  1. Decompressez l'archive ou vous voulez.
+  2. Lancez simia-desktop (double-clic, ou ./simia-desktop dans un terminal).
+  3. L'interface s'ouvre sur http://127.0.0.1:8170. Au premier message,
+     SIMIA telecharge le modele choisi (une seule fois).
+
+macOS
+  Le binaire n'est pas signe. Au premier lancement, macOS le bloque :
+    xattr -dr com.apple.quarantine .
+  puis relancez. Pour la generation d'images, seuls les Mac Apple Silicon
+  disposent d'un binaire stable-diffusion.cpp.
+
+Windows
+  SmartScreen peut demander une confirmation : "Informations complementaires"
+  puis "Executer quand meme". Aucun droit administrateur n'est necessaire.
+
+Linux
+  chmod +x simia-desktop avant le premier lancement.
+
+Modeles
+  Le catalogue pointe vers le CDN. Les poids deja telecharges restent dans
+  models/ et peuvent etre supprimes pour liberer de l'espace.
