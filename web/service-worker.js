@@ -1,4 +1,4 @@
-const CACHE_NAME = "simia-shell-v160";
+const CACHE_NAME = "simia-shell-v161";
 const APP_SHELL = ["./index.html", "./styles.css", "./app.js", "./code-runner.js", "./cookies-config.js", "./manifest.webmanifest", "./icon.svg", "./simia-logo.svg", "./simia-logo-white.svg"];
 
 self.addEventListener("install", event => {
