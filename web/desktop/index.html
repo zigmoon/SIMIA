@@ -129,29 +129,53 @@
     display:grid; place-items:center; font-style:normal; font-size:13px; color:var(--accent-ink);
     box-shadow:inset 0 -2px 0 rgba(0,0,0,.12);
   }
-  .nav nav{display:flex; gap:22px; margin-left:auto}
-  .nav nav a{text-decoration:none; font-size:14px; font-weight:600; color:var(--muted); transition:color .15s}
-  .nav nav a:hover{color:var(--ink)}
+  /* Sans align-items, les liens etaient etires sur les 66 px du bandeau : leur
+     texte restait en haut alors que le bouton centrait le sien, d'ou le mot
+     « Modeles » plus bas que ses voisins. */
+  .nav nav{display:flex; align-items:center; align-self:stretch; gap:22px; margin-left:auto}
+  .nav nav > a{
+    position:relative; padding:6px 0; line-height:1;
+    text-decoration:none; font-size:14px; font-weight:600; color:var(--muted);
+    transition:color .15s;
+  }
+  .nav nav > a::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
+    border-radius:2px; background:var(--accent);
+    transform:scaleX(0); transform-origin:left; transition:transform .22s ease;
+  }
+  .nav nav > a:hover{color:var(--ink)}
+  .nav nav > a:hover::after{transform:scaleX(1)}
   .nav .cta{margin-left:8px}
+  .nav-panel-cta{display:none}
 
   /* ---------- mega-menu Modeles ---------- */
-  .mega{position:relative}
+  .mega{position:relative; display:flex; align-items:center; align-self:stretch}
   .mega-trigger{
-    display:inline-flex; align-items:center; gap:5px; cursor:pointer;
-    border:0; background:transparent; padding:0; color:var(--muted);
-    font:600 14px Manrope,sans-serif; transition:color .15s;
+    display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    border:0; background:transparent; padding:6px 0; color:var(--muted);
+    font:600 14px/1 Manrope,sans-serif; transition:color .15s;
   }
   .mega-trigger:hover,.mega-trigger[aria-expanded="true"]{color:var(--ink)}
-  .mega-trigger svg{width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s}
+  .mega-trigger svg{
+    display:block; flex:none; width:13px; height:13px; fill:none; stroke:currentColor;
+    stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round;
+    transition:transform .2s ease; margin-top:1px;
+  }
   .mega-trigger[aria-expanded="true"] svg{transform:rotate(180deg)}
   .mega-trigger-mobile{display:none}
 
+  .nav-burger{display:none}
+
   .mega-panel{
-    position:absolute; top:calc(100% + 18px); left:50%; z-index:60;
+    position:absolute; top:calc(100% + 12px); left:50%; z-index:60;
     width:min(920px,calc(100vw - 40px)); transform:translateX(-50%);
     border:1px solid var(--line); border-radius:16px; background:var(--surface);
     box-shadow:0 28px 70px rgba(29,37,34,.18); overflow:hidden;
+    animation:megaIn .18s ease both;
   }
+  @keyframes megaIn{from{opacity:0; transform:translateX(-50%) translateY(-6px)}to{opacity:1; transform:translateX(-50%)}}
+  /* Pont invisible : la souris peut traverser l'ecart sans refermer le panneau. */
+  .mega-panel::after{content:""; position:absolute; left:0; right:0; top:-14px; height:14px}
   .mega-panel[hidden]{display:none}
   .mega-panel::before{
     content:""; position:absolute; top:-7px; left:50%; width:12px; height:12px;
@@ -234,30 +258,131 @@
   .hero-note{display:flex; flex-wrap:wrap; gap:18px; font-size:13px; color:var(--muted)}
   .hero-note b{color:var(--ink)}
 
+  /* ---------- Illustration : la conversation s'anime ---------- */
+  .hero-visual{position:relative; isolation:isolate}
+  .hero-blob{
+    position:absolute; inset:-14% -8% -18% 4%; z-index:-1; border-radius:50%;
+    background:radial-gradient(circle at 58% 38%, rgba(216,244,81,.44), rgba(216,244,81,0) 62%);
+    filter:blur(8px); animation:blobPulse 12s ease-in-out infinite;
+  }
+  @keyframes blobPulse{0%,100%{transform:scale(1); opacity:.92}50%{transform:scale(1.07); opacity:1}}
+
   .mock{
-    border:1px solid var(--line); border-radius:18px; background:var(--surface);
+    position:relative; border:1px solid var(--line); border-radius:18px; background:var(--surface);
     box-shadow:0 30px 70px rgba(29,37,34,.16); overflow:hidden; transform:rotate(-.6deg);
   }
   .mock-bar{display:flex; align-items:center; gap:7px; padding:11px 14px; border-bottom:1px solid var(--line); background:#faf9f5}
   .mock-bar i{width:9px; height:9px; border-radius:50%; background:#dfe3da}
   .mock-bar i:first-child{background:#e6c9a8}
-  .mock-bar span{margin-left:8px; font:500 10px "DM Mono",monospace; color:var(--dim); letter-spacing:.06em}
-  .mock-body{display:grid; grid-template-columns:74px 1fr; min-height:280px}
-  .mock-side{border-right:1px solid var(--line); padding:12px 10px; background:#f3f2ec}
-  .mock-side b{display:block; height:7px; border-radius:4px; background:#dfe2d8; margin-bottom:9px}
-  .mock-side b:nth-child(2){width:70%}
-  .mock-side b:nth-child(3){width:84%}
-  .mock-side b:nth-child(4){width:58%; background:var(--accent)}
-  .mock-chat{padding:16px 18px; display:flex; flex-direction:column; gap:12px}
-  .bubble{border-radius:12px; padding:10px 13px; font-size:12.2px; line-height:1.5; max-width:88%}
+  .mock-title{margin-left:8px; font:500 10px "DM Mono",monospace; color:var(--dim); letter-spacing:.06em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .mock-status{
+    margin-left:auto; display:inline-flex; align-items:center; gap:5px; flex:none;
+    padding:3px 8px; border:1px solid #d8e2c0; border-radius:999px; background:#f2f8e6;
+    font:700 8.5px "DM Mono",monospace; letter-spacing:.07em; text-transform:uppercase; color:#4c6b1f;
+  }
+  .mock-status b{width:5px; height:5px; border-radius:50%; background:#7fb01e; animation:livePulse 2.6s ease-in-out infinite}
+  @keyframes livePulse{0%,100%{box-shadow:0 0 0 0 rgba(127,176,30,.5)}60%{box-shadow:0 0 0 5px rgba(127,176,30,0)}}
+
+  .mock-body{display:grid; grid-template-columns:104px 1fr}
+  .mock-side{border-right:1px solid var(--line); padding:12px 8px; background:#f3f2ec; display:flex; flex-direction:column; gap:3px}
+  .rail-title{margin:0 0 5px 5px; font:700 7.5px "DM Mono",monospace; letter-spacing:.12em; text-transform:uppercase; color:#a6aca3}
+  .rail-item{
+    display:flex; align-items:center; gap:5px; padding:5px 6px; border-radius:6px;
+    font-size:9px; font-weight:600; color:#7c857e; white-space:nowrap; overflow:hidden;
+    transition:background .4s ease, color .4s ease, box-shadow .4s ease;
+  }
+  .rail-item::before{content:""; width:4px; height:4px; border-radius:50%; background:#c6ccc2; flex:none; transition:background .4s ease}
+  .rail-item.on{background:#fffefa; color:var(--ink); box-shadow:0 1px 3px rgba(29,37,34,.08)}
+  .rail-item.on::before{background:#7fb01e}
+
+  .mock-chat{padding:14px 15px 16px; display:flex; flex-direction:column; gap:10px; min-width:0}
+  .bubble{border-radius:12px; padding:9px 12px; font-size:11.6px; line-height:1.5; max-width:94%}
   .bubble.user{background:#e4efe8; align-self:flex-end}
-  .bubble.bot{background:#f6f6f1; border:1px solid #ebeae3}
-  .bubble.bot .tag{display:inline-block; margin-bottom:6px; font:600 9px "DM Mono",monospace; letter-spacing:.08em; color:#6d8a3c}
-  .typing{display:inline-flex; gap:4px; margin-top:6px}
-  .typing i{width:5px; height:5px; border-radius:50%; background:#b9c2b5; animation:blink 1.2s infinite}
-  .typing i:nth-child(2){animation-delay:.2s}
-  .typing i:nth-child(3){animation-delay:.4s}
+  .bubble.bot{background:#f6f6f1; border:1px solid #ebeae3; align-self:flex-start}
+  .bubble.bot .tag{display:block; margin-bottom:5px; font:600 8.5px "DM Mono",monospace; letter-spacing:.09em; color:#6d8a3c}
+  .bubble p{margin:0}
+
+  .bubble.img{align-self:flex-start; padding:8px; max-width:min(232px,100%); background:#fffefa; border:1px solid #ebeae3}
+  .gen-frame{position:relative; border-radius:9px; overflow:hidden; aspect-ratio:16/11; background:#f0f0e8}
+  .gen-frame svg{display:block; width:100%; height:100%; transform-origin:center}
+  .gen-shimmer{
+    position:absolute; inset:0; border-radius:9px;
+    background:linear-gradient(105deg,#eef0e7 12%,#f8f8f3 26%,#eef0e7 40%);
+    background-size:240% 100%; animation:shimmer 1.5s linear infinite;
+  }
+  @keyframes shimmer{from{background-position:120% 0}to{background-position:-120% 0}}
+  .gen-progress{position:absolute; left:0; right:0; bottom:0; height:2px; background:rgba(29,37,34,.09)}
+  .gen-progress b{display:block; height:100%; width:0; background:#8fae4a; transition:width 1.5s linear}
+  .img-caption{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; font:600 8.5px "DM Mono",monospace; letter-spacing:.05em; text-transform:uppercase; color:#8b938d}
+
+  .mock-composer{display:flex; align-items:center; gap:8px; padding:10px 12px; border-top:1px solid var(--line); background:#faf9f5}
+  .composer-field{
+    flex:1; min-width:0; display:flex; align-items:center; gap:5px;
+    padding:7px 10px; border:1px solid #e4e5dd; border-radius:9px; background:#fff;
+    font-size:10.5px; color:#a9b0a8; white-space:nowrap; overflow:hidden;
+  }
+  .composer-caret{width:1.5px; height:11px; background:#8fae4a; animation:caretBlink 1.1s steps(1) infinite; flex:none}
+  /* Pendant que le modele « reflechit », les trois points remplacent le
+     placeholder : la hauteur du champ ne bouge pas d'un pixel. */
+  .composer-thinking{display:none; align-items:center; gap:4px; height:11px}
+  .composer-thinking i{width:4.5px; height:4.5px; border-radius:50%; background:#b9c2b5; animation:blink 1.15s infinite}
+  .composer-thinking i:nth-child(2){animation-delay:.18s}
+  .composer-thinking i:nth-child(3){animation-delay:.36s}
+  .mock.thinking .composer-text,.mock.thinking .composer-caret{display:none}
+  .mock.thinking .composer-thinking{display:inline-flex}
   @keyframes blink{0%,60%,100%{opacity:.28}30%{opacity:1}}
+  .composer-btn{
+    width:26px; height:26px; flex:none; display:grid; place-items:center;
+    border-radius:8px; background:var(--accent); box-shadow:0 3px 9px rgba(216,244,81,.55);
+    transition:transform .16s ease;
+  }
+  .composer-btn svg{width:13px; height:13px; fill:none; stroke:#263400; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
+  .mock.send .composer-btn{animation:sendPop .42s ease}
+  @keyframes sendPop{0%{transform:scale(1)}40%{transform:scale(.86)}100%{transform:scale(1)}}
+  @keyframes caretBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+  /* Bulles flottantes autour de l'illustration. */
+  .hero-float{
+    position:absolute; z-index:3; display:inline-flex; align-items:center; gap:6px;
+    padding:7px 11px; border:1px solid #d8e2c0; border-radius:999px;
+    background:rgba(255,254,250,.95); backdrop-filter:blur(6px);
+    font:700 9.5px "DM Mono",monospace; letter-spacing:.06em; text-transform:uppercase; color:#4c6b1f;
+    box-shadow:0 12px 26px rgba(29,37,34,.14);
+    animation:floatY 7.5s ease-in-out infinite;
+  }
+  .hero-float i{width:5px; height:5px; border-radius:50%; background:#7fb01e; flex:none}
+  .hero-float.f1{top:-13px; right:8px; animation-delay:-1.4s}
+  .hero-float.f2{bottom:52px; left:-30px; animation-delay:-3.8s}
+  .hero-float.f3{bottom:-12px; right:44px; animation-delay:-5.6s; border-color:#e2e4dc; color:#6e7771}
+  .hero-float.f3 i{background:#b9c2b5}
+  @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+  /* Etats d'animation. Tout reste visible sans JavaScript : les regles de
+     masquage ne s'appliquent qu'une fois .anim-ready pose sur l'illustration. */
+  .mock.anim-ready .bub{opacity:0; transform:translateY(9px)}
+  .mock.anim-ready .bub.in{opacity:1; transform:none; transition:opacity .42s ease, transform .42s cubic-bezier(.2,.8,.3,1)}
+  .mock.anim-ready .gen-shimmer{opacity:1; transition:opacity .35s ease}
+  .mock.anim-ready .gen-frame.done .gen-shimmer{opacity:0}
+  .mock.anim-ready .gen-frame svg{opacity:0; transform:scale(1.07); filter:blur(7px)}
+  .mock.anim-ready .gen-frame.done svg{
+    opacity:1; transform:none; filter:none;
+    transition:opacity .85s ease, transform 1s cubic-bezier(.2,.8,.3,1), filter .8s ease;
+  }
+  .mock.anim-ready .gen-progress{opacity:1; transition:opacity .3s ease}
+  .mock.anim-ready .gen-frame.done .gen-progress{opacity:0}
+
+  .typ .w{opacity:0; transition:opacity 95ms linear}
+  .typ.on .w{opacity:1}
+  .typ .caret{display:inline-block; width:2px; height:.95em; margin-left:1px; vertical-align:-1px; background:#8fae4a; opacity:0}
+  .typ.typing .caret{opacity:1; animation:caretBlink .85s steps(1) infinite}
+
+  @media (prefers-reduced-motion:reduce){
+    .hero-blob,.hero-float,.mock-status b,.composer-caret,.typing i,.gen-shimmer{animation:none}
+    .mock.anim-ready .bub{opacity:1; transform:none; transition:none}
+    .typ .w{opacity:1; transition:none}
+    .mock.anim-ready .gen-frame svg{opacity:1; transform:none; filter:none}
+    .mock.anim-ready .gen-shimmer{opacity:0}
+  }
 
   .stats{border-block:1px solid var(--line); background:var(--surface)}
   .stats-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:0}
@@ -408,35 +533,67 @@
     .models{grid-template-columns:repeat(2,1fr)}
     .privacy{grid-template-columns:1fr; gap:28px}
 
-    /* Menu mobile : le bouton ouvre la navigation, puis "Modeles" deplie le panneau. */
-    .nav{position:relative; gap:10px}
+    /* Menu mobile : le bouton hamburger ouvre la navigation, puis « Modeles »
+       deplie le panneau. Le panneau defile au lieu de deborder de l'ecran. */
+    .nav{position:relative; gap:12px}
     .nav .brand{order:1}
-    .nav nav{margin-left:0}
-    .mega-trigger-mobile{display:inline-flex; order:2; margin-left:auto; padding:8px 12px; border:1px solid #d5d9d2; border-radius:8px; background:transparent; color:var(--ink); font-size:13px}
-    .nav .cta{order:3; margin-left:0}
+    .nav .cta{order:2; margin-left:auto}
     .nav nav{
       display:none; position:absolute; top:calc(100% + 10px); left:0; right:0; z-index:70;
       flex-direction:column; align-items:stretch; gap:2px;
       padding:10px; border:1px solid var(--line); border-radius:14px;
       background:var(--surface); box-shadow:0 24px 60px rgba(29,37,34,.2);
+      max-height:calc(100vh - 96px);
+      max-height:calc(100dvh - 96px);
+      overflow-y:auto; overscroll-behavior:contain;
+      animation:navIn .18s ease both;
     }
+    @keyframes navIn{from{opacity:0; transform:translateY(-6px)}to{opacity:1; transform:none}}
     .nav.nav-open nav{display:flex}
-    .nav nav > a{padding:12px; border-radius:8px; font-size:15px}
+    body.nav-locked{overflow:hidden}
+    .nav nav > a{padding:13px 12px; border-radius:9px; font-size:15px; line-height:1.2}
+    .nav nav > a::after{display:none}
     .nav nav > a:hover{background:#f4f8ef}
-    .mega{position:static}
-    .mega > .mega-trigger{width:100%; justify-content:space-between; padding:12px; border-radius:8px; font-size:15px}
+    .nav-panel-cta{
+      display:flex; align-items:center; justify-content:center; margin-top:6px;
+      padding:13px 14px; border-radius:9px; text-decoration:none;
+      background:var(--accent); color:var(--accent-ink); font-size:14px; font-weight:800;
+    }
+    .mega{position:static; display:block; align-self:auto}
+    .mega > .mega-trigger{
+      width:100%; justify-content:space-between; padding:13px 12px;
+      border-radius:9px; font:600 15px/1.2 Manrope,sans-serif;
+    }
     .mega > .mega-trigger:hover{background:#f4f8ef}
     .mega-panel{
       position:static; transform:none; width:auto; margin:4px 0 6px;
-      border-radius:12px; box-shadow:none;
+      border-radius:12px; box-shadow:none; animation:none;
     }
-    .mega-panel::before{display:none}
+    .mega-panel::before,.mega-panel::after{display:none}
     .mega-grid{grid-template-columns:1fr; gap:14px; padding:14px}
     .mega-tag{grid-row:auto}
     .mega-foot{padding:12px 14px}
   }
   @media (min-width:961px){
     .mega-trigger-mobile{display:none}
+    .nav-burger{display:none}
+  }
+  @media (max-width:960px){
+    .nav-burger{
+      display:inline-flex; order:3; flex-direction:column; justify-content:center; gap:4px;
+      width:38px; height:38px; padding:0 9px; margin-left:2px;
+      border:1px solid #d5d9d2; border-radius:10px; background:transparent; cursor:pointer;
+      transition:background .15s, border-color .15s;
+    }
+    .nav-burger:hover{background:#f4f8ef; border-color:#9ab387}
+    .nav-burger span{
+      display:block; height:2px; width:100%; border-radius:2px; background:var(--ink);
+      transition:transform .22s ease, opacity .15s ease;
+    }
+    .nav-burger[aria-expanded="true"]{background:#f4f8ef; border-color:#9ab387}
+    .nav-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+    .nav-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+    .nav-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
   }
   @media (max-width:560px){
     .hero{padding:52px 0 44px}
@@ -444,6 +601,16 @@
     .models{grid-template-columns:1fr}
     .final{padding:36px 26px}
     .nav .cta{display:none}
+    .nav-burger{margin-left:auto}
+    /* Sur telephone, la barre laterale disparait comme dans l'application :
+       la conversation occupe toute la largeur. */
+    .mock-body{grid-template-columns:1fr}
+    .mock-side{display:none}
+    .bubble{font-size:12px}
+    .hero-float.f2{display:none}
+    .hero-float.f1{top:-11px; right:4px}
+    .hero-float.f3{right:10px; bottom:-11px}
+    .mock-composer{padding:9px 10px}
   }
 </style>
 </head>
@@ -530,10 +697,10 @@
       </div>
       <a href="#confidentialite">Confidentialité</a>
       <a href="#faq">FAQ</a>
+      <a class="nav-panel-cta" href="https://app.zigmoon.com/SIMIA/">Ouvrir la version web</a>
     </nav>
-    <button class="mega-trigger mega-trigger-mobile" id="mega-trigger-mobile" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
-      Menu
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    <button class="nav-burger" id="mega-trigger-mobile" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
+      <span></span><span></span><span></span>
     </button>
     <a class="btn btn-primary btn-sm cta" href="https://app.zigmoon.com/SIMIA/">Ouvrir la version web</a>
   </div>
@@ -565,20 +732,78 @@
         </p>
       </div>
 
-      <div class="mock" aria-hidden="true">
-        <div class="mock-bar"><i></i><i></i><i></i><span>SIMIA — conversation locale</span></div>
-        <div class="mock-body">
-          <div class="mock-side"><b></b><b></b><b></b><b></b><b></b></div>
-          <div class="mock-chat">
-            <div class="bubble user">Explique-moi la photosynthèse simplement.</div>
-            <div class="bubble bot">
-              <span class="tag">QWEN 3.5 · LOCAL</span>
-              Les plantes captent la lumière du soleil avec la chlorophylle, puis transforment
-              l'eau et le CO₂ en sucre et en oxygène. C'est leur façon de cuisiner leur propre nourriture.
-              <div class="typing"><i></i><i></i><i></i></div>
+      <div class="hero-visual">
+        <span class="hero-blob" aria-hidden="true"></span>
+        <div class="mock" id="hero-mock" aria-hidden="true">
+          <div class="mock-bar">
+            <i></i><i></i><i></i>
+            <span class="mock-title">SIMIA — conversation locale</span>
+            <span class="mock-status"><b></b> hors ligne</span>
+          </div>
+          <div class="mock-body">
+            <div class="mock-side">
+              <p class="rail-title">Aujourd'hui</p>
+              <span class="rail-item" data-rail="0">Photosynthèse</span>
+              <span class="rail-item" data-rail="1">Planche botanique</span>
+              <span class="rail-item">Idées de titre</span>
+              <span class="rail-item">Résumé de PDF</span>
+            </div>
+            <div class="mock-chat">
+              <div class="bubble user bub" data-bub="u1">
+                <p class="typ">Explique-moi la photosynthèse simplement.</p>
+              </div>
+              <div class="bubble bot bub" data-bub="b1">
+                <span class="tag">QWEN 3.5 · LOCAL</span>
+                <p class="typ">Les plantes captent la lumière avec la chlorophylle, puis transforment l'eau et le CO₂ en sucre et en oxygène.</p>
+              </div>
+              <div class="bubble user bub" data-bub="u2">
+                <p class="typ">Et dessine-moi une planche botanique.</p>
+              </div>
+              <div class="bubble img bub" data-bub="img">
+                <div class="gen-frame" data-gen>
+                  <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid slice" focusable="false">
+                    <rect width="160" height="110" fill="#f6f4ea"/>
+                    <g fill="none" stroke="#2f3a2c" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M79 97c-2-19 2-36 7-51"/>
+                      <path d="M79 84c-11-2-18-9-19-19 10 1 17 8 19 19Z"/>
+                      <path d="M79 84c-5-6-10-11-15-13"/>
+                      <path d="M84 67c9-1 16-8 18-16-9 1-15 6-18 16Z"/>
+                      <path d="M84 67c5-5 9-9 14-11"/>
+                      <path d="M85 51c-8-2-13-9-13-16 8 2 12 7 13 16Z"/>
+                      <path d="M86 45c-5-6-5-14 0-19 5 5 5 13 0 19Z"/>
+                      <path d="M86 27c-6-3-8-9-6-14 5 3 7 9 6 14Z"/>
+                      <path d="M86 27c6-3 8-9 6-14-5 3-7 9-6 14Z"/>
+                      <circle cx="86" cy="20" r="2.4" fill="#2f3a2c" stroke="none"/>
+                    </g>
+                    <g stroke="#2f3a2c" stroke-width=".55" opacity=".4" stroke-linecap="round">
+                      <path d="M63 69l11 6M61 73l10 5M65 62l10 7M98 45l8 5M97 49l7 4M71 42l9 6M88 88l-8 5M92 90l-6 4"/>
+                    </g>
+                    <g stroke="#2f3a2c" stroke-width=".6" opacity=".3" stroke-linecap="round">
+                      <path d="M20 100h120M28 100v-4M42 100v-6M56 100v-3M112 100v-5M128 100v-4M140 100v-6"/>
+                    </g>
+                    <text x="9" y="17" font-family="'DM Mono',monospace" font-size="6" letter-spacing="1.2" fill="#8b938d">PL. XII</text>
+                  </svg>
+                  <span class="gen-shimmer"></span>
+                  <span class="gen-progress"><b data-progress></b></span>
+                </div>
+                <span class="img-caption"><span>Gravure SIMIA</span><span>512 px · 24 pas</span></span>
+              </div>
             </div>
           </div>
+          <div class="mock-composer">
+            <span class="composer-field">
+              <span class="composer-text">Écrivez votre message…</span>
+              <span class="composer-caret"></span>
+              <span class="composer-thinking"><i></i><i></i><i></i></span>
+            </span>
+            <span class="composer-btn">
+              <svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="m12 6 6 6-6 6"/></svg>
+            </span>
+          </div>
         </div>
+        <div class="hero-float f1"><i></i> 100 % local</div>
+        <div class="hero-float f2"><i></i> 0 donnée envoyée</div>
+        <div class="hero-float f3"><i></i> llama.cpp</div>
       </div>
     </div>
   </section>
@@ -837,6 +1062,7 @@
   const closeNav = () => {
     navWrap?.classList.remove("nav-open");
     navToggle?.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("nav-locked");
   };
 
   megaTrigger?.addEventListener("click", event => {
@@ -852,7 +1078,12 @@
     const open = !navWrap.classList.contains("nav-open");
     navWrap.classList.toggle("nav-open", open);
     navToggle.setAttribute("aria-expanded", String(open));
+    document.body.classList.toggle("nav-locked", open && window.innerWidth <= 960);
     if (!open) setMega(false);
+  });
+  // Repasser en grand ecran ne doit pas laisser la page verrouillee.
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 960) closeNav();
   });
 
   document.addEventListener("click", event => {
@@ -882,6 +1113,148 @@
     megaWrap.addEventListener("mouseleave", () => {
       hoverTimer = setTimeout(() => setMega(false), 240);
     });
+  }
+
+  /* ---------- illustration : la conversation s'anime ----------
+     Les mots sont poses une seule fois au chargement. Les bulles gardent donc
+     leur hauteur definitive pendant toute la boucle : rien ne bouge autour. */
+  const heroMock = document.getElementById("hero-mock");
+
+  if (heroMock) {
+    const bubs = {
+      u1: heroMock.querySelector('[data-bub="u1"]'),
+      b1: heroMock.querySelector('[data-bub="b1"]'),
+      u2: heroMock.querySelector('[data-bub="u2"]'),
+      img: heroMock.querySelector('[data-bub="img"]'),
+    };
+    const genFrame = heroMock.querySelector("[data-gen]");
+    const progress = heroMock.querySelector("[data-progress]");
+    const rails = [...heroMock.querySelectorAll("[data-rail]")];
+    const typs = [...heroMock.querySelectorAll(".typ")];
+
+    typs.forEach(typ => {
+      const words = typ.textContent.trim().split(/\s+/).filter(Boolean);
+      typ.textContent = "";
+      words.forEach((word, index) => {
+        const span = document.createElement("span");
+        span.className = "w";
+        span.textContent = word;
+        typ.append(span);
+        if (index < words.length - 1) typ.append(" ");
+      });
+      const caret = document.createElement("span");
+      caret.className = "caret";
+      typ.append(caret);
+    });
+
+    const wordsOf = bub => [...(bub?.querySelectorAll(".typ .w") ?? [])];
+    const typOf = bub => bub?.querySelector(".typ") ?? null;
+
+    let runId = 0;
+    let looping = false;
+    const wait = (ms, token) => new Promise(resolve => setTimeout(() => resolve(runId !== token), ms));
+
+    const reset = () => {
+      Object.values(bubs).forEach(bub => bub?.classList.remove("in"));
+      genFrame?.classList.remove("done");
+      if (progress) progress.style.width = "0%";
+      heroMock.classList.remove("thinking", "send");
+      typs.forEach(typ => {
+        typ.classList.remove("on", "typing");
+        typ.querySelectorAll(".w").forEach(word => { word.style.transitionDelay = "0ms"; });
+      });
+      rails.forEach((rail, index) => rail.classList.toggle("on", index === 0));
+    };
+
+    const typeInto = (bub, step) => {
+      const typ = typOf(bub);
+      if (!typ) return;
+      wordsOf(bub).forEach((word, index) => { word.style.transitionDelay = `${index * step}ms`; });
+      typ.classList.add("typing", "on");
+    };
+
+    const scene = async id => {
+      reset();
+      if (await wait(160, id)) return;
+
+      bubs.u1?.classList.add("in");
+      heroMock.classList.add("send");
+      if (await wait(260, id)) return;
+      typeInto(bubs.u1, 55);
+      if (await wait(330, id)) return;
+
+      heroMock.classList.remove("send");
+      heroMock.classList.add("thinking");
+      if (await wait(520, id)) return;
+
+      heroMock.classList.remove("thinking");
+      bubs.b1?.classList.add("in");
+      typeInto(bubs.b1, 42);
+      if (await wait(1150, id)) return;
+
+      rails.forEach((rail, index) => rail.classList.toggle("on", index === 1));
+      bubs.u2?.classList.add("in");
+      heroMock.classList.add("send");
+      if (await wait(260, id)) return;
+      typeInto(bubs.u2, 48);
+      if (await wait(330, id)) return;
+
+      heroMock.classList.remove("send");
+      bubs.img?.classList.add("in");
+      if (progress) progress.style.width = "100%";
+      if (await wait(1350, id)) return;
+
+      genFrame?.classList.add("done");
+      if (await wait(3600, id)) return;
+
+      // Fondu de fin, puis la boucle repart sur une scene vierge.
+      Object.values(bubs).forEach(bub => bub?.classList.remove("in"));
+      genFrame?.classList.remove("done");
+      if (progress) progress.style.width = "0%";
+      rails.forEach((rail, index) => rail.classList.toggle("on", index === 0));
+      if (await wait(650, id)) return;
+    };
+
+    const startHero = async () => {
+      if (looping) return;
+      looping = true;
+      const id = ++runId;
+      heroMock.classList.add("anim-ready");
+      while (looping && runId === id) {
+        await scene(id);
+        if (runId !== id) break;
+        await wait(400, id);
+        reset();
+      }
+      looping = false;
+    };
+
+    const stopHero = () => {
+      looping = false;
+      runId += 1;
+      reset();
+      // Hors ecran, l'illustration reste lisible et ne consomme plus rien.
+      heroMock.classList.remove("anim-ready");
+    };
+
+    const stillMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!stillMotion.matches) {
+      if ("IntersectionObserver" in window) {
+        const mockObserver = new IntersectionObserver(entries => {
+          entries.forEach(entry => (entry.isIntersecting ? startHero() : stopHero()));
+        }, { threshold: 0.2 });
+        mockObserver.observe(heroMock);
+      } else {
+        startHero();
+      }
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          stopHero();
+        } else if (heroMock.getBoundingClientRect().top < window.innerHeight) {
+          startHero();
+        }
+      });
+    }
   }
 
   /* ---------- versions publiées, lues sur l'API GitHub ---------- */
