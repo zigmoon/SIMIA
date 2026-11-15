@@ -288,6 +288,13 @@ const ui = {
   appMenuExport: document.querySelector("#app-menu-export"),
   appMenuLegal: document.querySelector("#app-menu-legal"),
   appMenuPurge: document.querySelector("#app-menu-purge"),
+  appMenuInstall: document.querySelector("#app-menu-install"),
+  installApp: document.querySelector("#install-app"),
+  installAppLabel: document.querySelector("#install-app-label"),
+  installDialog: document.querySelector("#install-dialog"),
+  installContent: document.querySelector("#install-content"),
+  installTitle: document.querySelector("#install-title"),
+  installClose: document.querySelector("#install-close"),
   settings: document.querySelector("#settings-panel"),
   webllm: document.querySelector("#webllm-toggle"),
   model: document.querySelector("#model-select"),
@@ -4995,7 +5002,12 @@ function applyLanguage() {
     ui.appMenuExport.textContent = text.export;
     ui.appMenuLegal.textContent = text.legal;
     ui.appMenuPurge.textContent = text.purge;
+    if (ui.appMenuInstall) ui.appMenuInstall.textContent = installLabel();
   }
+  if (ui.installAppLabel) ui.installAppLabel.textContent = installLabel();
+  if (ui.installApp) ui.installApp.title = installLabel();
+  if (ui.installTitle) ui.installTitle.textContent = installLabel();
+  if (ui.installClose) ui.installClose.setAttribute("aria-label", localizedText("Fermer", "Close", "Cerrar", "閉じる"));
   ui.prompt.placeholder = text.placeholder;
   ui.prompt.setAttribute("aria-label", localizedText("Votre message", "Your message", "Tu mensaje"));
   renderModeLabel();
@@ -6293,13 +6305,229 @@ detectGpuLimit().then(() => {
 setupVoiceRecognition();
 restoreDraft();
 autoResize();
+
+/* --------------------------------------------------------------------------
+ * Installation (PWA) et mise a jour du service worker
+ * ------------------------------------------------------------------------ */
+
+function installLabel() {
+  return localizedText("Installer SIMIA", "Install SIMIA", "Instalar SIMIA", "SIMIAをインストール");
+}
+
+function isStandalone() {
+  try {
+    return window.matchMedia("(display-mode: standalone)").matches
+      || window.matchMedia("(display-mode: minimal-ui)").matches
+      || navigator.standalone === true;
+  } catch {
+    return false;
+  }
+}
+
+function isIosDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+let deferredInstallPrompt = null;
+
+function setInstallVisible(visible) {
+  const show = Boolean(visible) && !NATIVE && !isStandalone();
+  if (ui.installApp) ui.installApp.hidden = !show;
+  if (ui.appMenuInstall) ui.appMenuInstall.hidden = !show;
+}
+
+function refreshInstallUi() {
+  // Pas de bouton dans l'application de bureau : elle est deja installee.
+  setInstallVisible(Boolean(deferredInstallPrompt) || isIosDevice());
+}
+
+function openInstallHelp() {
+  if (!ui.installDialog || !ui.installContent) return;
+  const ios = isIosDevice();
+  const generic = !deferredInstallPrompt && !ios;
+  const steps = ios
+    ? [
+        localizedText("Ouvrez cette page dans Safari (les autres navigateurs iOS ne peuvent pas installer d'application).", "Open this page in Safari (other iOS browsers cannot install apps).", "Abre esta página en Safari (los demás navegadores de iOS no pueden instalar aplicaciones).", "このページをSafariで開きます（他のiOSブラウザはアプリをインストールできません）。"),
+        localizedText("Touchez le bouton Partager, en bas de l'écran.", "Tap the Share button at the bottom of the screen.", "Toca el botón Compartir, en la parte inferior.", "画面下部の共有ボタンをタップします。"),
+        localizedText("Choisissez « Sur l'écran d'accueil », puis Ajouter.", "Choose “Add to Home Screen”, then Add.", "Elige «Añadir a pantalla de inicio» y pulsa Añadir.", "「ホーム画面に追加」を選び、追加をタップします。"),
+      ]
+    : generic
+      ? [
+          localizedText("Ouvrez le menu de votre navigateur (les trois points, en haut à droite).", "Open your browser menu (the three dots, top right).", "Abre el menú del navegador (los tres puntos, arriba a la derecha).", "ブラウザのメニュー（右上の三点）を開きます。"),
+          localizedText("Choisissez « Installer SIMIA » ou « Ajouter à l'écran d'accueil ».", "Choose “Install SIMIA” or “Add to Home Screen”.", "Elige «Instalar SIMIA» o «Añadir a pantalla de inicio».", "「SIMIAをインストール」または「ホーム画面に追加」を選びます。"),
+          localizedText("SIMIA s'ouvre alors dans sa propre fenêtre, sans barre d'adresse.", "SIMIA then opens in its own window, without an address bar.", "SIMIA se abre entonces en su propia ventana, sin barra de direcciones.", "SIMIAはアドレスバーのない専用ウィンドウで開きます。"),
+        ]
+      : [
+          localizedText("Confirmez avec « Installer » dans la fenêtre qui s'ouvre.", "Confirm with “Install” in the dialog that opens.", "Confirma con «Instalar» en la ventana que se abre.", "開いたダイアログで「インストール」を選びます。"),
+          localizedText("SIMIA rejoint vos applications et s'ouvre dans sa propre fenêtre.", "SIMIA joins your apps and opens in its own window.", "SIMIA se añade a tus aplicaciones y se abre en su propia ventana.", "SIMIAがアプリ一覧に加わり、専用ウィンドウで開きます。"),
+          localizedText("L'interface est mise en cache : le démarrage suivant est immédiat.", "The interface is cached: the next start is instant.", "La interfaz queda en caché: el próximo inicio es inmediato.", "インターフェースはキャッシュされ、次回から即座に起動します。"),
+        ];
+
+  ui.installContent.textContent = "";
+  const intro = document.createElement("p");
+  intro.textContent = localizedText(
+    "SIMIA s'installe comme une application : une icône, une fenêtre à lui, et l'interface disponible même sans réseau. Aucun magasin, aucun compte.",
+    "SIMIA installs like an app: an icon, its own window, and the interface available even offline. No store, no account.",
+    "SIMIA se instala como una aplicación: un icono, su propia ventana y la interfaz disponible incluso sin red. Sin tienda, sin cuenta.",
+    "SIMIAはアプリとしてインストールされます。アイコン、専用ウィンドウ、オフラインでも使える画面。ストアもアカウントも不要です。",
+  );
+  const list = document.createElement("ol");
+  list.className = "install-steps";
+  steps.forEach((step, index) => {
+    const item = document.createElement("li");
+    const badge = document.createElement("b");
+    badge.textContent = String(index + 1);
+    const label = document.createElement("span");
+    label.textContent = step;
+    item.append(badge, label);
+    list.append(item);
+  });
+  const hint = document.createElement("p");
+  hint.className = "install-hint";
+  hint.textContent = localizedText(
+    "Seule l'interface est téléchargée. Les modèles restent sur votre appareil, dans le cache du navigateur ou le dossier de l'application.",
+    "Only the interface is downloaded. Models stay on your device, in the browser cache or the application folder.",
+    "Solo se descarga la interfaz. Los modelos permanecen en tu dispositivo, en la caché del navegador o en la carpeta de la aplicación.",
+    "ダウンロードされるのは画面だけです。モデルはブラウザのキャッシュまたはアプリのフォルダに残ります。",
+  );
+
+  const actions = document.createElement("div");
+  actions.className = "install-actions";
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = localizedText("J'ai compris", "Got it", "Entendido", "了解しました");
+  close.addEventListener("click", () => ui.installDialog.close());
+  actions.append(close);
+
+  ui.installContent.append(intro, list, hint, actions);
+  ui.installDialog.showModal();
+}
+
+async function requestInstall() {
+  if (NATIVE) return;
+  if (deferredInstallPrompt) {
+    const event = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    try {
+      event.prompt();
+      const choice = await event.userChoice;
+      if (choice?.outcome === "accepted") {
+        setInstallVisible(false);
+        return;
+      }
+    } catch (error) {
+      console.warn("Invite d'installation impossible", error);
+    }
+    // Invite refusée ou déjà consommée : on garde le bouton, il ouvrira cette
+    // fois les instructions au lieu de l'invite native.
+    setInstallVisible(true);
+    return;
+  }
+  openInstallHelp();
+}
+
+ui.installApp?.addEventListener("click", requestInstall);
+if (ui.appMenuInstall) {
+  // Le menu applicatif vit sur mobile : c'est la seule entree visible la-bas.
+  ui.appMenuInstall.addEventListener("click", requestInstall);
+}
+ui.installClose?.addEventListener("click", () => ui.installDialog?.close());
+
+window.addEventListener("beforeinstallprompt", event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  refreshInstallUi();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  setInstallVisible(false);
+  toast(localizedText(
+    "SIMIA est installé. Son icône est sur votre bureau ou votre écran d'accueil.",
+    "SIMIA is installed. Its icon is on your desktop or home screen.",
+    "SIMIA está instalado. Su icono está en tu escritorio o pantalla de inicio.",
+    "SIMIAをインストールしました。アイコンはデスクトップまたはホーム画面にあります。",
+  ));
+});
+
+if (window.matchMedia) {
+  window.matchMedia("(display-mode: standalone)").addEventListener?.("change", refreshInstallUi);
+}
+refreshInstallUi();
+
+/* ---------- service worker : cache hors ligne et mises a jour ---------- */
+
+function showUpdateBar(registration) {
+  if (document.querySelector(".update-bar")) return;
+  const bar = document.createElement("div");
+  bar.className = "update-bar";
+  bar.setAttribute("role", "status");
+
+  const message = document.createElement("span");
+  message.textContent = localizedText(
+    "Une nouvelle version de SIMIA est prête.",
+    "A new version of SIMIA is ready.",
+    "Hay una nueva versión de SIMIA lista.",
+    "SIMIAの新しいバージョンを準備しました。",
+  );
+
+  const reload = document.createElement("button");
+  reload.type = "button";
+  reload.textContent = localizedText("Recharger", "Reload", "Recargar", "再読み込み");
+  reload.addEventListener("click", () => {
+    saveDraft();
+    reload.disabled = true;
+    registration.waiting?.postMessage({ type: "SKIP_WAITING" });
+  });
+
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.className = "update-dismiss";
+  dismiss.setAttribute("aria-label", localizedText("Ignorer", "Dismiss", "Descartar", "閉じる"));
+  dismiss.textContent = "×";
+  dismiss.addEventListener("click", () => bar.remove());
+
+  bar.append(message, reload, dismiss);
+  document.body.append(bar);
+}
+
 if (!NATIVE && "serviceWorker" in navigator && location.protocol !== "file:") {
-  let reloadingForUpdate = false;
+  const hadController = Boolean(navigator.serviceWorker.controller);
+
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloadingForUpdate) return;
-    reloadingForUpdate = true;
+    // Un rechargement seulement si la page servait deja une ancienne version :
+    // a la premiere installation, `clients.claim()` declenche le meme evenement
+    // sans qu'il y ait quoi que ce soit a recharger.
+    if (!hadController) return;
     saveDraft();
     window.location.reload();
   });
-  navigator.serviceWorker.register("./service-worker.js").catch(error => console.warn("Service worker unavailable", error));
+
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" });
+      if (registration.waiting) showUpdateBar(registration);
+      registration.addEventListener("updatefound", () => {
+        const installing = registration.installing;
+        if (!installing) return;
+        installing.addEventListener("statechange", () => {
+          if (installing.state === "installed" && navigator.serviceWorker.controller) showUpdateBar(registration);
+        });
+      });
+      // Une nouvelle version peut sortir pendant que l'onglet reste ouvert.
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) registration.update().catch(() => {});
+      });
+    } catch (error) {
+      console.warn("Service worker indisponible", error);
+    }
+  });
 }
+
+// Raccourci de l'icone installee : SIMIA s'ouvre sur une conversation vierge.
+if (new URLSearchParams(location.search).has("new")) {
+  if (state.activeConversationId) newConversation();
+  history.replaceState({}, "", location.pathname);
+}
+

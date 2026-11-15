@@ -5,18 +5,26 @@ directement depuis le CDN HuggingFace, sans occuper d'espace chez vous.
 
 ## 1. L'interface (`app.zigmoon.com/SIMIA/`)
 
-16 fichiers à la racine, **1,3 Mo**, plus `models/hosting-status.json` :
+23 fichiers, **1,4 Mo**, plus `models/hosting-status.json` :
 
 ```
 app.zigmoon.com/SIMIA/
-├── index.html                    23,8 Ko   ← changé
-├── app.js                       361,7 Ko   ← changé
-├── styles.css                    53,0 Ko   ← changé
+├── index.html                    29,4 Ko
+├── app.js                       383,6 Ko
+├── styles.css                    57,4 Ko
 ├── code-runner.js                 3,7 Ko
-├── service-worker.js              2,1 Ko   ← changé (simia-shell-v157)
-├── manifest.webmanifest
+├── service-worker.js              7,0 Ko   ← simia-shell-3.0.0
+├── manifest.webmanifest           2,2 Ko
+├── offline.html                   2,4 Ko
+├── .htaccess                      1,3 Ko   ← types MIME + cache
 ├── cookies-config.js
 ├── icon.svg · simia-logo.svg · simia-logo-white.svg
+├── icons/                         4 fichiers PNG, 17,5 Ko
+│   ├── icon-192.png · icon-512.png
+│   ├── maskable-512.png
+│   └── apple-touch-icon-180.png
+├── screenshots/                   2 PNG, 121 Ko (boîte d'installation)
+├── desktop/index.html            page de présentation des versions
 ├── robots.txt · sitemap.xml
 ├── agent-api.php · read-url-api.php · web-search-api.php
 └── models/hosting-status.json
@@ -25,9 +33,12 @@ app.zigmoon.com/SIMIA/
 `prepare-self-hosted-llama.ps1` est un outil local (préparation WebLLM), inutile
 sur le serveur.
 
-Les trois fichiers marqués sont ceux modifiés depuis le dernier envoi. Bumper
-`CACHE_NAME` dans `service-worker.js` (fait : v158) suffit à ce que les visiteurs
-récupèrent la nouvelle version au rechargement suivant.
+> **Le fichier `.htaccess` est indispensable.** Apache ne connaît pas
+> `.webmanifest` par défaut : sans lui, le manifeste part en
+> `application/octet-stream` et Chrome refuse l'installation. Il fixe aussi
+> `Cache-Control: no-cache` sur `service-worker.js`, sans quoi un ancien worker
+> peut rester actif plusieurs heures. Certains clients FTP masquent les fichiers
+> commençant par un point : vérifier qu'il est bien arrivé.
 
 > **Le dossier `SIMIA/desktop/`** contient la page de présentation
 > (`SIMIA/desktop/index.html`) : elle propose les téléchargements Windows, macOS
@@ -43,6 +54,63 @@ Son unique constante pointe déjà vers les releases du dépôt :
 ```js
 const RELEASE_BASE = "https://github.com/zigmoon/SIMIA/releases/latest/download";
 ```
+
+## L'application installable (PWA)
+
+Trois éléments rendent SIMIA installable, tous déjà en place :
+
+| Élément | Fichier | Rôle |
+|---|---|---|
+| Manifeste | `manifest.webmanifest` | nom, icônes, `display: standalone`, raccourcis, captures |
+| Service worker | `service-worker.js` | rend l'interface disponible hors ligne |
+| Icônes | `icons/` | 192 et 512 px obligatoires, plus une version `maskable` |
+
+Chrome et Edge déclenchent l'installation quand ces trois conditions sont
+remplies et que la page est servie en **HTTPS**. L'application affiche alors son
+propre bouton **Installer SIMIA** (barre latérale sur ordinateur, menu sur
+mobile), qui appelle l'invite native du navigateur.
+
+Sur iOS, aucun navigateur ne peut déclencher cette invite : le bouton ouvre une
+aide en trois étapes (Partager → Sur l'écran d'accueil). Safari exige que le site
+soit dans `Safari`, pas dans Chrome iOS.
+
+> Le bouton reste masqué si l'application tourne déjà en mode installé
+> (`display-mode: standalone`) ou dans le lanceur de bureau : inutile de proposer
+> d'installer ce qui l'est déjà.
+
+### Ce que le service worker met en cache
+
+Précache à l'installation : `index.html`, `app.js`, `styles.css`,
+`code-runner.js`, `manifest.webmanifest`, `offline.html`, les logos, les 4 icônes
+PNG et la page `desktop/`. Environ 500 Ko, une seule fois.
+
+Jamais mis en cache : tout ce qui est sous `/models/` (plusieurs gigaoctets), les
+fichiers `.gguf` et `.safetensors`, les points d'entrée `.php`, et toute requête
+inter-origine (les poids viennent de HuggingFace).
+
+Comportement réseau :
+
+| Type de requête | Stratégie |
+|---|---|
+| Navigation (une page) | réseau d'abord, 4 s maximum, puis cache, puis `offline.html` |
+| Assets (`js`, `css`, `svg`, `png`, `webmanifest`…) | cache immédiat, rafraîchissement en arrière-plan |
+| `.php`, `/models/`, CDN | laissé passer sans interception |
+
+### Publier une nouvelle version
+
+Deux cas, et un seul geste dans chacun :
+
+1. **Contenu modifié** (interface, page de présentation) : rien à faire de plus
+   que l'upload. Le worker se met à jour en arrière-plan, la page affiche
+   « Une nouvelle version de SIMIA est prête — Recharger », et l'ancien cache est
+   supprimé à l'activation.
+2. **Logique du worker modifiée** : incrémenter `VERSION` dans
+   `service-worker.js` (`3.0.0` aujourd'hui). Le nom du cache en découle : les
+   anciens caches sont supprimés d'office.
+
+Pour tester après upload, dans Chrome : **DevTools → Application → Manifest**
+(doit afficher les icônes sans erreur), **Service Workers** (état `activated`),
+puis cocher **Offline** et recharger : SIMIA doit s'ouvrir normalement.
 
 ## La règle des 1,9 Go en web
 
@@ -202,7 +270,23 @@ continuent depuis le CDN.
 ```powershell
 # l'interface
 curl.exe -sI https://app.zigmoon.com/SIMIA/app.js
-# 200 + Content-Length proche de 370000 (361,7 Ko)
+# 200 + Content-Length proche de 393000 (383,6 Ko)
+
+# le service worker doit etre servi sans cache
+curl.exe -sI https://app.zigmoon.com/SIMIA/service-worker.js
+# 200 + Cache-Control: no-cache, no-store, must-revalidate
+
+# le manifeste doit avoir le bon type, sinon Chrome refuse l'installation
+curl.exe -sI https://app.zigmoon.com/SIMIA/manifest.webmanifest
+# 200 + Content-Type: application/manifest+json   (jamais application/octet-stream)
+
+# les icones de l'application installee
+curl.exe -sI https://app.zigmoon.com/SIMIA/icons/icon-512.png
+curl.exe -sI https://app.zigmoon.com/SIMIA/icons/maskable-512.png
+
+# la page hors ligne et la page de presentation
+curl.exe -sI https://app.zigmoon.com/SIMIA/offline.html
+curl.exe -sI https://app.zigmoon.com/SIMIA/desktop/
 
 # le catalogue et les versions
 curl.exe -s https://app.zigmoon.com/SIMIA/models/versions.json

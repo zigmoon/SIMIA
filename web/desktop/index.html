@@ -10,7 +10,10 @@
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <link rel="canonical" href="https://app.zigmoon.com/SIMIA/desktop/">
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../icon.svg">
+<link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon-180.png">
+<meta name="apple-mobile-web-app-title" content="SIMIA">
+<meta name="theme-color" content="#f6f5f1">
 <link rel="alternate" hreflang="fr" href="https://app.zigmoon.com/SIMIA/desktop/">
 <link rel="alternate" hreflang="x-default" href="https://app.zigmoon.com/SIMIA/desktop/">
 <meta property="og:type" content="website">
@@ -19,8 +22,12 @@
 <meta property="og:description" content="Assistant IA local-first. Conversations, documents et images générées sur votre machine. Version web dans le navigateur, ou application de bureau pour Windows, macOS et Linux.">
 <meta property="og:url" content="https://app.zigmoon.com/SIMIA/desktop/">
 <meta property="og:site_name" content="SIMIA by Zigmoon">
-<meta property="og:image" content="https://app.zigmoon.com/SIMIA/icon.svg">
+<meta property="og:image" content="https://app.zigmoon.com/SIMIA/icons/icon-512.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://app.zigmoon.com/SIMIA/icons/icon-512.png">
 <meta name="twitter:title" content="SIMIA — assistant IA local, privé et hors ligne">
 <meta name="twitter:description" content="Version web ou application de bureau Windows, macOS et Linux. Aucun compte, aucune donnée envoyée.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,6 +73,11 @@
           "@type": "Question",
           "name": "Quelle différence entre la version web et la version desktop de SIMIA ?",
           "acceptedAnswer": { "@type": "Answer", "text": "La version web exécute le modèle dans le navigateur via WebGPU, ce qui la limite aux modèles sous 1,9 Go. La version desktop lance le moteur directement sur le GPU de la machine, sans plafond de navigateur : elle accède aux modèles de code les plus gros et à la génération d'images jusqu'à 1024 px." }
+        },
+        {
+          "@type": "Question",
+          "name": "Peut-on installer la version web de SIMIA comme une application ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Oui. Sur Chrome et Edge, un bouton Installer SIMIA apparaît dans l'interface : l'application obtient son icône et sa propre fenêtre, sans barre d'adresse. Sur iPhone et iPad, il faut passer par Safari puis Partager → Sur l'écran d'accueil. L'interface est ensuite mise en cache par un service worker : elle s'ouvre même sans réseau, seuls les modèles se téléchargent." }
         },
         {
           "@type": "Question",
@@ -833,6 +845,7 @@
           <ul>
             <li>Modèles jusqu'à <b>1,9 Go</b>, la limite raisonnable d'un navigateur</li>
             <li>Conversations enregistrées localement</li>
+                        <li>Installable comme une application, icône et fenêtre propre</li>
             <li>Recherche web, pièces jointes, dictée</li>
             <li>Fonctionne sur Chrome et Edge avec WebGPU</li>
           </ul>
@@ -977,6 +990,10 @@
         <details>
           <summary>Quelle différence entre la version web et la version desktop ?</summary>
           <p>La version web exécute le modèle dans votre navigateur via WebGPU : pratique pour essayer, mais limitée aux modèles sous 1,9 Go. La version desktop lance le moteur directement sur le GPU de la machine, sans plafond de navigateur : elle accède aux modèles de code les plus gros et à la génération d'images jusqu'à 1024 px.</p>
+        </details>
+        <details>
+          <summary>La version web peut-elle s'installer comme une application ?</summary>
+          <p>Oui. Sur Chrome et Edge, un bouton <b>Installer SIMIA</b> apparaît dans l'interface : l'application obtient son icône et sa propre fenêtre, sans barre d'adresse. Sur iPhone et iPad, passez par Safari puis <b>Partager → Sur l'écran d'accueil</b>. L'interface est ensuite mise en cache : elle s'ouvre même sans réseau.</p>
         </details>
         <details>
           <summary>Faut-il une carte graphique puissante ?</summary>

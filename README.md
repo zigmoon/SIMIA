@@ -26,6 +26,7 @@ vos phrases ne quittent pas l'ordinateur.
 - [Ce que SIMIA sait faire](#ce-que-simia-sait-faire)
 - [Confidentialité](#confidentialité)
 - [Télécharger](#télécharger)
+- [La version web, installable](#la-version-web-installable)
 - [Versions publiées](#versions-publiées)
 - [Les modèles](#les-modèles)
 - [Architecture](#architecture)
@@ -53,8 +54,12 @@ Le même code d'interface sert les deux versions ; seule l'exécution diffère :
 | Systèmes | Windows 10/11, macOS 12+ (Intel et Apple Silicon), Linux x86_64 | Chrome et Edge avec WebGPU |
 | Modèles de texte | tout le catalogue, jusqu'à 9,7 Go | uniquement sous **1,9 Go** (mémoire du navigateur) |
 | Génération d'images | 7 packs, jusqu'à 1024 px, aucun filtre de contenu | — |
-| Installation | archive à décompresser, aucun installateur | aucune |
+| Installation | archive à décompresser, aucun installateur | un clic dans le navigateur (PWA) |
 | Stockage | disque, à côté de l'exécutable | cache du navigateur |
+
+La version web s'installe : icône sur le bureau ou l'écran d'accueil, fenêtre
+sans barre d'adresse, et interface disponible même sans réseau. C'est le même
+code que l'onglet, mis en cache par un service worker.
 
 ## Ce que SIMIA sait faire
 
@@ -68,6 +73,7 @@ Le même code d'interface sert les deux versions ; seule l'exécution diffère :
 | Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | — |
 | Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
 | Quatre langues | français, anglais, espagnol, japonais | ✅ | ✅ |
+| Installation | application installable depuis le navigateur (icône, fenêtre propre, hors ligne) | ✅ | — |
 | Hors ligne | après le premier téléchargement des poids, aucune connexion requise | ✅ | ✅ |
 
 > L'agent web s'appuie sur un relais PHP (`agent-api.php`) déployé sur le site.
@@ -106,6 +112,38 @@ exécutable si l'archive a perdu le droit : `chmod +x simia-desktop`.
 > `xattr -dr com.apple.quarantine simia-macos-arm64/` puis relancez.
 > **Windows** : SmartScreen affiche un avertissement à la première ouverture,
 > faute de signature de code.
+
+## La version web, installable
+
+Rien à télécharger : [app.zigmoon.com/SIMIA](https://app.zigmoon.com/SIMIA/)
+s'installe depuis le navigateur. Un bouton **Installer SIMIA** apparaît dans la
+barre latérale (menu sur mobile) dès que le navigateur sait le proposer.
+
+| Étape | Chrome / Edge (ordinateur et Android) | Safari (iOS et iPadOS) |
+|---|---|---|
+| 1 | Cliquer sur **Installer SIMIA** | Ouvrir la page dans Safari |
+| 2 | Confirmer dans la fenêtre du navigateur | Partager → **Sur l'écran d'accueil** |
+| 3 | L'icône rejoint le bureau ou le lanceur | L'icône rejoint l'écran d'accueil |
+
+Une fois installée, SIMIA s'ouvre dans sa propre fenêtre, sans barre d'adresse,
+et démarre instantanément : l'interface est dans un cache local. Le réseau ne
+sert plus qu'à télécharger un modèle.
+
+Ce que le service worker garde en mémoire, et ce qu'il refuse :
+
+| Requête | Traitement |
+|---|---|
+| Interface (`index.html`, `app.js`, `styles.css`, icônes, `desktop/`) | précachée à l'installation, servie immédiatement |
+| Navigation | réseau d'abord (4 s), puis cache, puis page `offline.html` |
+| `/models/`, `.gguf`, `.safetensors` | jamais mis en cache (plusieurs gigaoctets) |
+| Points d'entrée `.php`, CDN HuggingFace | laissés passer, sans interception |
+
+Quand une nouvelle version est publiée, un bandeau discret propose de recharger :
+le nouveau service worker attend sagement, plutôt que de recharger la page au
+milieu d'une conversation. Voir
+[docs/PUBLICATION.md](docs/PUBLICATION.md#lapplication-installable-pwa) pour la
+procédure d'upload, y compris le `.htaccess` qui déclare les types MIME
+(`application/manifest+json`) sans lesquels Chrome refuse l'installation.
 
 ## Versions publiées
 
@@ -188,6 +226,11 @@ d'interface, un seul code source pour le web et le bureau.
 SIMIA-desktop/
 ├── launcher/                       code Rust du lanceur
 ├── web/                            copie de ../SIMIA (tools/sync-web.ps1)
+│   ├── icons/                      icônes PWA 192, 512, maskable, Apple
+│   ├── screenshots/                captures de la boîte d'installation
+│   ├── manifest.webmanifest        nom, icônes, raccourcis, mode standalone
+│   ├── service-worker.js           cache hors ligne et mises à jour
+│   └── offline.html                page de repli sans réseau
 ├── packaging/LISEZ-MOI.txt         fichier livré dans chaque archive
 ├── .github/workflows/build.yml     CI Windows / macOS / Linux
 ├── vendor/llama/win-vulkan/        llama.cpp + DLL Vulkan + runtime VC++
@@ -373,8 +416,15 @@ Pour entraîner votre propre style, voir [tools/lora/README.md](tools/lora/READM
 - **Modèles à raisonnement** (Qwen 3.x) : sans réglage, la réponse part dans
   `reasoning_content` et `content` reste vide. `app.js` envoie donc
   `chat_template_kwargs: { enable_thinking: false }`.
-- **Service worker** : désactivé en mode bureau (le lanceur sert un worker inerte),
-  sinon il servirait une ancienne version de `app.js` après une mise à jour.
+- **Service worker** : actif sur le site, désactivé en mode bureau — le lanceur
+  sert un worker inerte qui s'enregistre puis se désinscrit. Sans cela, il
+  servirait une ancienne version de `app.js` après une mise à jour, alors que le
+  fichier est déjà local. Conséquence : pas de bandeau « nouvelle version » ni de
+  bouton d'installation dans l'application de bureau, ce qui est logique.
+- **Fichiers `.htaccess` et dossiers `icons/`** : à envoyer avec l'interface.
+  Sans `.htaccess`, Apache sert `manifest.webmanifest` en
+  `application/octet-stream`, et Chrome refuse l'installation ; sans les icônes,
+  le manifeste est invalide. `tools/sync-web.ps1` les copie dans `web/`.
 - **Port fixe** : `localStorage` est lié à l'origine. Changer de port perd les
   conversations locales.
 - **Contexte** : `--ctx` fixe la fenêtre du modèle (8 192 tokens par défaut, un

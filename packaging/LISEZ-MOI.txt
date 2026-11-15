@@ -23,3 +23,9 @@ Linux
 Modeles
   Le catalogue pointe vers le CDN. Les poids deja telecharges restent dans
   models/ et peuvent etre supprimes pour liberer de l'espace.
+
+Version web
+  La meme interface est publiee sur https://app.zigmoon.com/SIMIA/ et peut
+  s'installer comme une application depuis le navigateur (icone, fenetre
+  propre, demarrage instantane). Cette version web reste limitee aux modeles
+  sous 1,9 Go : c'est la seule difference avec l'application de bureau.

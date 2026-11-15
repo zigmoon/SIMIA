@@ -1,18 +1,81 @@
 {
-  "name": "SIMIA - Local-first AI",
+  "id": "./",
+  "name": "SIMIA — assistant IA local",
   "short_name": "SIMIA",
-  "description": "A local-first AI workspace that keeps conversations in your browser.",
+  "description": "Assistant IA local-first : conversation, documents et génération d'images sur votre machine. Sans compte, sans serveur, sans télémétrie.",
+  "lang": "fr",
+  "dir": "ltr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
   "background_color": "#f6f5f1",
   "theme_color": "#1d2522",
+  "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/apple-touch-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle conversation",
+      "short_name": "Nouveau",
+      "description": "Ouvrir SIMIA sur une conversation vierge",
+      "url": "./index.html?new=1",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Version de bureau",
+      "short_name": "Bureau",
+      "description": "Télécharger l'application Windows, macOS ou Linux",
+      "url": "./desktop/",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/app-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Conversation locale, documents et atelier de code"
+    },
+    {
+      "src": "screenshots/app-narrow.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "SIMIA sur mobile"
     }
   ]
 }

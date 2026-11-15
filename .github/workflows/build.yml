@@ -62,10 +62,27 @@ jobs:
       - name: Verifier la presence de l'interface
         shell: bash
         run: |
-          if [ ! -f web/index.html ]; then
-            echo "::error::web/index.html absent. Lancez tools/sync-web.ps1 puis commitez web/."
+          # Une installation PWA invalide passerait inapercue : on bloque ici.
+          manquants=""
+          for f in web/index.html web/app.js web/service-worker.js \
+                   web/manifest.webmanifest web/offline.html \
+                   web/icons/icon-192.png web/icons/icon-512.png; do
+            [ -f "$f" ] || manquants="$manquants $f"
+          done
+          if [ -n "$manquants" ]; then
+            echo "::error::Fichiers absents :$manquants — lancez tools/sync-web.ps1 puis commitez web/."
             exit 1
           fi
+          python3 - <<'PY'
+          import json, sys
+          m = json.load(open("web/manifest.webmanifest", encoding="utf-8"))
+          sizes = {i.get("sizes") for i in m.get("icons", [])}
+          if not {"192x192", "512x512"} <= sizes:
+            sys.exit("manifeste : icones 192 et 512 obligatoires")
+          if m.get("display") != "standalone":
+            sys.exit("manifeste : display doit valoir standalone")
+          print("manifeste valide :", m["name"])
+          PY
 
       - name: Outils Rust
         uses: dtolnay/rust-toolchain@stable
