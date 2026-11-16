@@ -329,6 +329,13 @@ Sur macOS Intel, la génération d'images est simplement masquée : le bouton
 Chaque paquet contient `simia-desktop`, `web/`, `vendor/`, `models/*.json` et
 `LISEZ-MOI.txt`. Les poids ne sont pas inclus : le catalogue pointe vers le CDN.
 
+Le corps de la release n'est pas laissé au « Full Changelog » automatique de
+GitHub : [tools/release-body.mjs](tools/release-body.mjs) le rédige à partir des
+archives réellement présentes dans `dist/` — tableau des systèmes avec la taille
+exacte, instructions d'installation par OS, empreintes SHA-256, et mention des
+cibles qui ont échoué. Une archive manquante est signalée au lieu de disparaître
+silencieusement du tableau.
+
 ## Ce que l'interface affiche
 
 Le moteur d'image est distinct du modèle de texte, donc il est visible à deux
