@@ -15,14 +15,16 @@
 # Le service worker ne doit jamais etre servi depuis un cache intermediaire :
 # sinon une ancienne version peut rester active pendant des heures.
 <IfModule mod_headers.c>
-  <FilesMatch "service-worker\.js$">
-    Header set Cache-Control "no-cache, no-store, must-revalidate"
-    Header set Service-Worker-Allowed "/SIMIA/"
-  </FilesMatch>
   # L'interface doit pouvoir changer a chaque deploiement : le service worker
   # gere deja le hors-ligne, le cache HTTP n'a rien a garder ici.
   <FilesMatch "\.(html|css|js|mjs|webmanifest)$">
     Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  # Regle du worker volontairement APRES la regle generique : Apache applique le
+  # dernier FilesMatch correspondant, sinon le no-store serait ecrase.
+  <FilesMatch "service-worker\.js$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Service-Worker-Allowed "/SIMIA/"
   </FilesMatch>
   # Seules les images et les polices peuvent rester en cache navigateur.
   <FilesMatch "\.(svg|png|ico|woff2)$">

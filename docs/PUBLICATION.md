@@ -13,10 +13,10 @@ app.zigmoon.com/SIMIA/
 ├── app.js                       383,6 Ko
 ├── styles.css                    57,4 Ko
 ├── code-runner.js                 3,7 Ko
-├── service-worker.js              7,0 Ko   ← simia-shell-3.0.0
+├── service-worker.js              7,0 Ko   ← simia-shell-3.1.0
 ├── manifest.webmanifest           2,2 Ko
 ├── offline.html                   2,4 Ko
-├── .htaccess                      1,3 Ko   ← types MIME + cache
+├── .htaccess                      1,4 Ko   ← types MIME + cache
 ├── cookies-config.js
 ├── icon.svg · simia-logo.svg · simia-logo-white.svg
 ├── icons/                         4 fichiers PNG, 17,5 Ko
@@ -32,6 +32,14 @@ app.zigmoon.com/SIMIA/
 
 `prepare-self-hosted-llama.ps1` est un outil local (préparation WebLLM), inutile
 sur le serveur.
+
+> **État constaté le 16/11** : l'interface et la page de présentation sont en
+> ligne et complètes (25 fichiers, contenu identique au dépôt). Le dossier
+> `models/` ne contient pour l'instant que `hosting-status.json` : les 3 GGUF et
+> le LoRA restent à téléverser (voir section 2). Ce n'est pas bloquant — la
+> version bureau bascule sur le CDN HuggingFace, vérifié 200 sur les trois
+> modèles — mais `versions.json` et `catalog.json` manquent aussi, donc le
+> lanceur n'affiche pas la veille de version.
 
 > **Le fichier `.htaccess` est indispensable.** Apache ne connaît pas
 > `.webmanifest` par défaut : sans lui, le manifeste part en
@@ -105,8 +113,26 @@ Deux cas, et un seul geste dans chacun :
    « Une nouvelle version de SIMIA est prête — Recharger », et l'ancien cache est
    supprimé à l'activation.
 2. **Logique du worker modifiée** : incrémenter `VERSION` dans
-   `service-worker.js` (`3.0.0` aujourd'hui). Le nom du cache en découle : les
+   `service-worker.js` (`3.1.0` aujourd'hui). Le nom du cache en découle : les
    anciens caches sont supprimés d'office.
+
+### Migration depuis l'ancien service worker (`simia-shell-v146`)
+
+Le premier worker déployé sur le site ne se mettait jamais à jour : il servait
+son cache indéfiniment, y compris `app.js` et `manifest.webmanifest`. Les
+visiteurs revenus voyaient donc une interface périmée, et le worker correct
+restait en attente sans jamais prendre la main.
+
+Le worker actuel détecte ce cas : si un cache au nom d'une ancienne génération
+(`simia-shell-v146`, `simia-shell-v162`…) existe au moment de l'installation, il
+appelle `skipWaiting()` immédiatement au lieu d'attendre un clic. Les anciens
+caches sont purgés, la page se recharge une fois, et le visiteur récupère la
+version courante. Les mises à jour suivantes (3.1.0 → 3.2.0) reviennent au
+comportement normal : le worker attend, la page propose de recharger.
+
+Vérifié en local en reproduisant l'état exact : cache `simia-shell-v146` contenant
+un `app.js` périmé, puis dépôt du nouveau worker. Résultat : un seul cache
+restant (`simia-shell-3.1.0`), `app.js` à jour, rechargement automatique.
 
 Pour tester après upload, dans Chrome : **DevTools → Application → Manifest**
 (doit afficher les icônes sans erreur), **Service Workers** (état `activated`),

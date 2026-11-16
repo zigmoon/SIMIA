@@ -1,4 +1,4 @@
-/* SIMIA — service worker
+﻿/* SIMIA â€” service worker
  *
  * Trois responsabilites, et rien d'autre :
  *   1. garder la coquille (interface + page de presentation) disponible hors ligne ;
@@ -9,12 +9,27 @@
  * l'ancien cache a l'activation.
  *
  * Mise a jour : le nouveau worker attend sagement. La page detecte ce worker en
- * attente, propose « Recharger » et envoie SKIP_WAITING. Aucun rechargement
+ * attente, propose Â« Recharger Â» et envoie SKIP_WAITING. Aucun rechargement
  * surprise au milieu d'une conversation.
  */
 
-const VERSION = "3.0.1";
+const VERSION = "3.1.0";
 const CACHE = `simia-shell-${VERSION}`;
+
+/* Un cache d'une ancienne generation (`simia-shell-v146`) signale un worker qui
+   ne se met jamais a jour : il sert son cache pour toujours et le nouveau
+   worker reste en attente indefiniment. Dans ce cas precis, et seulement dans
+   celui-la, on prend la main immediatement au lieu d'attendre un clic. */
+const LEGACY_CACHE = /^simia-shell-(?!\d+\.\d+\.\d+$)/;
+
+async function legacyWorkerPresent() {
+  try {
+    const keys = await caches.keys();
+    return keys.some(key => key.startsWith("simia-shell-") && LEGACY_CACHE.test(key));
+  } catch {
+    return false;
+  }
+}
 
 const CORE = [
   "./",
@@ -69,17 +84,17 @@ async function precache() {
   const put = async url => {
     const request = new Request(url, { cache: "reload" });
     const response = await fetch(request);
-    if (!response || !response.ok) throw new Error(`${url} → ${response ? response.status : "réseau"}`);
+    if (!response || !response.ok) throw new Error(`${url} â†’ ${response ? response.status : "rÃ©seau"}`);
     await cache.put(url, response);
   };
 
   const results = await Promise.allSettled(CORE.map(put));
   const failures = results.filter(result => result.status === "rejected");
   if (failures.length) {
-    console.warn("[SIMIA] précache incomplet :", failures.map(failure => String(failure.reason)));
+    console.warn("[SIMIA] prÃ©cache incomplet :", failures.map(failure => String(failure.reason)));
   }
   // La moindre coquille manquante rendrait l'application inutilisable hors ligne.
-  if (failures.length === results.length) throw new Error("précache impossible");
+  if (failures.length === results.length) throw new Error("prÃ©cache impossible");
 
   await Promise.allSettled(OPTIONAL.map(put));
 }
@@ -92,9 +107,12 @@ self.addEventListener("install", event => {
       await caches.delete(CACHE);
       throw error;
     }
-    // Premiere installation : on prend la main tout de suite.
-    // Mise a jour : on reste en attente, la page proposera de recharger.
-    if (!self.registration.active) await self.skipWaiting();
+    // Premiere installation, ou migration depuis un worker qui ne se mettait
+    // jamais a jour : on prend la main tout de suite. Sinon (mise a jour
+    // normale) on reste en attente, la page proposera de recharger.
+    if (!self.registration.active || (await legacyWorkerPresent())) {
+      await self.skipWaiting();
+    }
   })());
 });
 
@@ -120,7 +138,7 @@ self.addEventListener("message", event => {
    l'ouverture de l'application. */
 function withTimeout(promise, ms) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("délai dépassé")), ms);
+    const timer = setTimeout(() => reject(new Error("dÃ©lai dÃ©passÃ©")), ms);
     promise.then(
       value => { clearTimeout(timer); resolve(value); },
       error => { clearTimeout(timer); reject(error); },
@@ -142,7 +160,7 @@ async function handleNavigation(event, url) {
   const cache = await caches.open(CACHE);
   try {
     const response = await withTimeout(fetch(freshRequest(event.request)), NAV_TIMEOUT);
-    if (!response || response.type !== "basic") throw new Error("réponse non exploitable");
+    if (!response || response.type !== "basic") throw new Error("rÃ©ponse non exploitable");
     // Un 404 du serveur reste un 404 : on ne le remplace pas par une page du cache.
     if (response.ok) {
       const copy = response.clone();
