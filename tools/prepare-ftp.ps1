@@ -5,21 +5,21 @@
 .DESCRIPTION
     Le dossier SIMIA/ ne contient que l'interface web : ses poids de modeles
     sont dans SIMIA-desktop/models/. Glisser SIMIA/ ne peut donc jamais envoyer
-    les .gguf. Ce script assemble un dossier unique, pret a etre glisse tel quel
-    dans le dossier SIMIA/ du serveur.
+    les .gguf. Ce script assemble le dossier SIMIA complet, pret a etre glisse
+    tel quel a la RACINE du serveur (il devient app.zigmoon.com/SIMIA/).
 
         pwsh -File tools/prepare-ftp.ps1
 
     Les fichiers de plus de 100 Mo sont relies par lien physique quand c'est
     possible : aucune copie, aucun espace disque supplementaire.
 
-    Resultat : dist/ftp/  (~3 Go logiques)
+    Resultat : dist/SIMIA/  (~3 Go logiques)
 #>
 
 param(
     [string]$Web = (Join-Path $PSScriptRoot "..\..\SIMIA"),
     [string]$Models = (Join-Path $PSScriptRoot "..\models"),
-    [string]$Out = (Join-Path $PSScriptRoot "..\dist\ftp")
+    [string]$Out = (Join-Path $PSScriptRoot "..\dist\SIMIA")
 )
 
 $ErrorActionPreference = "Stop"
@@ -104,7 +104,6 @@ if ($missing.Count) {
 
 $files = Get-ChildItem $Out -Recurse -File
 $logical = ($files | Measure-Object Length -Sum).Sum
-$real = (Get-ChildItem $Out -Recurse -File | ForEach-Object { $_.Length } | Measure-Object -Sum)
 
 Write-Host ""
 Write-Host "Dossier pret : $Out"
@@ -115,4 +114,9 @@ foreach ($group in ($files | Group-Object { $_.Directory.FullName.Replace($Out, 
     Write-Host ("  {0,-22} {1,3} fichiers  {2,8:N1} Mo" -f $label, $group.Count, (($group.Group | Measure-Object Length -Sum).Sum / 1MB))
 }
 Write-Host ""
-Write-Host "Televersez le CONTENU de ce dossier dans le dossier SIMIA/ du serveur."
+Write-Host "Deposez le dossier SIMIA ENTIER a la racine du serveur :"
+Write-Host "  app.zigmoon.com/  +  SIMIA/   ->   app.zigmoon.com/SIMIA/"
+Write-Host ""
+Write-Host "Le dossier est autonome : il remplace integralement la version en ligne."
+Write-Host "Ne pas oublier de repasser en mode ASCII/binaire selon votre client :"
+Write-Host "les .gguf et les PNG doivent partir en binaire, jamais en ASCII."

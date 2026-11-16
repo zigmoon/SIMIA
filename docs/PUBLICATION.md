@@ -369,7 +369,7 @@ Get-FileHash qwen2.5-1.5b-instruct-q4_k_m.gguf -Algorithm SHA256   # sur votre c
 | `Llama-3.2-1B-Instruct-Q4_K_M.gguf` | 807 694 368 | `3f5a2242…68d862dcc1` |
 | `qwen2.5-1.5b-instruct-q4_k_m.gguf` | 1 117 320 736 | `6a1a2eb6…e434e9407e` |
 | `Qwen3.5-2B-Q4_K_M.gguf` | 1 280 835 840 | `aaf42c8b…914699223` |
-| `image/loras/simia-gravure.safetensors` | 6 434 152 | `7f3be811…2647930a` |
+| `image/loras/simia-gravure.safetensors` | 6 434 192 | `7f3be811…2647930a` |
 
 Les valeurs complètes sont dans [models/versions.json](../models/versions.json).
 
