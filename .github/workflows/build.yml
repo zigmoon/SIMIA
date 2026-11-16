@@ -110,11 +110,17 @@ jobs:
           tmp="$RUNNER_TEMP/sidecars"
           mkdir -p "$tmp" "vendor/llama/${{ matrix.target }}" "vendor/sd/${{ matrix.target }}"
 
-          curl -fsSL -o "$tmp/llama.pkg" \
+          # Le fichier garde son extension d'origine : le decompresseur choisit
+          # d'apres elle. Nomme "llama.pkg", rien n'etait extrait et le paquet
+          # partait sans moteur.
+          llama_pkg="$tmp/$LLAMA_ASSET"
+          curl -fsSL -o "$llama_pkg" \
             "https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_TAG}/${LLAMA_ASSET}"
 
+          sd_pkg=""
           if [ -n "${SD_ASSET}" ]; then
-            curl -fsSL -o "$tmp/sd.pkg" \
+            sd_pkg="$tmp/$SD_ASSET"
+            curl -fsSL -o "$sd_pkg" \
               "https://github.com/leejet/stable-diffusion.cpp/releases/download/${SD_RELEASE_TAG}/${SD_ASSET}"
           fi
 
@@ -122,16 +128,41 @@ jobs:
             case "$1" in
               *.zip) unzip -q -o "$1" -d "$2" ;;
               *.tar.gz) tar -xzf "$1" -C "$2" ;;
+              *)
+                echo "::error::archive non reconnue : $1"
+                exit 1
+                ;;
             esac
           }
 
-          extract "$tmp/llama.pkg" "vendor/llama/${{ matrix.target }}"
-          if [ -n "${SD_ASSET}" ]; then
-            extract "$tmp/sd.pkg" "vendor/sd/${{ matrix.target }}"
+          extract "$llama_pkg" "vendor/llama/${{ matrix.target }}"
+          if [ -n "$sd_pkg" ]; then
+            extract "$sd_pkg" "vendor/sd/${{ matrix.target }}"
           fi
 
           echo "--- moteurs presents ---"
           find vendor -type f \( -name "llama-server*" -o -name "sd-server*" \) | sort
+
+          # Sans ce controle, un paquet sans moteur partait en release et le
+          # lanceur echouait chez l'utilisateur, pas ici.
+          # On passe par un fichier : « find | grep -q » peut echouer a tort
+          # (grep sort au premier resultat, find recoit SIGPIPE, pipefail
+          # propage le code 141).
+          find vendor -type f -name "llama-server*" > "$tmp/llama-found.txt"
+          if [ ! -s "$tmp/llama-found.txt" ]; then
+            echo "::error::llama-server absent apres extraction"
+            exit 1
+          fi
+          echo "llama-server : $(head -n 1 "$tmp/llama-found.txt")"
+
+          if [ -n "${SD_ASSET}" ]; then
+            find vendor -type f -name "sd-server*" > "$tmp/sd-found.txt"
+            if [ ! -s "$tmp/sd-found.txt" ]; then
+              echo "::error::sd-server absent apres extraction"
+              exit 1
+            fi
+            echo "sd-server    : $(head -n 1 "$tmp/sd-found.txt")"
+          fi
 
       - name: Assembler le paquet
         shell: bash
@@ -157,6 +188,14 @@ jobs:
 
           cp -r vendor "$stage/vendor"
           cp packaging/LISEZ-MOI.txt "$stage/"
+
+          # Dernier garde-fou : un paquet sans moteur ne doit jamais partir.
+          found=$(find "$stage/vendor" -type f -name "llama-server*" -print 2>/dev/null)
+          if [ -z "$found" ]; then
+            echo "::error::le paquet assemble ne contient pas llama-server"
+            exit 1
+          fi
+          echo "taille des moteurs : $(du -sh "$stage/vendor" | cut -f1)"
 
           if [ "${{ matrix.archive }}" = "zip" ]; then
             (cd "$RUNNER_TEMP" && 7z a -tzip -mx=3 "$name.zip" "$name" > /dev/null)
@@ -206,6 +245,11 @@ jobs:
           draft: false
           generate_release_notes: true
           files: dist/*
+          # Republier sur un tag deja utilise ecrase les archives existantes :
+          # c'est ce qui permet de corriger une release defectueuse sans la
+          # supprimer.
+          overwrite_files: true
+          fail_on_unmatched_files: true
 
       # Le README porte le tableau des versions telechargeables : il est
       # regenere ici, une fois les archives attachees a la release.
