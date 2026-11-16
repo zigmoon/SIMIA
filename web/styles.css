@@ -173,12 +173,17 @@ textarea { display:block; resize:none; outline:0; border:0; width:100%; min-heig
 textarea::placeholder { color:#989e99; }
 .composer-footer { display:flex; align-items:center; justify-content:space-between; margin-top:4px; }
 .composer-tools { display:flex; min-width:0; align-items:center; gap:10px; color:#939a94; font:400 10px "DM Mono", monospace; }.composer-actions{display:flex;flex:none;align-items:center;gap:7px}
-.agent-toggle{height:28px;padding:0 9px;border:1px solid #c9d0c8;border-radius:5px;background:transparent;color:#536058;font:500 9px "DM Mono",monospace}.agent-toggle:hover{border-color:#879888;color:var(--ink)}.agent-toggle[aria-pressed="true"]{border-color:#9bb76c;background:var(--accent);color:var(--accent-ink);font-weight:800}
-.image-toggle[aria-pressed="true"]{border-color:#9bb76c;background:var(--accent);color:var(--accent-ink);font-weight:800}.image-toggle.is-pending{border-style:dashed;color:#7a8377}
+.agent-toggle{height:28px;padding:0 9px;border:1px solid #c9d0c8;border-radius:5px;background:transparent;color:#536058;font:500 9px "DM Mono",monospace}.agent-toggle:hover{border-color:#879888;color:var(--ink)}
+/* Actif : vert de la charte, pas l'accent citron. Un bloc citron dans la barre
+   de saisie attire l'oeil plus que le texte qu'on est en train d'ecrire. */
+.agent-toggle[aria-pressed="true"],.image-toggle[aria-pressed="true"]{border-color:#8fae5c;background:#eef4e2;color:#3f5b28;font-weight:800;box-shadow:inset 0 0 0 1px #cdddb6}
+.image-toggle.is-pending{border-style:dashed;color:#5f6a62}
+/* Un modele d'image manquant ne doit pas effacer le libelle du mode actif. */
+.image-toggle.is-pending[aria-pressed="true"]{border-style:solid;color:#3f5b28}
 /* Mode image : meme palette que le reste, aucun orange. Le liseré vert et un
    fond tres legerement teinte suffisent a distinguer le mode. */
-.composer[data-image-mode="true"]{border-color:#9bb76c}
-.composer[data-image-mode="true"] textarea{background-image:linear-gradient(90deg,rgba(216,244,81,.16),transparent 42%)}
+.composer[data-image-mode="true"]{border-color:#9bb76c;background:linear-gradient(180deg,rgba(155,183,108,.10),rgba(155,183,108,0) 62%),var(--surface)}
+.composer[data-image-mode="true"] textarea{background-image:none}
 .message-image{margin:12px 0 0;max-width:min(520px,100%);border:1px solid #d8ded5;border-radius:10px;background:#fffefa;overflow:hidden}
 .message-image .image-frame{position:relative;aspect-ratio:1/1;background:repeating-linear-gradient(45deg,#f2f4ee,#f2f4ee 10px,#e9ede4 10px,#e9ede4 20px);display:grid;place-items:center}
 .message-image .image-frame img{width:100%;height:100%;object-fit:cover;display:block}
@@ -199,7 +204,7 @@ textarea::placeholder { color:#989e99; }
 .image-progress button{border:1px solid #d5d9d2;border-radius:5px;background:transparent;color:#6b7a6c;font:600 10px "DM Mono",monospace;padding:4px 8px;cursor:pointer}
 .image-progress button:hover{border-color:#9bb76c;color:var(--ink)}
 .image-progress-bar{height:4px;margin-top:9px;border-radius:999px;background:#e6eae0;overflow:hidden}
-.image-progress-bar i{display:block;height:100%;width:4%;border-radius:999px;background:linear-gradient(90deg,#9bb76c,#c9e744);transition:width .35s ease}
+.image-progress-bar i{display:block;height:100%;width:4%;border-radius:999px;background:linear-gradient(90deg,#9bb76c,#5f8220);transition:width .35s ease}
 .icon-button { display:flex; align-items:center; justify-content:center; width:24px; height:24px; padding:0; border:1px solid #dfdfd8; border-radius:4px; color:#69736b; background:transparent; line-height:0; }
 .icon-cross { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round }.attach-button svg,.voice-button svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.voice-button.attach-button{width:34px;height:32px}.attach-button:hover{border-color:#879888;color:#33433a}.voice-button{display:grid;width:34px;height:32px;place-items:center;padding:0;border:1px solid #c9d0c8;border-radius:5px;color:#33433a;background:#f6f8f3;transition:.18s}.voice-button:hover{border-color:#879888;background:#edf2e9}.voice-button.is-listening{border-color:#b74e46;background:#fff0ed;color:#a53d36;animation:voice-pulse 1.25s ease-in-out infinite}.voice-status{min-width:0;max-width:245px;overflow:hidden;color:#a53d36;font-size:9px;line-height:1.3;white-space:nowrap;text-overflow:ellipsis}@keyframes voice-pulse{50%{box-shadow:0 0 0 4px rgba(183,78,70,.12)}}
 .send-button { height:32px; border:0; border-radius:5px; padding:8px 10px; background:var(--ink); color:white; font-size:11px; font-weight:800; transition:.18s; }.send-button:hover{background:#33433a}.send-button:disabled{opacity:.5;cursor:wait}.send-button b{font:400 9px "DM Mono",monospace;opacity:.6;margin-left:4px}

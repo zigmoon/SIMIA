@@ -2367,7 +2367,9 @@ function toast(message, kind = "info") {
 
 function setStatus(label, kind = "ready") {
   ui.status.innerHTML = `<i></i> ${escapeHtml(label)}`;
-  ui.status.querySelector("i").style.background = kind === "error" ? "#c56b5d" : kind === "loading" ? "#e3b55f" : "#77b289";
+  // Vert de la charte pour l'attente, rouge pour l'erreur : l'ambre d'origine
+  // jurait avec le reste de l'interface et se lisait comme un avertissement.
+  ui.status.querySelector("i").style.background = kind === "error" ? "#b74e46" : kind === "loading" ? "#9bb76c" : "#77b289";
   ui.status.dataset.state = kind;
   if (kind !== "loading") ui.topbar.style.setProperty("--model-load-progress", "0%");
 }
