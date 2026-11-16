@@ -21,6 +21,9 @@ models/upscale/
 # Compilation Rust.
 launcher/target/
 
+# Dossier pret a televerser (tools/prepare-ftp.ps1) : ~3 Go, jamais versionne.
+dist/
+
 # Journaux et divers.
 *.log
 *.err

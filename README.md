@@ -232,6 +232,7 @@ SIMIA-desktop/
 │   ├── service-worker.js           cache hors ligne et mises à jour
 │   └── offline.html                page de repli sans réseau
 ├── packaging/LISEZ-MOI.txt         fichier livré dans chaque archive
+├── dist/ftp/                       dossier prêt à téléverser (tools/prepare-ftp.ps1)
 ├── .github/workflows/build.yml     CI Windows / macOS / Linux
 ├── vendor/llama/win-vulkan/        llama.cpp + DLL Vulkan + runtime VC++
 ├── vendor/sd/win-vulkan/           stable-diffusion.cpp (sd-server) + DLL

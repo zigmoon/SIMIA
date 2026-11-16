@@ -1,7 +1,37 @@
 # Publication des modèles SIMIA
 
-Seuls **3 modèles** sont hébergés sur votre serveur. Les 26 autres sont téléchargés
+Seuls **3 modèles** sont hébergés sur votre serveur. Les autres sont téléchargés
 directement depuis le CDN HuggingFace, sans occuper d'espace chez vous.
+
+## Préparer le dossier à téléverser
+
+Les poids ne sont **pas** dans `SIMIA/` : ce dossier ne contient que l'interface.
+Glisser `SIMIA/` sur le FTP ne peut donc jamais envoyer les `.gguf`. Un script
+assemble le tout :
+
+```powershell
+cd SIMIA-desktop
+powershell -NoProfile -File tools\prepare-ftp.ps1
+```
+
+Résultat dans **`SIMIA-desktop/dist/ftp/`** : 31 fichiers, **2,99 Go**, avec la
+bonne arborescence. Les trois `.gguf` sont posés en **liens physiques** : aucune
+copie, aucun espace disque consommé.
+
+> Il suffit ensuite de sélectionner **le contenu** de `dist/ftp/` et de le
+> déposer dans le dossier `SIMIA/` du serveur (pas le dossier lui-même).
+
+| Sous-dossier | Contenu | Rôle |
+|---|---|---|
+| *(racine)* | 17 fichiers de l'interface + `.htaccess` | application web, PWA |
+| `desktop/` | `index.html` | page de présentation |
+| `icons/` | 4 PNG | icônes de l'app installée |
+| `screenshots/` | 2 PNG | boîte d'installation |
+| `models/` | 3 GGUF + `versions.json` + `catalog.json` + `hosting-status.json` | modèles servis par le serveur |
+| `models/image/loras/` | `simia-gravure.safetensors` | style maison |
+
+`catalog.json` n'est pas lu par le navigateur, mais il documente le catalogue
+côté serveur ; `versions.json` alimente la veille de version du lanceur.
 
 ## 1. L'interface (`app.zigmoon.com/SIMIA/`)
 
@@ -33,13 +63,13 @@ app.zigmoon.com/SIMIA/
 `prepare-self-hosted-llama.ps1` est un outil local (préparation WebLLM), inutile
 sur le serveur.
 
-> **État constaté le 16/11** : l'interface et la page de présentation sont en
-> ligne et complètes (25 fichiers, contenu identique au dépôt). Le dossier
-> `models/` ne contient pour l'instant que `hosting-status.json` : les 3 GGUF et
-> le LoRA restent à téléverser (voir section 2). Ce n'est pas bloquant — la
-> version bureau bascule sur le CDN HuggingFace, vérifié 200 sur les trois
-> modèles — mais `versions.json` et `catalog.json` manquent aussi, donc le
-> lanceur n'affiche pas la veille de version.
+> **État constaté le 16/11 à 01:35** : l'interface est en ligne et à jour
+> (service worker `3.1.0`, `.htaccess` actif, Brotli côté serveur). Le dossier
+> `models/` ne contient toujours que `hosting-status.json` : les 3 GGUF, le LoRA
+> et les deux catalogues n'ont pas été téléversés, car ils ne sont pas dans
+> `SIMIA/`. Utiliser `tools/prepare-ftp.ps1`. Ce n'est pas bloquant — la version
+> bureau bascule sur le CDN HuggingFace, vérifié 200 sur les trois modèles — mais
+> le lanceur n'affiche pas encore la veille de version.
 
 > **Le fichier `.htaccess` est indispensable.** Apache ne connaît pas
 > `.webmanifest` par défaut : sans lui, le manifeste part en
