@@ -279,6 +279,10 @@
     filter:blur(10px);
   }
   .hero-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center}
+  /* Sans min-width:0, une colonne de grille ne descend pas sous la largeur
+     mini de son contenu : sur un ecran de 320 px, l'apercu de l'application
+     elargissait la colonne et le titre se retrouvait coupe. */
+  .hero-grid > *{min-width:0}
   .eyebrow{
     display:inline-flex; align-items:center; gap:8px; margin-bottom:20px;
     padding:6px 12px; border:1px solid #d8e2c0; border-radius:999px; background:#f2f8e6;
