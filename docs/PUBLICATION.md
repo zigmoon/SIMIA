@@ -448,7 +448,7 @@ curl.exe -s -o NUL -w "%{http_code}`n" https://app.zigmoon.com/SIMIA/models/cata
 
 À chaque premier lancement, Windows affiche « Windows a protégé votre PC » et
 macOS refuse le binaire. Ce n'est pas un défaut de l'archive : c'est l'absence de
-signature. Vérifié sur l'archive v0.1.2 :
+signature. Vérifié sur les archives v0.1.2 et v0.1.3 :
 
 ```
 Get-AuthenticodeSignature .\simia-desktop.exe
