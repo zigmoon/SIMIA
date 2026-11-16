@@ -47,7 +47,7 @@ const TARGETS = [
     file: "simia-linux-x64.tar.gz",
     os: "Linux",
     detail: "x86_64",
-    note: "Moteur Vulkan, repli processeur. Testé sur Ubuntu 24.04.",
+    note: "Moteur Vulkan, repli processeur. Conversation dès Ubuntu 22.04 (glibc 2.34) ; génération d'images à partir d'Ubuntu 26.04 (glibc 2.43).",
   },
 ];
 
@@ -132,10 +132,10 @@ xattr -dr com.apple.quarantine simia-desktop
 chmod +x simia-desktop
 \`\`\`
 
-**Windows** — Windows affiche un avertissement au premier lancement, faute de
+**Windows** — Un avertissement apparaît au premier lancement, faute de
 signature de code. Pour l'éviter, **avant de décompresser** : clic droit sur le
-`.zip` → *Propriétés* → cocher *Débloquer* → *OK*. Windows oublie alors que le
-fichier vient d'Internet et `simia-desktop.exe` démarre sans rien demander. Si
+\`.zip\` → *Propriétés* → cocher *Débloquer* → *OK*. Windows oublie alors que le
+fichier vient d'Internet et \`simia-desktop.exe\` démarre sans rien demander. Si
 l'avertissement apparaît malgré tout : *Informations complémentaires* puis
 *Exécuter quand même*. Ce n'est pas un virus — le programme est compilé par
 GitHub Actions à partir du code source de ce dépôt.
