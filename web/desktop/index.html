@@ -454,6 +454,11 @@
   }
   .dl .files a:hover{background:#f2f8e6; border-color:#c2d39a}
   .dl .files a small{font:500 11px "DM Mono",monospace; color:var(--dim); text-transform:none; letter-spacing:0}
+  /* Aucun paquet publie : le lien reste lisible mais n'invite plus au clic. */
+  .dl .files a.is-pending{color:var(--muted); background:#f7f7f3; border-style:dashed; cursor:default}
+  .dl .files a.is-pending:hover{background:#f7f7f3; border-color:#e2e5dc; transform:none}
+  .dl .files a.is-pending small{color:#a4aba4}
+  #downloads-note.is-pending{color:#8a6d2f}
   .tag-soon{font:700 9px "DM Mono",monospace; letter-spacing:.08em; text-transform:uppercase; color:#8a6d2f; background:#f6edd8; padding:3px 8px; border-radius:999px}
 
   /* ---------- versions publiees (GitHub) ---------- */
@@ -926,7 +931,7 @@
         </article>
       </div>
 
-      <p class="mono" style="margin-top:22px">
+      <p class="mono" style="margin-top:22px" id="downloads-note">
         Les paquets sont compilés automatiquement par GitHub Actions à chaque version publiée.
       </p>
 
@@ -1058,9 +1063,37 @@
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   const RELEASES_API = `https://api.github.com/repos/zigmoon/SIMIA/releases?per_page=6`;
 
-  document.querySelectorAll("[data-release]").forEach(link => {
+  const releaseLinks = [...document.querySelectorAll("[data-release]")];
+  releaseLinks.forEach(link => {
     link.href = `${RELEASE_BASE}/${RELEASE_PREFIX}${link.dataset.release}`;
   });
+
+  /* Tant qu'aucune version n'est publiee, les liens de telechargement
+     renverraient un 404 GitHub. On les neutralise et on l'explique, plutot que
+     de laisser un visiteur cliquer dans le vide. Reactive des qu'une release
+     existe, sans rien changer au code. */
+  const downloadsNote = document.getElementById("downloads-note");
+  const downloadsReadyText = downloadsNote ? downloadsNote.textContent.trim() : "";
+  const setDownloadsReady = ready => {
+    releaseLinks.forEach(link => {
+      link.classList.toggle("is-pending", !ready);
+      if (!ready) {
+        link.setAttribute("aria-disabled", "true");
+        link.removeAttribute("download");
+        link.href = `${REPO_URL}/releases`;
+      } else {
+        link.removeAttribute("aria-disabled");
+        link.setAttribute("download", "");
+        link.href = `${RELEASE_BASE}/${RELEASE_PREFIX}${link.dataset.release}`;
+      }
+    });
+    if (downloadsNote) {
+      downloadsNote.textContent = ready
+        ? downloadsReadyText
+        : "Les paquets Windows, macOS et Linux ne sont pas encore publiés. Ils arriveront sur la page Releases du dépôt.";
+      downloadsNote.classList.toggle("is-pending", !ready);
+    }
+  };
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]
@@ -1338,6 +1371,7 @@
       const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
       if (response.status === 404) {
         releasesFallback("Aucune version publiée pour le moment.");
+        setDownloadsReady(false);
         return;
       }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1345,11 +1379,14 @@
       const releases = (Array.isArray(all) ? all : []).filter(item => !item.draft);
       if (!releases.length) {
         releasesFallback("Aucune version publiée pour le moment.");
+        setDownloadsReady(false);
         return;
       }
 
       const latest = releases[0];
       const assets = (latest.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name));
+      // Des versions existent sans paquet joint : les boutons resteraient morts.
+      setDownloadsReady(assets.length > 0);
       const assetLinks = assets.map(asset => `<a class="release-asset" href="${asset.browser_download_url}" download>
           <span>${escapeHtml(assetLabel(asset.name))}</span><small>${formatSize(asset.size)}</small>
         </a>`).join("");
@@ -1369,7 +1406,10 @@
           : `<p class="releases-offline">Cette version n'a pas encore de paquet joint : la compilation est peut-être en cours.</p>`}
         ${previous ? `<ul class="release-list">${previous}</ul>` : ""}`;
     } catch {
+      // Reseau indisponible ou API limitee : on ne peut pas garantir que les
+      // paquets sont la, donc on neutralise aussi les boutons.
       releasesFallback("Le chargement automatique est indisponible (limite de l'API GitHub ou hors ligne).");
+      setDownloadsReady(false);
     }
   }
 
