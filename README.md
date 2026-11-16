@@ -381,13 +381,20 @@ officielles :
 | `macos-x64` | macos-x64 | **aucun binaire** | `simia-macos-x64.tar.gz` |
 | `linux-x64` | ubuntu-vulkan-x64 | Ubuntu x86_64 vulkan | `simia-linux-x64.tar.gz` |
 
-Sur macOS Intel, la génération d'images est simplement masquée : le bouton
-**Image** n'apparaît pas tant que `sd-server` est absent, sans erreur.
+Sur macOS Intel, la génération d'images reste absente : `sd-server` n'existe pas
+pour cette plateforme, donc le bouton **Image** n'apparaît pas et les archives
+Mac Intel ne joignent pas de modèle d'image.
 
 Chaque paquet contient `simia-desktop`, `web/`, `vendor/`, `models/*.json`,
-`models/image/loras/` et `LISEZ-MOI.txt`. Les poids ne sont pas inclus : le
-catalogue pointe vers le CDN. Sur Windows, le runtime VC++ est joint aux
-moteurs, donc rien à installer.
+`models/image/loras/`, un modèle d'image prêt à l'emploi
+(`models/image/sd15/`, SD 1.5, 1,46 Go) et `LISEZ-MOI.txt`. Les poids de
+conversation ne sont pas inclus : le catalogue pointe vers le CDN.
+
+SD 1.5 est le plus gros modèle d'image qui puisse tenir dans une release
+GitHub, plafonnée à **2 Gio par fichier** : SD-Turbo (1,72 Go) passerait de
+justesse, SDXL Turbo (3,67 Go) jamais. C'est ce qui fixe la limite, pas un
+choix de qualité. Le fichier n'étant pas versionné, le workflow le télécharge
+et vérifie son empreinte SHA-256 avant de l'ajouter au paquet.
 
 Le corps de la release n'est pas laissé au « Full Changelog » automatique de
 GitHub : [tools/release-body.mjs](tools/release-body.mjs) le rédige à partir des

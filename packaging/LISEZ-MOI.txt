@@ -50,11 +50,19 @@ Ce que contient cette archive
   web/                 l'interface complete
   vendor/              les moteurs d'inference (llama.cpp, et
                        stable-diffusion.cpp quand la plateforme en a un)
-  models/              les catalogues, et le style Gravure SIMIA (LoRA 6 Mo)
+  models/              le catalogue, le style Gravure SIMIA (LoRA 6 Mo) et un
+                       modele d'image deja pret (SD 1.5, 1,46 Go) pour que le
+                       bouton Image fonctionne des le premier lancement, sur
+                       Windows, Mac Apple Silicon et Linux. Il est absent des
+                       archives Mac Intel, faute de moteur d'image.
 
 Modeles
   Le catalogue pointe vers un CDN : les poids se telechargent au premier choix
   et restent dans models/. Ils peuvent etre supprimes pour liberer de l'espace.
+  Un modele de conversation (Qwen 2.5 Coder 0.5B, 469 Mo) est telecharge au
+  tout premier lancement, avant que la fenetre ne s'ouvre : le pourcentage
+  defile dans la fenetre noire, c'est normal. Ensuite, chaque modele choisi se
+  telecharge depuis la bibliotheque, avec sa barre de progression.
 
   Pour ajouter un modele qui n'est pas au catalogue, deposez n'importe quel
   fichier .gguf compatible llama.cpp dans models/ puis relancez : il apparait

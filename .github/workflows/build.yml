@@ -24,6 +24,15 @@ env:
   # builds locaux sans MSVC. Cette variable la neutralise : les runners macOS et
   # Linux utilisent leur toolchain native.
   RUSTUP_TOOLCHAIN: stable
+  # Un modele d'image est joint aux archives pour que la generation d'images
+  # fonctionne des le premier lancement, sans second telechargement. SD 1.5 est
+  # le plus gros qui tienne sous la limite de 2 Gio par fichier de GitHub
+  # Releases : SDXL Turbo pese 3,67 Go et ne peut pas y entrer.
+  # Poids versionnes hors depot (.gitignore), donc telecharges ici puis verifies.
+  SD15_FILE: stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf
+  SD15_URL: https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf
+  SD15_BYTES: "1566768416"
+  SD15_SHA256: b8944e9fe0b69b36ae1b5bb0185b3a7b8ef14347fe0fa9af6c64c4829022261f
 
 jobs:
   build:
@@ -190,6 +199,28 @@ jobs:
           # fonctionne sans telechargement supplementaire.
           if ls models/image/loras/*.safetensors >/dev/null 2>&1; then
             cp models/image/loras/*.safetensors "$stage/models/image/loras/"
+          fi
+
+          # Modele d'image livre avec l'application, pour que le bouton Image de
+          # la barre de saisie soit utilisable au premier lancement. Les poids ne
+          # sont pas versionnes (.gitignore) : ils sont telecharges ici.
+          # macOS Intel n'a aucun binaire sd-server : rien a joindre.
+          if [ -n "${{ matrix.sd }}" ]; then
+            dir="$stage/models/image/sd15"
+            mkdir -p "$dir"
+            curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+              -o "$dir/$SD15_FILE" "$SD15_URL"
+            size=$(wc -c < "$dir/$SD15_FILE" | tr -d ' ')
+            if [ "$size" != "$SD15_BYTES" ]; then
+              echo "::error::SD 1.5 : $size octets recus, $SD15_BYTES attendus"
+              exit 1
+            fi
+            if command -v sha256sum >/dev/null 2>&1; then
+              echo "$SD15_SHA256  $dir/$SD15_FILE" | sha256sum -c -
+            else
+              echo "$SD15_SHA256  $dir/$SD15_FILE" | shasum -a 256 -c -
+            fi
+            echo "modele d'image joint : $(du -h "$dir/$SD15_FILE" | cut -f1)"
           fi
 
           cp -r vendor "$stage/vendor"

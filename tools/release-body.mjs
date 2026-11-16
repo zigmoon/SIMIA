@@ -29,13 +29,13 @@ const TARGETS = [
     file: "simia-windows-x64.zip",
     os: "Windows",
     detail: "10 et 11, 64 bits",
-    note: "Moteur Vulkan, repli processeur.",
+    note: "Moteur Vulkan, repli processeur. Modèle d'image SD 1.5 (1,46 Go) joint à l'archive.",
   },
   {
     file: "simia-macos-arm64.tar.gz",
     os: "macOS Apple Silicon",
     detail: "M1 et plus récent",
-    note: "Moteur Metal, génération d'images comprise.",
+    note: "Moteur Metal. Le modèle d'image SD 1.5 est joint à l'archive ; la génération 1024 px demande macOS 26.",
   },
   {
     file: "simia-macos-x64.tar.gz",
@@ -47,7 +47,7 @@ const TARGETS = [
     file: "simia-linux-x64.tar.gz",
     os: "Linux",
     detail: "x86_64",
-    note: "Moteur Vulkan, repli processeur. Conversation dès Ubuntu 22.04 (glibc 2.34) ; génération d'images à partir d'Ubuntu 26.04 (glibc 2.43).",
+    note: "Moteur Vulkan, repli processeur. Conversation dès Ubuntu 22.04 (glibc 2.34) ; génération d'images à partir d'Ubuntu 26.04 (glibc 2.43). Modèle SD 1.5 joint.",
   },
 ];
 
@@ -110,9 +110,11 @@ Pas de compte, pas de clé API, pas de serveur : vos phrases ne quittent pas
 l'ordinateur.
 
 Chaque archive contient le lanceur, les moteurs d'inférence
-(llama.cpp et stable-diffusion.cpp), l'interface complète et le style
-« Gravure SIMIA ». Les poids des modèles se téléchargent depuis l'application,
-au moment où vous en choisissez un.
+(llama.cpp et stable-diffusion.cpp), l'interface complète, le style
+« Gravure SIMIA » et un modèle d'image déjà prêt (SD 1.5, 1,46 Go) : le bouton
+**Image** fonctionne dès le premier lancement. C'est aussi pourquoi les archives
+pèsent environ 1,5 Go. Les poids des modèles de conversation, eux, se
+téléchargent depuis l'application, au moment où vous en choisissez un.
 
 ## Télécharger
 
@@ -123,7 +125,11 @@ ${table}
 1. Décompressez l'archive où vous voulez : aucun droit administrateur n'est
    nécessaire.
 2. Lancez \`simia-desktop\` (\`simia-desktop.exe\` sur Windows).
-3. Choisissez un modèle : il se télécharge une fois, puis reste sur la machine.
+3. **Premier lancement** : SIMIA télécharge un modèle de conversation
+   (Qwen 2.5 Coder 0.5B, 469 Mo) avant d'ouvrir la fenêtre. Le pourcentage
+   défile dans la fenêtre noire ; c'est normal, et cela n'arrive qu'une fois.
+4. Ensuite, chaque modèle choisi dans la bibliothèque se télécharge avec sa
+   propre barre de progression, sur sa carte.
 
 **macOS** — le binaire n'est pas signé, Gatekeeper le met en quarantaine :
 
