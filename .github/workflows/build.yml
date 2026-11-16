@@ -238,24 +238,31 @@ jobs:
           fi
           ls -la dist
 
+      # Le README porte le tableau des versions telechargeables : il est
+      # regenere ici, une fois les archives attachees a la release.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Les notes de release sont redigees a partir des archives reellement
+      # presentes : tableau des telechargements, instructions d'installation
+      # par systeme, empreintes SHA-256. Sans elles, GitHub n'affiche qu'un
+      # « Full Changelog » automatique et le visiteur ne sait pas quoi faire.
+      - name: Rediger les notes de version
+        run: node tools/release-body.mjs
+
       - name: Publier la release
         uses: softprops/action-gh-release@v2
         with:
           name: SIMIA ${{ github.ref_name }}
+          body_path: release-body.md
           draft: false
-          generate_release_notes: true
           files: dist/*
           # Republier sur un tag deja utilise ecrase les archives existantes :
           # c'est ce qui permet de corriger une release defectueuse sans la
           # supprimer.
           overwrite_files: true
           fail_on_unmatched_files: true
-
-      # Le README porte le tableau des versions telechargeables : il est
-      # regenere ici, une fois les archives attachees a la release.
-      - uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Mettre a jour le tableau des versions du README
         env:
