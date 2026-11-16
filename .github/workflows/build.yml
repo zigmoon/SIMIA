@@ -224,9 +224,12 @@ jobs:
           cp packaging/LISEZ-MOI.txt "$stage/LISEZ-MOI.txt"
           # Le meme fichier sert les quatre archives : le nom de la cible y est
           # injecte pour que le lecteur sache laquelle il a decompressee.
-          sed -i "s/{{TARGET}}/${{ matrix.target }}/" "$stage/LISEZ-MOI.txt"
+          # awk et non « sed -i » : le sed de macOS est BSD et exige une
+          # extension de sauvegarde, donc « sed -i » y echoue.
+          awk -v target="${{ matrix.target }}" '{ gsub(/\{\{TARGET\}\}/, target); print }' \
+            packaging/LISEZ-MOI.txt > "$stage/LISEZ-MOI.txt"
           if grep -q "{{TARGET}}" "$stage/LISEZ-MOI.txt"; then
-            echo "::error::le jeton {{TARGET}} n'a pas ete remplace dans LISEZ-MOI.txt"
+            echo "::error::le jeton de plateforme n'a pas ete remplace dans LISEZ-MOI.txt"
             exit 1
           fi
 
