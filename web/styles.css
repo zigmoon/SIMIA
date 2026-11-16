@@ -82,6 +82,10 @@ button { cursor:pointer; }
 .welcome-steps{display:flex;gap:10px;max-width:690px;margin:22px 0 0;padding:0;list-style:none}.welcome-steps li{display:flex;align-items:center;gap:11px;flex:1;min-width:0;padding:13px 14px;border:1px solid #e2e3da;border-radius:12px;background:var(--surface);transition:.18s}.welcome-steps li:hover{border-color:#c3cbb2;transform:translateY(-2px);box-shadow:0 8px 22px rgba(48,54,43,.07)}.welcome-steps b{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font:700 13px "DM Mono",monospace}.welcome-steps span{color:#35433b;font-size:11px;font-weight:700;line-height:1.35}
 .message { display:grid; grid-template-columns:32px minmax(0,1fr); gap:13px; margin:0 auto 31px; animation:rise .25s ease-out; }
 .avatar { width:31px; height:31px; border-radius:8px; display:grid; place-items:center; font:500 12px "DM Mono", monospace; background:var(--ink); color:var(--accent); overflow:hidden; }.avatar img{display:block;width:72%;height:72%;object-fit:contain}
+/* Marque SIMIA dans une bulle : dessinee en texte, pas en image. Un SVG de
+   280 Ko charge par message rendait la conversation lente a afficher, et une
+   image cassee suffisait a faire disparaitre l'initiale. */
+.avatar-mark{font:800 15px/1 "DM Sans", "DM Mono", system-ui, sans-serif; letter-spacing:0; color:var(--accent); transform:translateY(-.5px)}
 .message.user .avatar { background:#cbdcd1; color:#385143; }
 .message-content { max-width:710px; padding-top:4px; }.message-link{color:#2b6653;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;font-weight:700}.message-link:hover{color:#173e31}
 .message-role { margin:0 0 7px; font:500 10px "DM Mono", monospace; letter-spacing:.07em; color:var(--muted); }

@@ -1279,6 +1279,10 @@ fn ensure_llama(state: &Shared) -> Result<(), String> {
     Ok(())
 }
 
+fn sd_log_path(port: u16) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("simia-sd-{port}.log"))
+}
+
 fn spawn_sd_server(
     bin: &Path,
     pack: &ImagePack,
@@ -1319,9 +1323,22 @@ fn spawn_sd_server(
         .arg("--log-level")
         .arg("warn")
         .current_dir(bin.parent().unwrap_or_else(|| Path::new(".")))
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdin(Stdio::null());
+    // sd-server meurt sans message quand la VRAM manque au moment de dessiner :
+    // sans ce journal, l'utilisateur ne voyait qu'un « GPU libre ? » vague.
+    match fs::File::create(sd_log_path(port)) {
+        Ok(log) => match log.try_clone() {
+            Ok(copy) => {
+                command.stdout(Stdio::from(log)).stderr(Stdio::from(copy));
+            }
+            Err(_) => {
+                command.stdout(Stdio::null()).stderr(Stdio::null());
+            }
+        },
+        Err(_) => {
+            command.stdout(Stdio::null()).stderr(Stdio::null());
+        }
+    }
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -2253,16 +2270,36 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
     }
 
     if path.starts_with("/sdcpp/") || path.starts_with("/sdapi/") {
-        let (port, ready, lora) = match state.lock() {
-            Ok(guard) => {
+        let (port, ready, lora, exited) = match state.lock() {
+            Ok(mut guard) => {
                 let lora = guard.image.current().and_then(|pack| {
                     pack.lora_file().map(|file| (file.to_string(), pack.lora_weight))
                 });
-                (guard.image.port, guard.image.state == "ready", lora)
+                // Un sd-server mort laisse l'etat a « ready » : sans ce controle,
+                // chaque requete echouait sur une connexion refusee et
+                // l'interface concluait a un GPU occupe.
+                let exited = match guard.image.child.as_mut() {
+                    Some(child) => !matches!(child.try_wait(), Ok(None)),
+                    None => guard.image.state == "ready",
+                };
+                if exited {
+                    guard.image.child = None;
+                    if guard.image.state == "ready" {
+                        guard.image.state = "stopped".to_string();
+                        guard.image.message = "le generateur d'images s'est arrete".to_string();
+                        guard.image.last_used = None;
+                    }
+                }
+                (
+                    guard.image.port,
+                    guard.image.state == "ready",
+                    lora,
+                    exited,
+                )
             }
-            Err(_) => (0, false, None),
+            Err(_) => (0, false, None, true),
         };
-        if !ready || port == 0 {
+        if !ready || port == 0 || exited {
             respond_json(
                 request,
                 503,
@@ -2271,10 +2308,16 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
             );
             return;
         }
+        let generating = url.ends_with("/v1/img_gen") || url.ends_with("/sdapi/v1/txt2img");
+        if generating {
+            // Le GPU n'heberge qu'un moteur a la fois. Sans cette liberation,
+            // sd-server demarrait avec la VRAM deja prise par llama-server et
+            // mourait au premier pas de debruitage.
+            stop_llama(&state);
+        }
         if let Ok(mut guard) = state.lock() {
             guard.image.last_used = Some(Instant::now());
         }
-        let generating = url.ends_with("/v1/img_gen") || url.ends_with("/sdapi/v1/txt2img");
         match lora {
             Some((file, weight)) if generating => proxy_with_lora(request, port, &url, &file, weight),
             _ => proxy(request, port, &url),
@@ -2394,8 +2437,19 @@ fn forward(
             let _ = request.respond(response);
         }
         Err(err) => {
-            let payload = format!("{{\"error\":\"{}\"}}", js_escape(&err.to_string()));
-            let _ = request.respond(Response::from_string(payload).with_status_code(StatusCode(502)));
+            // La cause est presque toujours dans le journal de sd-server :
+            // allocation Vulkan refusee, modele invalide, plantage du backend.
+            let detail = tail_of(&sd_log_path(port), 3);
+            let body = if detail.is_empty() {
+                format!("{{\"error\":{}}}", js_escape(&err.to_string()))
+            } else {
+                format!(
+                    "{{\"error\":{},\"detail\":{}}}",
+                    js_escape(&err.to_string()),
+                    js_escape(&detail)
+                )
+            };
+            let _ = request.respond(Response::from_string(body).with_status_code(StatusCode(502)));
         }
     }
 }
@@ -2493,7 +2547,7 @@ fn native_script(state: &Shared) -> String {
         Ok(guard) => {
             let selected = guard.selected_model.clone();
             let image = format!(
-                "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"generateUrl\":\"/sdcpp/v1/img_gen\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
+                "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"apiBase\":\"\",\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"generateUrl\":\"/sdapi/v1/txt2img\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
                 guard.image.available(),
                 guard.image.bin.is_some() && guard.image.probe.is_none(),
                 guard.image.current().map(|pack| guard.image.size_override.unwrap_or(pack.px_or(DEFAULT_IMG_WIDTH))).unwrap_or(0),

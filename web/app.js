@@ -1750,6 +1750,7 @@ let imageDbPromise = null;
 let imageBusy = null;
 let imageJobId = null;
 let imageCancelPending = false;
+let imageAbort = null;
 const imageUrls = new Map();
 
 function imageDatabase() {
@@ -2088,43 +2089,67 @@ async function imageGenerate(prompt, bubble) {
   const steps = pack?.steps || IMAGE.steps;
   const cfg = pack?.cfg ?? IMAGE.cfg ?? 1.0;
   const styledPrompt = pack?.promptPrefix ? `${pack.promptPrefix}, ${prompt}` : prompt;
-  const response = await fetch(IMAGE.generateUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      prompt: styledPrompt,
-      negative_prompt: "",
-      width: px,
-      height: px,
-      seed: -1,
-      batch_count: 1,
-      sample_params: {
-        sample_steps: steps,
-        guidance: { txt_cfg: cfg }
-      },
-      preview: "none",
-      output_format: "png"
-    })
-  });
-  if (!response.ok) throw new Error(`image ${response.status}`);
-  const job = await response.json();
-  imageJobId = job.id;
 
-  let final = null;
-  while (!final) {
-    await new Promise(resolve => setTimeout(resolve, IMAGE_POLL_MS));
-    const poll = await fetch(`${IMAGE.jobsUrl}/${job.id}`, { cache: "no-store" }).then(item => item.json());
-    if (poll.status === "completed") { final = poll; break; }
-    if (poll.status === "failed") throw new Error(poll.error?.message || "generation_failed");
-    if (poll.status === "cancelled") throw new Error("cancelled");
-    const progress = poll.progress || {};
-    const total = Number(progress.total) || 0;
-    const done = Number(progress.completed) || 0;
-    setStage(imageStageLabel(progress), total ? done / total : 0.15);
+  /* Endpoint synchrone volontairement. Le couple
+     `img_gen` + `jobs/<id>` de stable-diffusion.cpp tue le serveur au premier
+     pas de debruitage (code de sortie 0xC0000409), alors que la meme generation
+     par `txt2img` aboutit. La progression vient donc d'un second appel,
+     `progress`, interroge pendant que la requete est en vol. */
+  const apiBase = String(IMAGE.apiBase || "").replace(/\/$/, "");
+  const controller = new AbortController();
+  imageAbort = controller;
+
+  let polling = true;
+  const watch = (async () => {
+    while (polling) {
+      await new Promise(resolve => setTimeout(resolve, IMAGE_POLL_MS));
+      if (!polling) return;
+      try {
+        const state_ = await fetch(`${apiBase}/sdapi/v1/progress`, { cache: "no-store" }).then(item => item.json());
+        const inner = state_?.state || {};
+        const total = Number(inner.sampling_steps) || steps;
+        const done = Number(inner.sampling_step) || 0;
+        const ratio = total ? done / total : 0;
+        setStage(imageStageLabel({ stage: ratio > 0.98 ? "vae_decode" : "sampling" }), Math.max(0.1, ratio));
+      } catch { /* le moteur peut etre occupe par le rendu */ }
+    }
+  })();
+
+  let payload;
+  try {
+    const response = await fetch(`${apiBase}/sdapi/v1/txt2img`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        prompt: styledPrompt,
+        negative_prompt: "",
+        width: px,
+        height: px,
+        steps,
+        cfg_scale: cfg,
+        seed: -1,
+        batch_size: 1,
+        n_iter: 1,
+        sampler_name: "Euler a",
+        save_images: false
+      })
+    });
+    if (!response.ok) {
+      const failure = new Error(`image_engine_${response.status}`);
+      failure.detail = await response.text().then(text => text.slice(0, 300)).catch(() => "");
+      failure.status = response.status;
+      throw failure;
+    }
+    payload = await response.json();
+  } finally {
+    polling = false;
+    imageAbort = null;
+    await watch.catch(() => {});
   }
   imageJobId = null;
 
-  const encoded = final.result?.images?.[0]?.b64_json;
+  const encoded = payload?.images?.[0];
   if (!encoded) throw new Error("image vide");
   const blob = base64ToBlob(encoded);
   const id = globalThis.crypto?.randomUUID?.() || `img${Date.now()}`;
@@ -2167,7 +2192,28 @@ async function requestImage(prompt) {
   imageBusy = { bubble, prompt: clean };
 
   try {
-    const image = await imageGenerate(clean, bubble);
+    let image = null;
+    let failure = null;
+    for (let attempt = 0; attempt < 2 && !image; attempt += 1) {
+      try {
+        image = await imageGenerate(clean, bubble);
+      } catch (error) {
+        failure = error;
+        const aborted = error?.name === "AbortError" || String(error?.message || "").includes("cancel");
+        if (aborted) break;
+        if (attempt === 0) {
+          /* sd-server meurt parfois au premier pas de debruitage quand la VRAM
+             vient d'etre liberee par llama-server. Un redemarrage suffit : on
+             relance le moteur et on retente une fois, sans rien dire a
+             l'utilisateur tant que la seconde tentative marche. */
+          const label = bubble.querySelector(".image-progress-label");
+          if (label) label.textContent = localizedText("Le moteur redémarre…", "Restarting the engine…", "Reiniciando el motor…", "エンジンを再起動中…");
+          await fetch(new URL("/_simia/image/release", location.href).href, { method: "POST" }).catch(() => null);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+    }
+    if (!image) throw failure || new Error("image");
     const figure = content.querySelector(".message-image, .image-progress");
     if (figure) {
       figure.outerHTML = imageFigureMarkup(image);
@@ -2180,15 +2226,23 @@ async function requestImage(prompt) {
       saveState();
     }
   } catch (error) {
-    const cancelled = String(error?.message || "").includes("cancel");
+    const cancelled = error?.name === "AbortError" || String(error?.message || "").includes("cancel");
+    const detail = String(error?.detail || "").trim();
     const text = cancelled
       ? localizedText("Génération annulée.", "Generation cancelled.", "Generación cancelada.", "生成を中止しました。")
-      : localizedText(
-          "L'image n'a pas pu être générée. Vérifiez que le GPU est libre, puis réessayez.",
-          "The image could not be generated. Check that the GPU is free, then try again.",
-          "No se pudo generar la imagen. Comprueba que la GPU esté libre e inténtalo de nuevo.",
-          "画像を生成できませんでした。GPUが空いているか確認して、もう一度お試しください。"
-        );
+      : detail
+        ? localizedText(
+            `L'image n'a pas pu être générée. Le moteur d'image a signalé : ${detail}`,
+            `The image could not be generated. The image engine reported: ${detail}`,
+            `No se pudo generar la imagen. El motor de imagen informó: ${detail}`,
+            `画像を生成できませんでした。画像エンジンからの報告: ${detail}`
+          )
+        : localizedText(
+            "L'image n'a pas pu être générée, même après redémarrage du moteur. Fermez les autres applications qui utilisent la carte graphique, puis réessayez avec une taille plus petite.",
+            "The image could not be generated, even after restarting the engine. Close other applications using the graphics card, then try again with a smaller size.",
+            "No se pudo generar la imagen, ni siquiera tras reiniciar el motor. Cierra las otras aplicaciones que usan la tarjeta gráfica e inténtalo de nuevo con un tamaño menor.",
+            "エンジンを再起動しても画像を生成できませんでした。GPUを使っている他のアプリを閉じ、小さいサイズで再試行してください。"
+          );
     content.querySelector(".image-progress")?.remove();
     content.insertAdjacentHTML("beforeend", `<div class="message-text"><p>${escapeHtml(text)}</p></div>`);
   } finally {
@@ -3901,7 +3955,7 @@ function renderMessage(role, content, scroll = true, attachments = [], sources =
   const element = document.createElement("article");
   element.className = `message ${role}`;
   const name = role === "user" ? localizedText("Vous", "You", "Tú", "あなた") : "SIMIA";
-  const avatar = role === "user" ? "U" : '<img src="simia-logo-white.svg" alt="">';
+  const avatar = role === "user" ? "U" : '<span class="avatar-mark" aria-hidden="true">S</span>';
   const attachmentMarkup = attachments.length ? `<div class="message-attachments">${attachments.map(attachment => attachmentCard(attachment)).join("")}</div>` : "";
   const sourcesMarkup = role === "assistant" && sources?.length ? documentSourcesMarkup(sources) : "";
   const imageMarkup = options.image ? imageFigureMarkup(options.image) : "";
@@ -3953,7 +4007,7 @@ function chatNearBottom() {
 function beginStreamingMessage(typing) {
   const element = document.createElement("article");
   element.className = "message assistant is-streaming";
-  element.innerHTML = '<div class="avatar"><img src="simia-logo-white.svg" alt=""></div><div class="message-content"><p class="message-role">SIMIA</p><div class="message-text"></div></div>';
+  element.innerHTML = '<div class="avatar"><span class="avatar-mark" aria-hidden="true">S</span></div><div class="message-content"><p class="message-role">SIMIA</p><div class="message-text"></div></div>';
   const textNode = element.querySelector(".message-text");
   typing.replaceWith(element);
   scrollChatToLatest();
@@ -4111,7 +4165,7 @@ function exportConversationMarkdown() {
 function createTyping() {
   const element = document.createElement("article");
   element.className = "message assistant";
-  element.innerHTML = '<div class="avatar"><img src="simia-logo-white.svg" alt=""></div><div class="message-content"><p class="message-role">SIMIA</p><div class="typing"><span></span><span></span><span></span></div></div>';
+  element.innerHTML = '<div class="avatar"><span class="avatar-mark" aria-hidden="true">S</span></div><div class="message-content"><p class="message-role">SIMIA</p><div class="typing"><span></span><span></span><span></span></div></div>';
   ui.chat.append(element);
   scrollChatToLatest();
   return element;
@@ -6144,6 +6198,10 @@ ui.chat.addEventListener("click", async event => {
     if (imageJobId) {
       try { await fetch(`${IMAGE.jobsUrl}/${imageJobId}/cancel`, { method: "POST" }); } catch { /* deja termine */ }
     }
+    /* L'appel de generation est synchrone : on ne peut pas l'annuler cote
+       moteur, mais on peut cesser de l'attendre et rendre la main tout de
+       suite. Le rendu continue une seconde ou deux puis s'arrete seul. */
+    imageAbort?.abort?.();
     return;
   }
   const frame = button.closest(".message-image");
