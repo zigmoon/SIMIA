@@ -39,12 +39,16 @@ jobs:
             sd: sd-master-5dcfa79-bin-win-vulkan-x64.zip
             archive: zip
           - target: macos-arm64
-            os: macos-14
+            # macOS 14 a ete retire de GitHub Actions le 2 novembre 2026 :
+            # macos-15 est le premier label Apple Silicon encore servi.
+            os: macos-15
             llama: llama-b12413-bin-macos-arm64.tar.gz
             sd: sd-master-5dcfa79-bin-Darwin-macOS-26.7.2-arm64.zip
             archive: tar.gz
           - target: macos-x64
-            os: macos-13
+            # macos-13 n'existe plus ; macos-15-intel est le label Intel actuel
+            # (macos-15-large exigerait un plan payant).
+            os: macos-15-intel
             llama: llama-b12413-bin-macos-x64.tar.gz
             # Aucun binaire stable-diffusion.cpp pour macOS Intel :
             # la generation d'images est simplement masquee dans l'application.
@@ -171,7 +175,10 @@ jobs:
           retention-days: 14
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    # `always()` : si une seule cible echoue, les autres paquets doivent quand
+    # meme etre publies. Sans cela, un job macOS en echec annulerait aussi
+    # Windows et Linux, deja compiles.
+    if: always() && startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-24.04
     steps:
@@ -179,6 +186,18 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+
+      - name: Verifier qu'au moins un paquet existe
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(find dist -maxdepth 1 -type f \( -name '*.zip' -o -name '*.tar.gz' \) | wc -l)
+          echo "paquets trouves : $count"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Aucune archive produite : rien a publier."
+            exit 1
+          fi
+          ls -la dist
 
       - name: Publier la release
         uses: softprops/action-gh-release@v2
