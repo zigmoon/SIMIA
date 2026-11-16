@@ -156,7 +156,7 @@ procédure d'upload, y compris le `.htaccess` qui déclare les types MIME
 <!-- versions:start -->
 | Version | Date | Windows | macOS ARM | macOS Intel | Linux |
 |---|---|---|---|---|---|
-| [v0.1.0](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.0) | 2026-11-16 | [zip 7 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-windows-x64.zip) | [tar.gz 7 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-macos-arm64.tar.gz) | [tar.gz 7 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-macos-x64.tar.gz) | [tar.gz 7 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-linux-x64.tar.gz) |
+| [v0.1.0](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.0) | 2026-11-16 | [zip 76 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-windows-x64.zip) | [tar.gz 72 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-macos-arm64.tar.gz) | [tar.gz 31 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-macos-x64.tar.gz) | [tar.gz 82 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.0/simia-linux-x64.tar.gz) |
 <!-- versions:end -->
 
 Le tableau ci-dessus est régénéré automatiquement par le workflow à chaque
