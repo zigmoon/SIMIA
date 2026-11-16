@@ -39,6 +39,13 @@
     { "id": "Qwen3-4B-Q4_K_M", "name": "Qwen 3 4B", "category": "Documents", "size": "~2.3 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf" },
     { "id": "Qwen3.5-4B-Q4_K_M", "name": "Qwen 3.5 4B", "category": "Documents", "size": "~2.6 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf" },
     { "id": "gemma-4-E2B-it-Q4_K_M", "name": "Gemma 4 E2B", "category": "Documents", "size": "~2.9 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf" },
-    { "id": "Qwen3.5-9B-Q4_K_M", "name": "Qwen 3.5 9B", "category": "Documents", "size": "~5.3 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf" }
+    { "id": "Qwen3.5-9B-Q4_K_M", "name": "Qwen 3.5 9B", "category": "Documents", "size": "~5.3 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf" },
+
+    { "id": "LFM2-1.2B-Q4_K_M", "name": "LFM2 1.2B", "category": "Léger", "size": "~697 MB", "license": "LFM Open License", "source": "cdn", "url": "https://huggingface.co/unsloth/LFM2-1.2B-GGUF/resolve/main/LFM2-1.2B-Q4_K_M.gguf" },
+    { "id": "granite-4.0-h-1b-Q4_K_M", "name": "Granite 4.0 1B", "category": "Documents", "size": "~859 MB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/ibm-granite/granite-4.0-h-1b-GGUF/resolve/main/granite-4.0-h-1b-Q4_K_M.gguf" },
+    { "id": "SmolLM3-3B-Q4_K_M", "name": "SmolLM3 3B", "category": "Généraliste", "size": "~1.8 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/SmolLM3-3B-GGUF/resolve/main/SmolLM3-3B-Q4_K_M.gguf" },
+    { "id": "granite-4.0-micro-Q4_K_M", "name": "Granite 4.0 Micro", "category": "Documents", "size": "~2.0 GB", "license": "Apache-2.0", "source": "cdn", "url": "https://huggingface.co/unsloth/granite-4.0-micro-GGUF/resolve/main/granite-4.0-micro-Q4_K_M.gguf" },
+    { "id": "Phi-4-mini-reasoning-Q4_K_M", "name": "Phi-4 mini Reasoning", "category": "Maths", "size": "~2.3 GB", "license": "MIT", "source": "cdn", "url": "https://huggingface.co/unsloth/Phi-4-mini-reasoning-GGUF/resolve/main/Phi-4-mini-reasoning-Q4_K_M.gguf" },
+    { "id": "DeepSeek-R1-0528-Qwen3-8B-Q4_K_M", "name": "DeepSeek R1 0528 8B", "category": "Maths", "size": "~4.7 GB", "license": "MIT", "source": "cdn", "url": "https://huggingface.co/unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF/resolve/main/DeepSeek-R1-0528-Qwen3-8B-Q4_K_M.gguf" }
   ]
 }

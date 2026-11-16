@@ -84,6 +84,58 @@
       "url": "https://huggingface.co/gpustack/stable-diffusion-xl-base-1.0-GGUF/resolve/main/stable-diffusion-xl-base-1.0-Q4_0.gguf"
     },
     {
+      "id": "sdxl-lightning",
+      "name": "SDXL Lightning",
+      "mode": "checkpoint",
+      "size": "~2,41 GB",
+      "license": "Stability Community",
+      "note": "SDXL distille en 4 pas par ByteDance : 1024 px, CFG 1, environ 4 s sur une RTX 2060 une fois le modele charge. Plus leger que SDXL Turbo et plus fidele au prompt que SD-Turbo en 512 px.",
+      "steps": 4,
+      "cfg": 1.0,
+      "px": 1024,
+      "model": "sdxl-lightning/sdxl_lightning_4step.q4_0.gguf",
+      "url": "https://huggingface.co/mzwing/SDXL-Lightning-GGUF/resolve/main/sdxl_lightning_4step.q4_0.gguf"
+    },
+    {
+      "id": "dreamshaper-xl",
+      "name": "DreamShaper XL Turbo",
+      "mode": "checkpoint",
+      "size": "~2,61 GB",
+      "license": "CreativeML OpenRAIL++-M",
+      "note": "Le SDXL le plus « artistique » de la selection : 1024 px en 6 pas, CFG 1,5. Illustrations, portraits et ambiances soignees. Reglages donnes par la fiche du modele.",
+      "steps": 6,
+      "cfg": 1.5,
+      "px": 1024,
+      "model": "dreamshaper-xl/dreamshaper-xl-v2-turbo-Q4_K.gguf",
+      "url": "https://huggingface.co/off-grid-ai/dreamshaper-xl-v2-turbo-GGUF/resolve/main/dreamshaper-xl-v2-turbo-Q4_K.gguf"
+    },
+    {
+      "id": "dreamshaper-8-lcm",
+      "name": "DreamShaper 8 LCM",
+      "mode": "checkpoint",
+      "size": "~1,46 GB",
+      "license": "CreativeML OpenRAIL-M",
+      "note": "Le plus rapide en 512 px : version LCM de DreamShaper 8, 6 pas, CFG 1,5, environ 1 s par image. Polyvalent, illustrations comme photos.",
+      "steps": 6,
+      "cfg": 1.5,
+      "px": 512,
+      "model": "dreamshaper8-lcm/dreamshaper_8LCM-iq4_nl.gguf",
+      "url": "https://huggingface.co/stduhpf/dreamshaper-8LCM-im-GGUF-sdcpp/resolve/main/dreamshaper_8LCM-iq4_nl.gguf"
+    },
+    {
+      "id": "anything-v5",
+      "name": "Anything V5",
+      "mode": "checkpoint",
+      "size": "~1,46 GB",
+      "license": "CreativeML OpenRAIL-M",
+      "note": "Specialise illustration et style anime : 512 px, 20 pas, CFG 7, environ 2 s par image. Aucun filtre de contenu n'est applique par SIMIA.",
+      "steps": 20,
+      "cfg": 7.0,
+      "px": 512,
+      "model": "anything-v5/anything-v5.q4_0.gguf",
+      "url": "https://huggingface.co/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf"
+    },
+    {
       "id": "z-image-turbo",
       "name": "Z-Image Turbo",
       "mode": "zimage",

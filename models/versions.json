@@ -1,7 +1,7 @@
 {
-  "version": 2,
-  "published": "2026-11-15",
-  "notes": "Catalogue GGUF SIMIA Desktop : 3 modeles heberges (serveur), 26 en CDN.",
+  "version": 3,
+  "published": "2026-11-16",
+  "notes": "Catalogue GGUF SIMIA Desktop : 3 modeles heberges (serveur), 35 en CDN. Ajout de LFM2, Granite 4.0 (1B et Micro), SmolLM3, Phi-4 mini Reasoning et DeepSeek R1 0528.",
   "models": {
     "Llama-3.2-1B-Instruct-Q4_K_M": { "bytes": 807694368, "sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1" },
     "qwen2.5-1.5b-instruct-q4_k_m": { "bytes": 1117320736, "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e" },

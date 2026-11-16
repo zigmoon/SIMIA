@@ -1919,7 +1919,7 @@ async function selectImagePack(id) {
    on retient donc l'identifiant concerne et chaque carte affiche sa propre
    barre. Le DOM est mis a jour sur place : re-rendre la bibliotheque a chaque
    sondage ferait sauter le defilement et clignoter les cartes. */
-const downloadState = { id: "", downloaded: 0, total: 0, stage: "", error: "" };
+const downloadState = { id: "", downloaded: 0, total: 0, stage: "", error: "", startedAt: 0 };
 let downloadTicker = 0;
 let downloadFetching = false;
 
@@ -1928,15 +1928,27 @@ function downloadPercent() {
   return Math.max(0, Math.min(100, Math.round((downloadState.downloaded / downloadState.total) * 100)));
 }
 
+function downloadSeconds() {
+  return downloadState.startedAt ? Math.max(0, Math.round((Date.now() - downloadState.startedAt) / 1000)) : 0;
+}
+
 function downloadProgressText() {
   const percent = downloadPercent();
+  const elapsed = `${downloadSeconds()} s`;
+  /* Un modele de 9 Go met parfois une minute a entrer dans le GPU : le temps
+     ecoule prouve que le travail avance, meme sans pourcentage. */
   if (downloadState.stage === "loading") {
-    return localizedText("Chargement du modèle…", "Loading model…", "Cargando el modelo…", "モデルを読み込み中…");
+    return localizedText(
+      `Chargement dans le GPU · ${elapsed}`,
+      `Loading into the GPU · ${elapsed}`,
+      `Cargando en la GPU · ${elapsed}`,
+      `GPUに読み込み中 · ${elapsed}`
+    );
   }
   if (!downloadState.total) {
     return localizedText("Téléchargement…", "Downloading…", "Descargando…", "ダウンロード中…");
   }
-  return `${percent} % · ${formatBytes(downloadState.downloaded)} / ${formatBytes(downloadState.total)}`;
+  return `${percent} % · ${formatBytes(downloadState.downloaded)} / ${formatBytes(downloadState.total)} · ${elapsed}`;
 }
 
 /* Met a jour les barres deja presentes dans la bibliotheque, sans la reconstruire.
@@ -1953,10 +1965,14 @@ function paintDownloadState() {
       box.hidden = !mine;
       if (mine) {
         const percent = downloadPercent();
+        const loading = downloadState.stage === "loading";
         const fill = box.querySelector(".card-progress-fill");
-        if (fill) fill.style.width = `${percent}%`;
         const track = box.querySelector(".card-progress-track");
-        if (track) track.setAttribute("aria-valuenow", String(percent));
+        if (track) {
+          track.classList.toggle("is-indeterminate", loading);
+          track.setAttribute("aria-valuenow", String(loading ? 0 : percent));
+        }
+        if (fill) fill.style.width = loading ? "100%" : `${percent}%`;
         const text = box.querySelector(".card-progress-text");
         if (text) text.textContent = downloadProgressText();
       }
@@ -1964,7 +1980,9 @@ function paintDownloadState() {
     if (!button) return;
     if (button.dataset.idleLabel === undefined) button.dataset.idleLabel = button.textContent;
     button.disabled = mine;
-    button.textContent = mine ? `${downloadPercent()} %` : button.dataset.idleLabel;
+    button.textContent = mine
+      ? (downloadState.stage === "loading" ? `${downloadSeconds()} s` : `${downloadPercent()} %`)
+      : button.dataset.idleLabel;
   });
 }
 
@@ -1984,12 +2002,13 @@ async function pollDownloadProgress() {
   finally { downloadFetching = false; }
 }
 
-function beginDownload(id) {
+function beginDownload(id, stage = "download") {
   downloadState.id = id;
   downloadState.downloaded = 0;
   downloadState.total = 0;
-  downloadState.stage = "download";
+  downloadState.stage = stage;
   downloadState.error = "";
+  downloadState.startedAt = Date.now();
   paintDownloadState();
   if (!downloadTicker) downloadTicker = setInterval(pollDownloadProgress, 600);
 }
@@ -1997,6 +2016,8 @@ function beginDownload(id) {
 function endDownload() {
   downloadState.id = "";
   downloadState.stage = "";
+  downloadState.error = "";
+  downloadState.startedAt = 0;
   if (downloadTicker) { clearInterval(downloadTicker); downloadTicker = 0; }
   renderModelLibrary();
 }
@@ -6351,21 +6372,22 @@ ui.modelLibrary.addEventListener("click", event => {
   }
   const choice = event.target.closest("button[data-model-id]");
   if (!choice) return;
-  /* Le modele n'est pas sur le disque : le lanceur va telecharger plusieurs
-     centaines de mega-octets. Fermer la bibliotheque tout de suite priverait le
-     visiteur de la seule barre de progression visible, donc on la garde ouverte
-     jusqu'a la fin. Le basculement instantane (modele deja present) ferme comme
-     avant. */
+  /* Le modele n'est pas encore actif : le lanceur va soit telecharger plusieurs
+     centaines de mega-octets, soit charger un modele deja present dans le GPU,
+     ce qui prend parfois une minute. Dans les deux cas la bibliotheque reste
+     ouverte et la carte affiche sa barre : fermer la fenetre tout de suite
+     priverait le visiteur de la seule indication de progression. Un modele
+     deja actif se contente de fermer, comme avant. */
   const target = MODELS.find(model => model.id === choice.dataset.modelId);
-  const downloads = Boolean(NATIVE) && Boolean(target) && target.nativeLocal === false;
-  if (downloads) {
-    beginDownload(choice.dataset.modelId);
+  const pending = Boolean(NATIVE) && Boolean(target) && target.id !== state.selectedModel;
+  if (pending) {
+    beginDownload(choice.dataset.modelId, target.nativeLocal === false ? "download" : "loading");
   } else {
     ui.settings.hidden = false;
     ui.modelLibrary.close();
   }
   selectModelById(choice.dataset.modelId).finally(() => {
-    if (!downloads) return;
+    if (!pending) return;
     endDownload();
     ui.settings.hidden = false;
     ui.modelLibrary.close();
@@ -6734,6 +6756,124 @@ if (!NATIVE && "serviceWorker" in navigator && location.protocol !== "file:") {
     }
   });
 }
+
+/* ---------- nouvelle version publiee sur GitHub ----------
+   Le service worker ne voit qu'un changement de l'interface servie par le site.
+   Une version de bureau, elle, ne se signale pas toute seule : on interroge donc
+   la derniere release GitHub. L'appel est un service externe, il reste soumis au
+   consentement, et le resultat est memorise une heure pour ne pas marteler l'API. */
+const RELEASE_LATEST_API = "https://api.github.com/repos/zigmoon/SIMIA/releases/latest";
+const RELEASE_LATEST_PAGE = "https://github.com/zigmoon/SIMIA/releases/latest";
+const SEEN_RELEASE_KEY = "simia.seen-release";
+const RELEASE_CHECK_KEY = "simia.release-check";
+const RELEASE_CHECK_MS = 60 * 60 * 1000;
+
+function readStored(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function writeStored(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* navigation privee */ }
+}
+
+/* Compare la version compilee (bureau) ou la derniere release vue (web) au tag
+   publie. Rend le tag seulement s'il est reellement plus recent. */
+function newerRelease(tag) {
+  const raw = String(tag || "").replace(/^v/i, "").trim();
+  if (!raw) return null;
+  const current = NATIVE ? String(NATIVE.version || "").replace(/^v/i, "").trim() : "";
+  if (current) {
+    const toParts = value => value.split(/[.\-+]/).map(part => Number.parseInt(part, 10) || 0);
+    const a = toParts(raw);
+    const b = toParts(current);
+    const length = Math.max(a.length, b.length);
+    for (let index = 0; index < length; index += 1) {
+      const left = a[index] || 0;
+      const right = b[index] || 0;
+      if (left > right) return raw;
+      if (left < right) return null;
+    }
+    return null;
+  }
+  // Version web : on n'a pas de numero compile, on retient le premier tag vu.
+  const seen = readStored(SEEN_RELEASE_KEY);
+  writeStored(SEEN_RELEASE_KEY, raw);
+  return seen && seen !== raw ? raw : null;
+}
+
+function showReleaseBar(tag) {
+  if (document.querySelector(".release-bar")) return;
+  const bar = document.createElement("div");
+  bar.className = "update-bar release-bar";
+  bar.setAttribute("role", "status");
+
+  const message = document.createElement("span");
+  message.textContent = NATIVE
+    ? localizedText(
+        `SIMIA ${tag} est disponible. Cette version-ci reste utilisable : installez la nouvelle quand vous voulez.`,
+        `SIMIA ${tag} is available. This version keeps working: install the new one whenever you like.`,
+        `SIMIA ${tag} está disponible. Esta versión sigue funcionando: instala la nueva cuando quieras.`,
+        `SIMIA ${tag} が公開されました。このバージョンはそのまま使えます。`
+      )
+    : localizedText(
+        `SIMIA ${tag} est disponible. Rechargez pour en profiter.`,
+        `SIMIA ${tag} is available. Reload to get it.`,
+        `SIMIA ${tag} está disponible. Recarga para obtenerla.`,
+        `SIMIA ${tag} が公開されました。再読み込みで反映されます。`
+      );
+
+  const action = document.createElement("button");
+  action.type = "button";
+  action.textContent = NATIVE
+    ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード")
+    : localizedText("Recharger", "Reload", "Recargar", "再読み込み");
+  action.addEventListener("click", async () => {
+    if (NATIVE) {
+      window.open(RELEASE_LATEST_PAGE, "_blank", "noopener");
+      bar.remove();
+      return;
+    }
+    saveDraft();
+    action.disabled = true;
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration();
+      await registration?.update();
+      if (registration?.waiting) registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    } catch { /* le rechargement suffit */ }
+    window.location.reload();
+  });
+
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.className = "update-dismiss";
+  dismiss.setAttribute("aria-label", localizedText("Ignorer", "Dismiss", "Descartar", "閉じる"));
+  dismiss.textContent = "×";
+  dismiss.addEventListener("click", () => bar.remove());
+
+  bar.append(message, action, dismiss);
+  document.body.append(bar);
+}
+
+async function checkPublishedRelease() {
+  if (!(window.SimiaConsent && window.SimiaConsent.external())) return;
+  const last = Number(readStored(RELEASE_CHECK_KEY)) || 0;
+  if (Date.now() - last < RELEASE_CHECK_MS) return;
+  writeStored(RELEASE_CHECK_KEY, String(Date.now()));
+  try {
+    const response = await fetch(RELEASE_LATEST_API, { headers: { Accept: "application/vnd.github+json" } });
+    if (!response.ok) return;
+    const release = await response.json();
+    const tag = newerRelease(release?.tag_name);
+    if (tag) showReleaseBar(tag);
+  } catch { /* hors ligne ou API limitee : on reessaiera plus tard */ }
+}
+
+window.addEventListener("load", () => {
+  setTimeout(checkPublishedRelease, 4000);
+  // Le visiteur qui accepte les ressources externes apres coup doit aussi voir
+  // l'annonce, sans recharger.
+  window.SimiaConsent?.onChange?.(granted => { if (granted) checkPublishedRelease(); });
+});
 
 // Raccourci de l'icone installee : SIMIA s'ouvre sur une conversation vierge.
 if (new URLSearchParams(location.search).has("new")) {
