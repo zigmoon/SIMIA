@@ -1,0 +1,69 @@
+# SIMIA - site public (landing + application web + modeles)
+#
+# Ce fichier est a la racine du dossier SIMIA sur le serveur. Il est
+# indispensable : sans les types MIME ci-dessous, le navigateur refuse le
+# manifeste, donc l'installation de la version web ne fonctionne pas.
+#
+# Arborescence :
+#   /SIMIA/            landing (ce dossier)
+#   /SIMIA/app/        application web installable
+#   /SIMIA/models/     poids des modeles
+#   /SIMIA/downloads/  paquets Windows, macOS, Linux
+
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType text/javascript .js .mjs
+  AddType image/svg+xml .svg
+  AddType application/json .json
+  AddType image/png .png
+  # Telechargements de plusieurs centaines de Mo : ne pas les confondre avec
+  # du texte, sinon le client FTP ou le navigateur les abime.
+  AddType application/octet-stream .zip .gguf .safetensors
+  AddType application/gzip .gz
+</IfModule>
+
+<IfModule mod_headers.c>
+  # L'interface doit pouvoir changer a chaque deploiement : le service worker
+  # gere deja le hors-ligne, le cache HTTP n'a rien a garder ici.
+  <FilesMatch "\.(html|css|js|mjs|webmanifest|json|xml|txt)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  # Regle du worker volontairement APRES la regle generique : Apache applique le
+  # dernier FilesMatch correspondant, sinon le no-store serait ecrase.
+  <FilesMatch "service-worker\.js$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+
+  # Seules les images et les polices peuvent rester en cache navigateur.
+  <FilesMatch "\.(svg|png|ico|woff2)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+
+  # Les paquets et les modeles sont immuables : leur nom ne change jamais sans
+  # que le contenu change (le manifeste porte le SHA-256).
+  <FilesMatch "\.(zip|gguf|safetensors|gz)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+    Header set Accept-Ranges "bytes"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/manifest+json application/json image/svg+xml text/xml
+</IfModule>
+
+# Ancienne adresse de la landing : elle est maintenant a la racine.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # /SIMIA/desktop/ -> /SIMIA/ (les liens et favoris existants continuent de
+  # fonctionner, et Google ne voit pas une page morte).
+  RewriteRule ^desktop/?$ /SIMIA/ [R=301,L]
+  RewriteRule ^desktop/index\.html$ /SIMIA/ [R=301,L]
+</IfModule>
+
+# Le dossier des modeles ne doit pas etre listable : il pese plusieurs Go et
+# n'a aucun interet pour un robot.
+<IfModule mod_autoindex.c>
+  Options -Indexes
+</IfModule>

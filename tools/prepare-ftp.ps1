@@ -1,117 +1,184 @@
 <#
 .SYNOPSIS
-    Prepare le dossier exact a televerser sur app.zigmoon.com/SIMIA/.
+    Assemble le dossier SIMIA/ a deposer tel quel a la racine du serveur.
 
 .DESCRIPTION
-    Le dossier SIMIA/ ne contient que l'interface web : ses poids de modeles
-    sont dans SIMIA-desktop/models/. Glisser SIMIA/ ne peut donc jamais envoyer
-    les .gguf. Ce script assemble le dossier SIMIA complet, pret a etre glisse
-    tel quel a la RACINE du serveur (il devient app.zigmoon.com/SIMIA/).
+    Le site publie n'est ni web/ (l'application) ni deploy/ (la landing) : c'est
+    leur reunion, plus les modeles et les paquets a telecharger.
 
         pwsh -File tools/prepare-ftp.ps1
+
+    Resultat :
+
+        dist/SIMIA/
+          index.html         landing
+          app/               application web installable
+          models/            poids des modeles
+          downloads/         paquets Windows, macOS, Linux + manifeste
+          *.php              points d'entree appeles par l'application
 
     Les fichiers de plus de 100 Mo sont relies par lien physique quand c'est
     possible : aucune copie, aucun espace disque supplementaire.
 
-    Resultat : dist/SIMIA/  (~3 Go logiques)
+    Le dossier est autonome : on peut le deplacer ou le recompacter sans rien
+    casser, il suffit qu'il s'appelle SIMIA.
 #>
 
 param(
-    [string]$Web = (Join-Path $PSScriptRoot "..\..\SIMIA"),
+    [string]$App = (Join-Path $PSScriptRoot "..\web"),
+    [string]$Site = (Join-Path $PSScriptRoot "..\deploy"),
     [string]$Models = (Join-Path $PSScriptRoot "..\models"),
     [string]$Out = (Join-Path $PSScriptRoot "..\dist\SIMIA")
 )
 
 $ErrorActionPreference = "Stop"
+$HardLinkAbove = 100MB
 
-if (-not (Test-Path (Join-Path $Web "index.html"))) {
-    throw "Interface introuvable : $Web (attendu : index.html)"
+function Write-Step($text) { Write-Host ""; Write-Host "== $text" -ForegroundColor Cyan }
+
+function Add-File {
+    param([string]$From, [string]$To)
+    $parent = Split-Path $To -Parent
+    if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+    $length = (Get-Item $From).Length
+    # Un lien physique pour les gros fichiers : le dossier reste complet, sans
+    # consommer un octet de plus sur le disque.
+    if ($length -gt $HardLinkAbove) {
+        if (Test-Path $To) { Remove-Item $To -Force }
+        try {
+            New-Item -ItemType HardLink -Path $To -Target $From -ErrorAction Stop | Out-Null
+            return
+        } catch {
+            # Autre volume : on retombe sur une copie.
+        }
+    }
+    Copy-Item $From $To -Force
 }
 
+foreach ($path in @($App, $Site, $Models)) {
+    if (-not (Test-Path $path)) { throw "Dossier introuvable : $path" }
+}
+# Chemins absolus normalises : les comparaisons de longueur ci-dessous en
+# dependent, et "..\web" n'a pas la meme longueur que sa cible resolue.
+$App = (Resolve-Path $App).Path
+$Site = (Resolve-Path $Site).Path
+$Models = (Resolve-Path $Models).Path
+
+Write-Step "Preparation"
 if (Test-Path $Out) { Remove-Item $Out -Recurse -Force }
 New-Item -ItemType Directory -Path $Out -Force | Out-Null
 
-$linked = 0
-$copied = 0
-
-function Place {
-    param([string]$Source, [string]$Target)
-
-    $dir = Split-Path $Target -Parent
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-
-    if (Test-Path $Target) { Remove-Item $Target -Force }
-
-    $size = (Get-Item $Source).Length
-    if ($size -gt 100MB) {
-        try {
-            New-Item -ItemType HardLink -Path $Target -Target $Source -ErrorAction Stop | Out-Null
-            $script:linked++
-            return
-        } catch {
-            # Volume different : on copie.
-        }
+Write-Step "Landing et fichiers de site"
+foreach ($file in (Get-ChildItem $Site -File -Force)) {
+    Add-File $file.FullName (Join-Path $Out $file.Name)
+}
+$downloadsFrom = Join-Path $Site "downloads"
+if (Test-Path $downloadsFrom) {
+    Get-ChildItem $downloadsFrom -File -Recurse | ForEach-Object {
+        $relative = $_.FullName.Substring($downloadsFrom.Length).TrimStart('\')
+        Add-File $_.FullName (Join-Path (Join-Path $Out "downloads") $relative)
     }
-    Copy-Item $Source $Target -Force
-    $script:copied++
 }
 
-# 1. L'interface (racine SIMIA/, hors notes internes).
-$skip = @("prepare-self-hosted-llama.ps1", "SELF_HOSTED_MODEL.md", "README.md")
-Get-ChildItem $Web -File | Where-Object {
-    $_.Extension -in ".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".txt", ".xml", ".ico", ".php" -and
-    $_.Name -notin $skip
-} | ForEach-Object { Place $_.FullName (Join-Path $Out $_.Name) }
-
-if (Test-Path (Join-Path $Web ".htaccess")) {
-    Place (Join-Path $Web ".htaccess") (Join-Path $Out ".htaccess")
+Write-Step "Application web sous app/"
+foreach ($file in (Get-ChildItem $App -File -Recurse)) {
+    $relative = $file.FullName.Substring($App.Length).TrimStart('\')
+    Add-File $file.FullName (Join-Path (Join-Path $Out "app") $relative)
 }
 
-# 2. Icones et captures de l'application installee.
-foreach ($folder in @("icons", "screenshots")) {
-    $from = Join-Path $Web $folder
-    if (-not (Test-Path $from)) { continue }
-    Get-ChildItem $from -File | ForEach-Object { Place $_.FullName (Join-Path $Out "$folder\$($_.Name)") }
+Write-Step "Modeles"
+# models/ contient tout le catalogue de bureau (~20 Go). Le serveur, lui, ne
+# publie que les modeles declares dans versions.json : c'est cette liste qui
+# fait foi, sinon le depot FTP devient impossible a envoyer.
+$versionsPath = Join-Path $Models "versions.json"
+if (-not (Test-Path $versionsPath)) { throw "models\versions.json introuvable : impossible de savoir quels modeles publier" }
+$versions = Get-Content $versionsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+$hosted = @()
+foreach ($entry in $versions.models.PSObject.Properties) {
+    $id = $entry.Name
+    if ($id -match '/') {
+        $relative = "models\" + ($id -replace '/', '\')
+    } else {
+        $relative = "models\$id.gguf"
+    }
+    if (-not (Test-Path (Join-Path $Models $relative.Substring(7)))) {
+        throw "modele declare dans versions.json mais absent du disque : $relative"
+    }
+    $hosted += $relative
+}
+# Fichiers de description, toujours publics. hosting-status.json n'est pas ici :
+# il decrit le modele WebLLM de l'application et vit dans app/models/.
+$hosted += "models\versions.json", "models\catalog.json"
+if (Test-Path (Join-Path $Models "image\catalog.json")) { $hosted += "models\image\catalog.json" }
+
+foreach ($relative in ($hosted | Sort-Object -Unique)) {
+    Add-File (Join-Path $Models $relative.Substring(7)) (Join-Path $Out $relative)
 }
 
-# 3. La page de presentation.
-$landing = Join-Path $Web "desktop\index.html"
-if (Test-Path $landing) { Place $landing (Join-Path $Out "desktop\index.html") }
+Write-Step "Manifeste des telechargements"
+$downloadsOut = Join-Path $Out "downloads"
+$builds = @()
+$targets = [ordered]@{
+    "simia-windows-x64.zip"    = "windows-x64"
+    "simia-macos-arm64.tar.gz" = "macos-arm64"
+    "simia-macos-x64.tar.gz"   = "macos-x64"
+    "simia-linux-x64.tar.gz"   = "linux-x64"
+}
+foreach ($name in $targets.Keys) {
+    $file = Join-Path $downloadsOut $name
+    if (-not (Test-Path $file)) { continue }
+    $builds += [ordered]@{
+        target = $targets[$name]
+        file   = $name
+        bytes  = (Get-Item $file).Length
+        sha256 = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+    }
+}
+$version = "0.1.0"
+$cargo = Join-Path $PSScriptRoot "..\launcher\Cargo.toml"
+if (Test-Path $cargo) {
+    $line = Select-String -Path $cargo -Pattern '^version\s*=' | Select-Object -First 1
+    if ($line) { $version = ($line.Line -split '=', 2)[1].Trim().Trim('"') }
+}
+$manifest = [ordered]@{
+    version   = $version
+    published = (Get-Date).ToString("yyyy-MM-dd")
+    builds    = $builds
+}
+if (-not (Test-Path $downloadsOut)) { New-Item -ItemType Directory -Path $downloadsOut -Force | Out-Null }
+[IO.File]::WriteAllText((Join-Path $downloadsOut "manifest.json"), ($manifest | ConvertTo-Json -Depth 4), (New-Object Text.UTF8Encoding($false)))
 
-# 4. Les modeles servis par le serveur (3 GGUF + LoRA + catalogues).
-$modelFiles = @(
-    "Qwen3.5-2B-Q4_K_M.gguf",
-    "qwen2.5-1.5b-instruct-q4_k_m.gguf",
-    "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
-    "versions.json",
-    "catalog.json",
-    "image\loras\simia-gravure.safetensors"
+Write-Step "Controle"
+$expected = @(
+    "index.html", ".htaccess", "robots.txt", "sitemap.xml", "service-worker.js",
+    "agent-api.php", "web-search-api.php", "read-url-api.php",
+    "app\index.html", "app\app.js", "app\styles.css", "app\service-worker.js",
+    "app\manifest.webmanifest", "app\offline.html",
+    "app\icons\icon-192.png", "app\icons\icon-512.png",
+    "models\versions.json", "models\catalog.json", "downloads\manifest.json"
 )
+$missing = $expected | Where-Object { -not (Test-Path (Join-Path $Out $_)) }
+if ($missing) { throw "Fichiers manquants dans le dossier final : $($missing -join ', ')" }
 
-$missing = @()
-foreach ($relative in $modelFiles) {
-    $source = Join-Path $Models $relative
-    if (-not (Test-Path $source)) { $missing += $relative; continue }
-    Place $source (Join-Path $Out "models\$relative")
+# Le manifeste de l'application doit rester installable.
+$appManifest = Get-Content (Join-Path $Out "app\manifest.webmanifest") -Raw -Encoding UTF8 | ConvertFrom-Json
+$sizes = $appManifest.icons | ForEach-Object { $_.sizes }
+foreach ($needed in "192x192", "512x512") {
+    if ($sizes -notcontains $needed) { throw "manifeste : icone $needed absente" }
 }
-
-$status = Join-Path $Web "models\hosting-status.json"
-if (Test-Path $status) { Place $status (Join-Path $Out "models\hosting-status.json") }
-
-if ($missing.Count) {
-    Write-Warning ("Modeles absents en local : " + ($missing -join ", "))
-}
+if ($appManifest.display -ne "standalone") { throw "manifeste : display doit valoir standalone" }
 
 $files = Get-ChildItem $Out -Recurse -File
 $logical = ($files | Measure-Object Length -Sum).Sum
+$outPath = (Resolve-Path $Out).Path
 
 Write-Host ""
-Write-Host "Dossier pret : $Out"
-Write-Host ("  {0} fichiers  ·  {1:N2} Go a televerser" -f $files.Count, ($logical / 1GB))
-Write-Host ("  {0} en lien physique (aucune copie), {1} copies" -f $linked, $copied)
-foreach ($group in ($files | Group-Object { $_.Directory.FullName.Replace($Out, "").TrimStart("\") } | Sort-Object Name)) {
-    $label = if ($group.Name) { $group.Name } else { "(racine)" }
-    Write-Host ("  {0,-22} {1,3} fichiers  {2,8:N1} Mo" -f $label, $group.Count, (($group.Group | Measure-Object Length -Sum).Sum / 1MB))
+Write-Host "Dossier pret : $outPath"
+Write-Host ("  {0} fichiers, {1:N2} Go" -f $files.Count, ($logical / 1GB))
+foreach ($group in ($files | Group-Object { $_.Directory.FullName.Replace($outPath, "").TrimStart("\").Split("\")[0] } | Sort-Object Name)) {
+    $label = if ($group.Name) { $group.Name + "/" } else { "racine" }
+    Write-Host ("  {0,-16} {1,3} fichiers  {2,8:N1} Mo" -f $label, $group.Count, (($group.Group | Measure-Object Length -Sum).Sum / 1MB))
 }
 Write-Host ""
 Write-Host "Deposez le dossier SIMIA ENTIER a la racine du serveur :"
@@ -119,4 +186,4 @@ Write-Host "  app.zigmoon.com/  +  SIMIA/   ->   app.zigmoon.com/SIMIA/"
 Write-Host ""
 Write-Host "Le dossier est autonome : il remplace integralement la version en ligne."
 Write-Host "Ne pas oublier de repasser en mode ASCII/binaire selon votre client :"
-Write-Host "les .gguf et les PNG doivent partir en binaire, jamais en ASCII."
+Write-Host "les .gguf, .zip et .png doivent partir en binaire, jamais en ASCII."

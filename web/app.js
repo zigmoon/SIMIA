@@ -4776,7 +4776,7 @@ function formatAgentResult(result) {
 }
 
 async function agentSearch(query) {
-  const endpoint = new URL("./agent-api.php", location.href);
+  const endpoint = new URL("../agent-api.php", location.href);
   endpoint.search = new URLSearchParams({ action: "search", q: query });
   const response = await fetch(endpoint, { cache: "no-store" });
   if (!response.ok) throw new Error(`Agent search failed: ${response.status}`);
@@ -4785,7 +4785,7 @@ async function agentSearch(query) {
 }
 
 async function agentFetch(url) {
-  const endpoint = new URL("./agent-api.php", location.href);
+  const endpoint = new URL("../agent-api.php", location.href);
   endpoint.search = new URLSearchParams({ action: "fetch", url });
   const response = await fetch(endpoint, { cache: "no-store" });
   const payload = await response.json().catch(() => null);

@@ -24,6 +24,12 @@ launcher/target/
 # Dossier pret a televerser (tools/prepare-ftp.ps1) : ~3 Go, jamais versionne.
 dist/
 
+# Paquets compiles a telecharger depuis le site : des centaines de Mo, produits
+# par tools/prepare-ftp.ps1 et non par Git.
+deploy/downloads/*.zip
+deploy/downloads/*.tar.gz
+deploy/downloads/manifest.json
+
 # Journaux et divers.
 *.log
 *.err

@@ -14,7 +14,7 @@ vos phrases ne quittent pas l'ordinateur.
 [![Compilation Windows, macOS, Linux](https://github.com/zigmoon/SIMIA/actions/workflows/build.yml/badge.svg)](https://github.com/zigmoon/SIMIA/actions/workflows/build.yml)
 [![Windows | macOS | Linux](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-x64%20%26%20arm64-4c6b1f?style=flat-square)](#télécharger)
 
-[**Télécharger**](#télécharger) · [**Essayer dans le navigateur**](https://app.zigmoon.com/SIMIA/) · [**Site officiel**](https://app.zigmoon.com/SIMIA/desktop/) · [**Modèles**](#les-modèles)
+[**Télécharger**](#télécharger) · [**Essayer dans le navigateur**](https://app.zigmoon.com/SIMIA/app/) · [**Site officiel**](https://app.zigmoon.com/SIMIA/) · [**Modèles**](#les-modèles)
 
 </div>
 
@@ -133,7 +133,7 @@ Ce que le service worker garde en mémoire, et ce qu'il refuse :
 
 | Requête | Traitement |
 |---|---|
-| Interface (`index.html`, `app.js`, `styles.css`, icônes, `desktop/`) | précachée à l'installation, servie immédiatement |
+| Interface (`index.html`, `app.js`, `styles.css`, icônes) | précachée à l'installation, servie immédiatement |
 | Navigation | réseau d'abord (4 s), puis cache, puis page `offline.html` |
 | `/models/`, `.gguf`, `.safetensors` | jamais mis en cache (plusieurs gigaoctets) |
 | Points d'entrée `.php`, CDN HuggingFace | laissés passer, sans interception |
@@ -225,14 +225,21 @@ d'interface, un seul code source pour le web et le bureau.
 ```
 SIMIA-desktop/
 ├── launcher/                       code Rust du lanceur
-├── web/                            copie de ../SIMIA (tools/sync-web.ps1)
+├── web/                            l'application, copie de ../SIMIA (tools/sync-web.ps1)
 │   ├── icons/                      icônes PWA 192, 512, maskable, Apple
 │   ├── screenshots/                captures de la boîte d'installation
 │   ├── manifest.webmanifest        nom, icônes, raccourcis, mode standalone
 │   ├── service-worker.js           cache hors ligne et mises à jour
 │   └── offline.html                page de repli sans réseau
+├── deploy/                         le site public, tel quel à la racine du serveur
+│   ├── index.html                  landing (celle de app.zigmoon.com/SIMIA/)
+│   ├── service-worker.js           désinscrit l'ancienne PWA installée à la racine
+│   ├── .htaccess                   types MIME, cache, redirection /desktop/
+│   ├── robots.txt, sitemap.xml     indexation
+│   ├── *.php                       agent web, recherche, lecture d'URL
+│   └── downloads/                  paquets à télécharger + manifest.json
 ├── packaging/LISEZ-MOI.txt         fichier livré dans chaque archive
-├── dist/ftp/                       dossier prêt à téléverser (tools/prepare-ftp.ps1)
+├── dist/SIMIA/                     dossier prêt à téléverser (tools/prepare-ftp.ps1)
 ├── .github/workflows/build.yml     CI Windows / macOS / Linux
 ├── vendor/llama/win-vulkan/        llama.cpp + DLL Vulkan + runtime VC++
 ├── vendor/sd/win-vulkan/           stable-diffusion.cpp (sd-server) + DLL
@@ -240,6 +247,17 @@ SIMIA-desktop/
 ├── models/image/                   packs d'images + catalog.json
 ├── models/image/loras/             LoRA de style (simia-gravure.safetensors)
 └── tools/lora/                     chaîne d'entraînement du LoRA
+```
+
+Le site publié réunit les deux dossiers : `deploy/` donne la racine, `web/`
+donne `app/`. C'est exactement ce que produit `tools/prepare-ftp.ps1`.
+
+```
+app.zigmoon.com/SIMIA/
+├── index.html          ← deploy/index.html      la landing
+├── app/                ← web/                   l'application installable
+├── models/             ← models/ (versions.json) 3 GGUF + le LoRA
+└── downloads/          ← deploy/downloads/      paquets Windows, macOS, Linux
 ```
 
 ## Utilisation

@@ -28,19 +28,14 @@ New-Item -ItemType Directory -Path $Target -Force | Out-Null
 
 $copies = 0
 Get-ChildItem $Source -File | Where-Object {
-    $_.Extension -in ".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".txt", ".xml", ".ico", ".php"
+    $_.Extension -in ".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".ico"
 } | ForEach-Object {
     Copy-Item $_.FullName (Join-Path $Target $_.Name) -Force
     $copies++
 }
 
-# Configuration Apache (types MIME du manifeste et du service worker) : sans
-# extension, donc traitee a part.
-$htaccess = Join-Path $Source ".htaccess"
-if (Test-Path $htaccess) {
-    Copy-Item $htaccess (Join-Path $Target ".htaccess") -Force
-    $copies++
-}
+# Configuration Apache : elle decrit le site, pas l'application. Elle est
+# desormais versionnee dans deploy/.htaccess.
 
 # Icones de l'application installee (192, 512, maskable, Apple).
 foreach ($folder in @("icons", "screenshots")) {
@@ -61,13 +56,8 @@ if (Test-Path $status) {
     $copies++
 }
 
-# Page de presentation des versions de bureau (app.zigmoon.com/SIMIA/desktop/).
-$landing = Join-Path $Source "desktop"
-if (Test-Path (Join-Path $landing "index.html")) {
-    New-Item -ItemType Directory -Path (Join-Path $Target "desktop") -Force | Out-Null
-    Copy-Item (Join-Path $landing "index.html") (Join-Path $Target "desktop\index.html") -Force
-    $copies++
-}
+# La landing et les fichiers de site ne sont plus dans web/ : ils vivent dans
+# deploy/ (landing a la racine du site, application sous /app/).
 
 $expected = @(
     "index.html", "app.js", "styles.css", "code-runner.js", "service-worker.js",

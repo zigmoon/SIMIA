@@ -55,10 +55,10 @@
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Version de bureau",
-      "short_name": "Bureau",
-      "description": "Télécharger l'application Windows, macOS ou Linux",
-      "url": "./desktop/",
+      "name": "Télécharger l'application",
+      "short_name": "Télécharger",
+      "description": "Versions Windows, macOS et Linux de SIMIA",
+      "url": "https://app.zigmoon.com/SIMIA/#telecharger",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],

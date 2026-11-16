@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Poids des modeles : fichiers de plusieurs gigaoctets, inutiles a l'indexation.
+Disallow: /SIMIA/models/
+# Paquets d'installation : archives binaires, hors sujet pour un moteur.
+Disallow: /SIMIA/downloads/
+
+# Points d'entree PHP appeles uniquement par l'application (POST).
+Disallow: /SIMIA/agent-api.php
+Disallow: /SIMIA/web-search-api.php
+Disallow: /SIMIA/read-url-api.php
+
+Sitemap: https://app.zigmoon.com/SIMIA/sitemap.xml

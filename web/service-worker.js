@@ -1,31 +1,37 @@
-﻿/* SIMIA â€” service worker
+/* SIMIA — service worker de l'application web
  *
  * Trois responsabilites, et rien d'autre :
- *   1. garder la coquille (interface + page de presentation) disponible hors ligne ;
+ *   1. garder la coquille (interface) disponible hors ligne ;
  *   2. servir vite depuis le cache tout en rafraichissant en arriere-plan ;
  *   3. ne jamais intercepter les poids des modeles ni les points d'entree PHP.
+ *
+ * L'application est servie depuis /SIMIA/app/ : tous les chemins ci-dessous sont
+ * relatifs a ce dossier, le worker fonctionne donc aussi bien a la racine du
+ * lanceur de bureau que sous ce prefixe.
  *
  * Les fichiers prefixes par une version : incrementer VERSION suffit a purger
  * l'ancien cache a l'activation.
  *
  * Mise a jour : le nouveau worker attend sagement. La page detecte ce worker en
- * attente, propose Â« Recharger Â» et envoie SKIP_WAITING. Aucun rechargement
+ * attente, propose « Recharger » et envoie SKIP_WAITING. Aucun rechargement
  * surprise au milieu d'une conversation.
  */
 
-const VERSION = "3.1.0";
-const CACHE = `simia-shell-${VERSION}`;
+const VERSION = "4.0.0";
+const CACHE = `simia-app-${VERSION}`;
 
-/* Un cache d'une ancienne generation (`simia-shell-v146`) signale un worker qui
-   ne se met jamais a jour : il sert son cache pour toujours et le nouveau
-   worker reste en attente indefiniment. Dans ce cas precis, et seulement dans
-   celui-la, on prend la main immediatement au lieu d'attendre un clic. */
-const LEGACY_CACHE = /^simia-shell-(?!\d+\.\d+\.\d+$)/;
+/* Un cache laisse par une generation precedente signale un worker qui ne se met
+   jamais a jour : il sert son cache pour toujours et le nouveau reste en
+   attente indefiniment. Dans ce cas precis, et seulement dans celui-la, on
+   prend la main immediatement au lieu d'attendre un clic.
+   `simia-shell-*` est l'ancien nom, du temps ou l'application vivait a la
+   racine du site. */
+const LEGACY_CACHE = /^simia-(shell|app)-(?!\d+\.\d+\.\d+$)/;
 
 async function legacyWorkerPresent() {
   try {
     const keys = await caches.keys();
-    return keys.some(key => key.startsWith("simia-shell-") && LEGACY_CACHE.test(key));
+    return keys.some(key => LEGACY_CACHE.test(key) && `simia-app-${key.split("simia-app-")[1]}` !== CACHE);
   } catch {
     return false;
   }
@@ -47,9 +53,6 @@ const CORE = [
   "./icons/maskable-512.png",
   "./icons/apple-touch-icon-180.png",
 ];
-
-// Facultatif : absent du serveur, l'installation continue quand meme.
-const OPTIONAL = ["./desktop/", "./desktop/index.html"];
 
 const NAV_TIMEOUT = 4000;
 const OFFLINE_PAGE = "./offline.html";
@@ -74,7 +77,6 @@ function isAsset(request, url) {
    jamais la coquille (sinon elle repondrait 200 a n'importe quoi). */
 function pageFor(url) {
   const path = url.pathname;
-  if (/\/desktop(\/|$)/i.test(path)) return "./desktop/index.html";
   if (path.endsWith("/index.html") || path.endsWith("/")) return "./index.html";
   return OFFLINE_PAGE;
 }
@@ -84,19 +86,17 @@ async function precache() {
   const put = async url => {
     const request = new Request(url, { cache: "reload" });
     const response = await fetch(request);
-    if (!response || !response.ok) throw new Error(`${url} â†’ ${response ? response.status : "rÃ©seau"}`);
+    if (!response || !response.ok) throw new Error(`${url} → ${response ? response.status : "réseau"}`);
     await cache.put(url, response);
   };
 
   const results = await Promise.allSettled(CORE.map(put));
   const failures = results.filter(result => result.status === "rejected");
   if (failures.length) {
-    console.warn("[SIMIA] prÃ©cache incomplet :", failures.map(failure => String(failure.reason)));
+    console.warn("[SIMIA] précache incomplet :", failures.map(failure => String(failure.reason)));
   }
   // La moindre coquille manquante rendrait l'application inutilisable hors ligne.
-  if (failures.length === results.length) throw new Error("prÃ©cache impossible");
-
-  await Promise.allSettled(OPTIONAL.map(put));
+  if (failures.length === results.length) throw new Error("précache impossible");
 }
 
 self.addEventListener("install", event => {
@@ -138,7 +138,7 @@ self.addEventListener("message", event => {
    l'ouverture de l'application. */
 function withTimeout(promise, ms) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("dÃ©lai dÃ©passÃ©")), ms);
+    const timer = setTimeout(() => reject(new Error("délai dépassé")), ms);
     promise.then(
       value => { clearTimeout(timer); resolve(value); },
       error => { clearTimeout(timer); reject(error); },
@@ -160,7 +160,7 @@ async function handleNavigation(event, url) {
   const cache = await caches.open(CACHE);
   try {
     const response = await withTimeout(fetch(freshRequest(event.request)), NAV_TIMEOUT);
-    if (!response || response.type !== "basic") throw new Error("rÃ©ponse non exploitable");
+    if (!response || response.type !== "basic") throw new Error("réponse non exploitable");
     // Un 404 du serveur reste un 404 : on ne le remplace pas par une page du cache.
     if (response.ok) {
       const copy = response.clone();

@@ -1,98 +1,105 @@
-# Publication des modèles SIMIA
+# Publication du site SIMIA
 
-Seuls **3 modèles** sont hébergés sur votre serveur. Les autres sont téléchargés
-directement depuis le CDN HuggingFace, sans occuper d'espace chez vous.
+Le site public tient dans un seul dossier : **`dist/SIMIA/`**. Il est autonome :
+la landing à la racine, l'application sous `app/`, les modeles et les paquets a
+telecharger en dessous.
 
 ## Préparer le dossier à téléverser
 
 Les poids ne sont **pas** dans `SIMIA/` : ce dossier ne contient que l'interface.
 Glisser `SIMIA/` sur le FTP ne peut donc jamais envoyer les `.gguf`. Un script
-assemble le tout :
+assemble le tout, à partir de `deploy/` (le site), `web/` (l'application) et
+`models/` (les poids) :
 
 ```powershell
 cd SIMIA-desktop
 powershell -NoProfile -File tools\prepare-ftp.ps1
 ```
 
-Résultat dans **`SIMIA-desktop/dist/ftp/`** : 31 fichiers, **2,99 Go**, avec la
-bonne arborescence. Les trois `.gguf` sont posés en **liens physiques** : aucune
+Résultat dans **`SIMIA-desktop/dist/SIMIA/`** : 35 fichiers, **3,14 Go**, avec la
+bonne arborescence. Les gros fichiers sont posés en **liens physiques** : aucune
 copie, aucun espace disque consommé.
 
-> Il suffit ensuite de sélectionner **le contenu** de `dist/ftp/` et de le
-> déposer dans le dossier `SIMIA/` du serveur (pas le dossier lui-même).
+> Il suffit ensuite de déposer **le dossier `dist/SIMIA/` entier** à la racine du
+> serveur : il devient `app.zigmoon.com/SIMIA/`. Pas son contenu, le dossier.
 
 | Sous-dossier | Contenu | Rôle |
 |---|---|---|
-| *(racine)* | 17 fichiers de l'interface + `.htaccess` | application web, PWA |
-| `desktop/` | `index.html` | page de présentation |
-| `icons/` | 4 PNG | icônes de l'app installée |
-| `screenshots/` | 2 PNG | boîte d'installation |
-| `models/` | 3 GGUF + `versions.json` + `catalog.json` + `hosting-status.json` | modèles servis par le serveur |
-| `models/image/loras/` | `simia-gravure.safetensors` | style maison |
+| *(racine)* | `index.html`, `.htaccess`, `robots.txt`, `sitemap.xml`, `service-worker.js`, 3 `.php` | la landing et ses fichiers de site |
+| `app/` | 18 fichiers | l'application web installable (PWA) |
+| `models/` | 3 GGUF + LoRA + `versions.json` + `catalog.json` | modèles servis par le serveur |
+| `downloads/` | paquets `.zip` / `.tar.gz` + `manifest.json` | les versions de bureau |
 
-`catalog.json` n'est pas lu par le navigateur, mais il documente le catalogue
-côté serveur ; `versions.json` alimente la veille de version du lanceur.
+`models/` ne reçoit **que** les fichiers déclarés dans `models/versions.json`.
+Le reste du catalogue local (~20 Go d'images) n'est jamais publié : il vient du
+CDN. `catalog.json` n'est pas lu par le navigateur mais documente le catalogue
+cote serveur ; `versions.json` alimente la veille de version du lanceur.
 
-## 1. L'interface (`app.zigmoon.com/SIMIA/`)
+`downloads/manifest.json` est régénéré à chaque exécution du script : la landing
+le lit pour savoir quels paquets existent réellement, et n'affiche jamais un lien
+mort. Déposer un nouveau `.zip` dans `deploy/downloads/` puis relancer le script
+suffit à le rendre téléchargeable.
 
-23 fichiers, **1,4 Mo**, plus `models/hosting-status.json` :
+## 1. La landing (`app.zigmoon.com/SIMIA/`)
+
+La racine du site sert la page de présentation. C'est elle que Google indexe et
+que les visiteurs voient en premier.
 
 ```
 app.zigmoon.com/SIMIA/
-├── index.html                    29,4 Ko
-├── app.js                       383,6 Ko
-├── styles.css                    57,4 Ko
-├── code-runner.js                 3,7 Ko
-├── service-worker.js              7,0 Ko   ← simia-shell-3.1.0
-├── manifest.webmanifest           2,2 Ko
-├── offline.html                   2,4 Ko
-├── .htaccess                      1,4 Ko   ← types MIME + cache
-├── cookies-config.js
-├── icon.svg · simia-logo.svg · simia-logo-white.svg
-├── icons/                         4 fichiers PNG, 17,5 Ko
-│   ├── icon-192.png · icon-512.png
-│   ├── maskable-512.png
-│   └── apple-touch-icon-180.png
-├── screenshots/                   2 PNG, 121 Ko (boîte d'installation)
-├── desktop/index.html            page de présentation des versions
-├── robots.txt · sitemap.xml
-├── agent-api.php · read-url-api.php · web-search-api.php
-└── models/hosting-status.json
++-- index.html                    79 Ko   <- la landing
++-- .htaccess                     2,8 Ko  <- types MIME + cache + redirection
++-- service-worker.js             1,3 Ko  <- desinscrit l'ancienne PWA
++-- robots.txt . sitemap.xml
++-- agent-api.php . read-url-api.php . web-search-api.php
++-- app/                                  <- l'application
++-- models/                               <- les poids
++-- downloads/                            <- les paquets
 ```
-
-`prepare-self-hosted-llama.ps1` est un outil local (préparation WebLLM), inutile
-sur le serveur.
-
-> **État constaté le 16/11 à 01:35** : l'interface est en ligne et à jour
-> (service worker `3.1.0`, `.htaccess` actif, Brotli côté serveur). Le dossier
-> `models/` ne contient toujours que `hosting-status.json` : les 3 GGUF, le LoRA
-> et les deux catalogues n'ont pas été téléversés, car ils ne sont pas dans
-> `SIMIA/`. Utiliser `tools/prepare-ftp.ps1`. Ce n'est pas bloquant — la version
-> bureau bascule sur le CDN HuggingFace, vérifié 200 sur les trois modèles — mais
-> le lanceur n'affiche pas encore la veille de version.
 
 > **Le fichier `.htaccess` est indispensable.** Apache ne connaît pas
 > `.webmanifest` par défaut : sans lui, le manifeste part en
 > `application/octet-stream` et Chrome refuse l'installation. Il fixe aussi
-> `Cache-Control: no-cache` sur `service-worker.js`, sans quoi un ancien worker
-> peut rester actif plusieurs heures. Certains clients FTP masquent les fichiers
-> commençant par un point : vérifier qu'il est bien arrivé.
+> `Cache-Control: no-store` sur les `service-worker.js`, sans quoi un ancien
+> worker peut rester actif plusieurs heures. Certains clients FTP masquent les
+> fichiers commençant par un point : vérifier qu'il est bien arrive.
 
-> **Le dossier `SIMIA/desktop/`** contient la page de présentation
-> (`SIMIA/desktop/index.html`) : elle propose les téléchargements Windows, macOS
-> et Linux ainsi que le lien vers la version web. `tools/sync-web.ps1` la copie
-> dans `web/desktop/`, donc elle part avec l'interface :
+## 2. L'application (`app.zigmoon.com/SIMIA/app/`)
+
+18 fichiers, **1,4 Mo** :
 
 ```
-app.zigmoon.com/SIMIA/desktop/index.html
+app.zigmoon.com/SIMIA/app/
++-- index.html                    30,1 Ko
++-- app.js                       393,0 Ko
++-- styles.css                    58,8 Ko
++-- code-runner.js                 3,8 Ko
++-- cookies-config.js
++-- service-worker.js              8,5 Ko   <- simia-app-4.0.0
++-- manifest.webmanifest           2,3 Ko
++-- offline.html                   2,5 Ko
++-- icon.svg . simia-logo.svg . simia-logo-white.svg
++-- icons/                         4 PNG, 17,5 Ko
++-- screenshots/                   2 PNG, 121 Ko
++-- models/hosting-status.json
 ```
 
-Son unique constante pointe déjà vers les releases du dépôt :
+Les points d'entree PHP restent à la racine : l'application les appelle en
+`../agent-api.php`. Les déplacer sous `app/` casserait l'agent web.
 
-```js
-const RELEASE_BASE = "https://github.com/zigmoon/SIMIA/releases/latest/download";
-```
+### L'ancienne adresse /SIMIA/desktop/
 
+La landing était auparavant servie depuis `/SIMIA/desktop/`. `.htaccess` la
+redirige en 301 vers la racine, pour les favoris et les liens déjà indexés.
+
+### Les visiteurs qui avaient installe l'ancienne version
+
+L'application occupait la racine : ceux qui l'avaient installée ont un service
+worker dont le périmètre couvre tout `/SIMIA/`, et qui continuerait de servir son
+cache a la place de la landing. `deploy/service-worker.js` existe uniquement pour
+ca : a l'activation il supprime les caches `simia-shell-*`, s'approprie les
+onglets, puis se désinscrit. Vérifié en local : les anciens caches disparaissent,
+celui de la nouvelle application (`simia-app-*`) est préservé.
 ## L'application installable (PWA)
 
 Trois éléments rendent SIMIA installable, tous déjà en place :
@@ -178,7 +185,7 @@ une carte « Version desktop » qui explique où les trouver.
 La version de bureau n'applique aucun filtre : elle charge le catalogue
 `models/catalog.json` tel quel, jusqu'à 9,7 Go par modèle.
 
-## 2. Les modèles (`app.zigmoon.com/SIMIA/models/`)
+## 3. Les modèles (`app.zigmoon.com/SIMIA/models/`)
 
 ```
 app.zigmoon.com/SIMIA/models/
@@ -325,7 +332,7 @@ continuent depuis le CDN.
 
 ```powershell
 # l'interface
-curl.exe -sI https://app.zigmoon.com/SIMIA/app.js
+curl.exe -sI https://app.zigmoon.com/SIMIA/app/app.js
 # 200 + Content-Length proche de 393000 (383,6 Ko)
 
 # le service worker doit etre servi sans cache
@@ -333,16 +340,18 @@ curl.exe -sI https://app.zigmoon.com/SIMIA/service-worker.js
 # 200 + Cache-Control: no-cache, no-store, must-revalidate
 
 # le manifeste doit avoir le bon type, sinon Chrome refuse l'installation
-curl.exe -sI https://app.zigmoon.com/SIMIA/manifest.webmanifest
+curl.exe -sI https://app.zigmoon.com/SIMIA/app/manifest.webmanifest
 # 200 + Content-Type: application/manifest+json   (jamais application/octet-stream)
 
 # les icones de l'application installee
-curl.exe -sI https://app.zigmoon.com/SIMIA/icons/icon-512.png
-curl.exe -sI https://app.zigmoon.com/SIMIA/icons/maskable-512.png
+curl.exe -sI https://app.zigmoon.com/SIMIA/app/icons/icon-512.png
+curl.exe -sI https://app.zigmoon.com/SIMIA/app/icons/maskable-512.png
 
 # la page hors ligne et la page de presentation
-curl.exe -sI https://app.zigmoon.com/SIMIA/offline.html
-curl.exe -sI https://app.zigmoon.com/SIMIA/desktop/
+curl.exe -sI https://app.zigmoon.com/SIMIA/app/offline.html
+curl.exe -sI https://app.zigmoon.com/SIMIA/    # la landing, en 200
+curl.exe -sI https://app.zigmoon.com/SIMIA/desktop/   # 301 vers la racine
+curl.exe -sI https://app.zigmoon.com/SIMIA/downloads/simia-windows-x64.zip
 
 # le catalogue et les versions
 curl.exe -s https://app.zigmoon.com/SIMIA/models/versions.json
