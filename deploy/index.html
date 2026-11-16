@@ -51,7 +51,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 12+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.9.0",
+      "softwareVersion": "0.1.0",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -894,7 +894,7 @@
       <div class="section-head reveal">
         <p class="mono">Téléchargements</p>
         <h2>Choisissez votre système.</h2>
-        <p>Chaque paquet contient le lanceur, le moteur d'inférence et l'interface. Aucun droit administrateur n'est nécessaire : l'application s'installe dans un dossier et se lance d'un double-clic.</p>
+        <p>Chaque paquet contient le lanceur, le moteur d'inférence et l'interface. Aucun droit administrateur n'est nécessaire : l'application s'installe dans un dossier et se lance d'un double-clic. Les liens pointent toujours vers la dernière version publiée sur GitHub.</p>
       </div>
 
       <div class="downloads">
@@ -908,7 +908,7 @@
           </div>
           <p class="req">Windows 10 ou 11 en 64 bits. Carte graphique Vulkan recommandée (NVIDIA, AMD, Intel) ; repli automatique sur le processeur.</p>
           <div class="files">
-            <a data-release="windows-x64.zip" href="#" download><span>Installateur 64 bits</span><small>zip</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
         </article>
 
@@ -922,8 +922,8 @@
           </div>
           <p class="req">macOS 12 ou plus récent. La génération d'images est disponible sur les Mac Apple Silicon ; sur Mac Intel, la conversation et le code fonctionnent normalement.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="#" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="#" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
         </article>
 
@@ -937,7 +937,7 @@
           </div>
           <p class="req">Distribution récente avec Vulkan ou processeur seul. Testé sur Ubuntu 24.04 et dérivées.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="#" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1080,23 +1080,32 @@
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   const RELEASES_API = `https://api.github.com/repos/zigmoon/SIMIA/releases?per_page=6`;
-  /* Les paquets sont aussi servis par le site lui-meme. Ce manifeste est ecrit
-     par tools/prepare-ftp.ps1 : il evite de dependre de l'API GitHub, qui est
-     limitee et absente tant que le depot n'a pas de release. */
+
+  /* Les paquets viennent tous de GitHub, et toujours de la derniere version
+     publiee : `releases/latest/download/<nom>` resout tout seul vers la release
+     marquee « Latest ». Aucune requete prealable, donc aucun consentement a
+     demander, et un lien qui ne se fige pas sur une version ancienne.
+
+     L'API GitHub ne sert plus qu'a deux choses : lister les versions dans le
+     bloc « Versions publiees » (soumise au consentement, puisque c'est une
+     requete vers un tiers), et reperer une cible qui n'a pas ete compilee pour
+     cette release afin de ne pas laisser croire que le lien fonctionne.
+
+     Le manifeste local reste lu : si un paquet est heberge a cote de la landing
+     (tools/prepare-ftp.ps1 peut y deposer un miroir), il est prefere pour
+     epargner GitHub. Il est vide par defaut. */
   const DOWNLOADS_MANIFEST = "./downloads/manifest.json";
 
   const releaseLinks = [...document.querySelectorAll("[data-release]")];
   const targetOf = name => String(name).replace(/\.(zip|tar\.gz)$/i, "");
   const localBuilds = new Map();
+  const latestUrlFor = name => `${RELEASE_BASE}/${RELEASE_PREFIX}${name}`;
 
   /* Les ressources externes ne sont chargees qu'avec l'accord du visiteur.
      Tant que la boite cookies n'a pas repondu, on considere que c'est non :
      aucune requete ne doit partir vers un tiers sans consentement. */
   const consentExternal = () => !!(window.SimiaConsent && window.SimiaConsent.external());
 
-  /* Trois sources possibles, dans cet ordre : le paquet heberge a cote de la
-     landing, puis la release GitHub, puis rien. Un visiteur ne doit jamais
-     cliquer sur un lien mort. */
   const downloadsNote = document.getElementById("downloads-note");
   const downloadsReadyText = downloadsNote ? downloadsNote.textContent.trim() : "";
 
@@ -1105,20 +1114,23 @@
     releaseLinks.forEach(link => {
       const target = targetOf(link.dataset.release);
       const local = localBuilds.get(target);
-      const remote = githubAssets && githubAssets[`${RELEASE_PREFIX}${link.dataset.release}`];
+      const compiled = !githubAssets || !!githubAssets[`${RELEASE_PREFIX}${link.dataset.release}`];
       if (local) {
         link.href = `./downloads/${local.file}`;
         link.setAttribute("download", "");
         link.removeAttribute("aria-disabled");
         link.classList.remove("is-pending");
         ready += 1;
-      } else if (remote) {
-        link.href = remote;
+      } else if (compiled) {
+        link.href = latestUrlFor(link.dataset.release);
         link.setAttribute("download", "");
         link.removeAttribute("aria-disabled");
         link.classList.remove("is-pending");
         ready += 1;
       } else {
+        // L'API a repondu et ne connait pas ce fichier : cette cible n'a pas
+        // ete compilee pour la derniere version. On renvoie vers la liste
+        // plutot que vers un 404.
         link.href = `${REPO_URL}/releases`;
         link.removeAttribute("download");
         link.setAttribute("aria-disabled", "true");

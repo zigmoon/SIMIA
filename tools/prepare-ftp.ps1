@@ -14,7 +14,7 @@
           index.html         landing
           app/               application web installable
           models/            poids des modeles
-          downloads/         paquets Windows, macOS, Linux + manifeste
+          downloads/         manifeste des paquets (les binaires viennent de GitHub)
           *.php              points d'entree appeles par l'application
 
     Les fichiers de plus de 100 Mo sont relies par lien physique quand c'est
@@ -55,6 +55,53 @@ function Add-File {
     Copy-Item $From $To -Force
 }
 
+# Un paquet Windows depose dans deploy/downloads/ est publie tel quel : rien ne
+# le reconstruit. Il doit donc embarquer l'interface a jour. Un ancien paquet a
+# deja ete servi avec l'interface privee de la boite cookies, le fichier
+# cookies-config.js disparu du projet, et les archives moteur laissees zippees
+# a la place de leur contenu : 146 Mo au lieu de 76, pour un resultat perime.
+function Assert-WindowsPackage {
+    param([string]$Path, [string]$ExpectedIndex)
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::OpenRead($Path)
+    try {
+        $names = @($zip.Entries | ForEach-Object { $_.FullName -replace '\\', '/' })
+        if (-not $names.Count) { throw "paquet Windows vide : $Path" }
+        $prefix = ($names[0] -split '/')[0]
+        $problems = @()
+
+        if ($names -notcontains "$prefix/web/cookies.js") {
+            $problems += "web/cookies.js absent"
+        }
+        if ($names -contains "$prefix/web/cookies-config.js") {
+            $problems += "web/cookies-config.js encore present, alors qu'il a ete supprime du projet"
+        }
+        $nested = @($names | Where-Object { $_ -match "^$([regex]::Escape($prefix))/vendor/.*\.(zip|tar\.gz)$" })
+        if ($nested.Count) {
+            $problems += "archives moteur publiees telles quelles au lieu de leur contenu : $($nested -join ', ')"
+        }
+
+        $entry = $zip.Entries | Where-Object { ($_.FullName -replace '\\', '/') -eq "$prefix/web/index.html" } | Select-Object -First 1
+        if (-not $entry) {
+            $problems += "web/index.html absent"
+        } else {
+            $reader = New-Object System.IO.StreamReader($entry.Open(), [System.Text.Encoding]::UTF8)
+            try { $inside = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            $current = [IO.File]::ReadAllText($ExpectedIndex, [System.Text.Encoding]::UTF8)
+            if (($inside -replace "`r", '') -ne ($current -replace "`r", '')) {
+                $problems += "web/index.html ne correspond pas a web/index.html : interface perimee"
+            }
+        }
+
+        if ($problems.Count) {
+            throw ("paquet Windows refuse ({0}) :`n  - {1}" -f [IO.Path]::GetFileName($Path), ($problems -join "`n  - "))
+        }
+        Write-Host ("  paquet verifie : {0} embarque l'interface a jour" -f [IO.Path]::GetFileName($Path)) -ForegroundColor DarkGray
+    } finally {
+        $zip.Dispose()
+    }
+}
+
 foreach ($path in @($App, $Site, $Models)) {
     if (-not (Test-Path $path)) { throw "Dossier introuvable : $path" }
 }
@@ -74,6 +121,9 @@ foreach ($file in (Get-ChildItem $Site -File -Force)) {
 }
 $downloadsFrom = Join-Path $Site "downloads"
 if (Test-Path $downloadsFrom) {
+    foreach ($package in (Get-ChildItem $downloadsFrom -File -Filter "*.zip")) {
+        Assert-WindowsPackage -Path $package.FullName -ExpectedIndex (Join-Path $App "index.html")
+    }
     Get-ChildItem $downloadsFrom -File -Recurse | ForEach-Object {
         $relative = $_.FullName.Substring($downloadsFrom.Length).TrimStart('\')
         Add-File $_.FullName (Join-Path (Join-Path $Out "downloads") $relative)

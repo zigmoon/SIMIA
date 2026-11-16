@@ -10,6 +10,11 @@ Conversation, génération d'images et atelier de code dans une seule interface,
 exécutés sur votre propre machine. Pas de compte, pas de clé API, pas de serveur :
 vos phrases ne quittent pas l'ordinateur.
 
+**La version bureau est la version complète** : elle fait tourner des modèles
+jusqu'à 9,7 Go, génère des images jusqu'à 1024 px, et accepte n'importe quel
+`.gguf` supplémentaire déposé dans son dossier `models/`. La version web, dans le
+navigateur, s'arrête à 1,9 Go par modèle et sert surtout à essayer.
+
 [![Dernière version](https://img.shields.io/github/v/release/zigmoon/SIMIA?style=flat-square&label=version&color=4c6b1f)](https://github.com/zigmoon/SIMIA/releases/latest)
 [![Compilation Windows, macOS, Linux](https://github.com/zigmoon/SIMIA/actions/workflows/build.yml/badge.svg)](https://github.com/zigmoon/SIMIA/actions/workflows/build.yml)
 [![Windows | macOS | Linux](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-x64%20%26%20arm64-4c6b1f?style=flat-square)](#télécharger)
@@ -31,6 +36,7 @@ vos phrases ne quittent pas l'ordinateur.
 - [Les modèles](#les-modèles)
 - [Architecture](#architecture)
 - [Utilisation](#utilisation)
+- [Ajouter un modèle](#ajouter-un-modèle)
 - [Questions fréquentes](#questions-fréquentes)
 - [Licence et mentions légales](#licence-et-mentions-légales)
 
@@ -56,6 +62,25 @@ Le même code d'interface sert les deux versions ; seule l'exécution diffère :
 | Génération d'images | 7 packs, jusqu'à 1024 px, aucun filtre de contenu | — |
 | Installation | archive à décompresser, aucun installateur | un clic dans le navigateur (PWA) |
 | Stockage | disque, à côté de l'exécutable | cache du navigateur |
+
+**La version bureau est la version complète.** Le navigateur impose un plafond
+de mémoire difficile à contourner : la version web se limite aux modèles sous
+1,9 Go, et ne sait pas générer d'images. Sur le poste, `llama.cpp` pilote
+directement le GPU sans plafond de ce genre :
+
+- **Tout le catalogue, y compris les gros modèles.** La version web s'arrête aux
+  modèles 1B à 2B ; la version bureau fait tourner des modèles de 7, 14 ou 32
+  milliards de paramètres, soit jusqu'à 9,7 Go de poids pour un seul fichier.
+- **Génération d'images.** Stable Diffusion en natif, sept packs de 512 à
+  1024 px, sans passer par le réseau.
+- **Vos propres fichiers `.gguf`.** Le dossier `models/` de l'application est un
+  dossier ordinaire : déposer n'importe quel fichier GGUF compatible llama.cpp
+  suffit à le voir apparaître dans le sélecteur de modèles, y compris des modèles
+  non listés dans le catalogue. Voir [Ajouter un modèle](#ajouter-un-modèle).
+
+La version web reste le moyen le plus rapide d'essayer : rien à installer, elle
+tient dans un onglet. Pour un usage quotidien, c'est le bureau qui donne toute la
+mesure de SIMIA.
 
 La version web s'installe : icône sur le bureau ou l'écran d'accueil, fenêtre
 sans barre d'adresse, et interface disponible même sans réseau. C'est le même
@@ -410,10 +435,25 @@ produit si un badge ou un bouton n'apparaît pas après édition.
 
 ## Ajouter un modèle
 
+C'est la différence de fond entre les deux versions : sur le bureau, le dossier
+`models/` de l'application est un dossier ordinaire, sans liste blanche. Tout
+fichier GGUF compatible `llama.cpp` y déposé est utilisable, y compris des
+modèles bien plus gros que ce que le navigateur accepte.
+
 1. Déposer un fichier `.gguf` dans `models/`.
 2. Relancer. Il apparaît dans la bibliothèque avec son nom et sa quantification
    extraits du nom de fichier (`Qwen3.5-2B-Q4_K_M.gguf` → « Qwen3.5 2B »,
    « ~1.2 GB (Q4_K_M) »).
+
+Aucune limite de taille imposée par SIMIA : c'est la mémoire vidéo de la machine
+qui décide. Un modèle 14B en Q4 (~8,4 Go) tient sur une carte de 12 Go ; un 32B
+en Q4 (~19 Go) demande une carte de 24 Go ou un repli processeur, lent mais
+fonctionnel. Les fichiers déjà présents dans le dossier sont reconnus au
+démarrage, il n'y a pas de réimport à faire.
+
+Pour un modèle très volumineux, il vaut mieux télécharger le `.gguf` à la main
+depuis Hugging Face que par l'interface : la reprise d'un téléchargement
+interrompu y est plus fiable.
 
 ## Ajouter un style (LoRA)
 
@@ -519,6 +559,13 @@ générale et plus d'erreurs sur les sujets pointus.
 Un onglet ne dispose que d'une fraction de la mémoire du GPU, et un dépassement
 fait planter l'onglet sans message utile. La version bureau n'a pas cette limite :
 elle charge le modèle sur le GPU de la machine.
+
+**Qu'apporte la version bureau, concrètement ?**
+Trois choses que le navigateur ne sait pas faire : les modèles volumineux (7B,
+14B, 32B, jusqu'à 9,7 Go de poids par fichier, contre 1,9 Go en web), la
+génération d'images Stable Diffusion jusqu'à 1024 px, et l'installation de
+n'importe quel `.gguf` supplémentaire en le déposant simplement dans le dossier
+`models/`. C'est la version complète ; la version web est faite pour essayer.
 
 **Les images générées sont-elles filtrées ?**
 Non. SIMIA ne filtre rien lui-même. Les licences des modèles (CreativeML

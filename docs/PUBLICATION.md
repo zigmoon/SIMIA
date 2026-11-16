@@ -16,7 +16,7 @@ cd SIMIA-desktop
 powershell -NoProfile -File tools\prepare-ftp.ps1
 ```
 
-Résultat dans **`SIMIA-desktop/dist/SIMIA/`** : 36 fichiers, **3,14 Go**, avec la
+Résultat dans **`SIMIA-desktop/dist/SIMIA/`** : 35 fichiers, **3,00 Go**, avec la
 bonne arborescence. Les gros fichiers sont posés en **liens physiques** : aucune
 copie, aucun espace disque consommé.
 
@@ -28,7 +28,7 @@ copie, aucun espace disque consommé.
 | *(racine)* | `index.html`, `.htaccess`, `robots.txt`, `sitemap.xml`, `service-worker.js`, 3 `.php` | la landing et ses fichiers de site |
 | `app/` | 18 fichiers | l'application web installable (PWA) |
 | `models/` | 3 GGUF + LoRA + `versions.json` + `catalog.json` | modèles servis par le serveur |
-| `downloads/` | paquets `.zip` / `.tar.gz` + `manifest.json` | les versions de bureau |
+| `downloads/` | `manifest.json` seul | l'état des paquets de bureau |
 
 `models/` ne reçoit **que** les fichiers déclarés dans `models/versions.json`.
 Le reste du catalogue local (~20 Go d'images) n'est jamais publié : il vient du
@@ -36,9 +36,18 @@ CDN. `catalog.json` n'est pas lu par le navigateur mais documente le catalogue
 cote serveur ; `versions.json` alimente la veille de version du lanceur.
 
 `downloads/manifest.json` est régénéré à chaque exécution du script : la landing
-le lit pour savoir quels paquets existent réellement, et n'affiche jamais un lien
-mort. Déposer un nouveau `.zip` dans `deploy/downloads/` puis relancer le script
-suffit à le rendre téléchargeable.
+le lit pour savoir quels paquets sont hébergés ici. Il est vide par défaut, et
+c'est voulu : les quatre archives viennent de la release GitHub, compilée par la
+CI, donc toutes de la même fabrication. La landing construit alors ses liens sur
+`releases/latest/download/<nom>`, sans appel d'API et donc sans dépendre du
+consentement aux cookies.
+
+Un miroir local reste possible : déposer un `.zip` dans `deploy/downloads/` puis
+relancer le script le publie et l'inscrit au manifeste. Le script **refuse** un
+paquet dont le `web/index.html` ne correspond pas à celui du dépôt, ou qui
+contient encore `cookies-config.js`, ou qui embarque les archives moteur au lieu
+de leur contenu — c'est exactement ce qui était arrivé : un paquet de 146 Mo au
+lieu de 76, servi avec l'interface d'avant la boîte de consentement.
 
 ## 1. La landing (`app.zigmoon.com/SIMIA/`)
 
@@ -379,7 +388,17 @@ curl.exe -sI https://app.zigmoon.com/SIMIA/app/icons/maskable-512.png
 curl.exe -sI https://app.zigmoon.com/SIMIA/app/offline.html
 curl.exe -sI https://app.zigmoon.com/SIMIA/    # la landing, en 200
 curl.exe -sI https://app.zigmoon.com/SIMIA/desktop/   # 301 vers la racine
-curl.exe -sI https://app.zigmoon.com/SIMIA/downloads/simia-windows-x64.zip
+
+# les quatre paquets : la landing pointe sur releases/latest/download, donc ce
+# sont ces URL-la qu'il faut tester, pas une copie locale
+for f in simia-windows-x64.zip simia-macos-arm64.tar.gz simia-macos-x64.tar.gz simia-linux-x64.tar.gz; do
+  curl.exe -sIL -o /dev/null -w "%{http_code} %{size_download} $f\n" \
+    https://github.com/zigmoon/SIMIA/releases/latest/download/$f
+done
+# 200 attendu pour les quatre, avec la taille de l'archive
+
+# le manifeste local : vide tant qu'aucun paquet n'est heberge ici, et c'est normal
+curl.exe -s https://app.zigmoon.com/SIMIA/downloads/manifest.json
 
 # le catalogue et les versions
 curl.exe -s https://app.zigmoon.com/SIMIA/models/versions.json
