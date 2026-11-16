@@ -11,10 +11,21 @@ Lancement
      sur la machine : le reseau peut etre coupe.
 
 Selon votre systeme
-  Windows  SmartScreen peut demander une confirmation : "Informations
-           complementaires" puis "Executer quand meme". Le runtime Visual C++
-           dont l'application a besoin est inclus dans l'archive : rien a
-           installer.
+  Windows  Windows affiche un avertissement au premier lancement : le programme
+           n'est pas signe par un certificat de signature de code. Ce n'est pas
+           un virus, le programme est compile par GitHub Actions a partir du
+           code source publie sur GitHub.
+
+           Pour ne PAS voir l'avertissement : avant de decompresser l'archive,
+           clic droit sur le .zip, Proprietes, cocher "Debloquer", puis OK.
+           Windows oublie ainsi que le fichier vient d'Internet, et
+           simia-desktop.exe demarre directement.
+
+           Si l'avertissement apparait quand meme : "Informations
+           complementaires", puis "Executer quand meme".
+
+           Le runtime Visual C++ dont l'application a besoin est inclus dans
+           l'archive : rien a installer, aucun droit administrateur.
 
   macOS    macOS 13.3 (Ventura) ou plus recent est necessaire : le moteur de
            conversation est compile pour cette version et macOS refuse de

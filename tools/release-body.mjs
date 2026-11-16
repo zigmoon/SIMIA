@@ -132,9 +132,13 @@ xattr -dr com.apple.quarantine simia-desktop
 chmod +x simia-desktop
 \`\`\`
 
-**Windows** — SmartScreen affiche un avertissement à la première ouverture,
-faute de signature de code : *Informations complémentaires* puis
-*Exécuter quand même*.
+**Windows** — Windows affiche un avertissement au premier lancement, faute de
+signature de code. Pour l'éviter, **avant de décompresser** : clic droit sur le
+`.zip` → *Propriétés* → cocher *Débloquer* → *OK*. Windows oublie alors que le
+fichier vient d'Internet et `simia-desktop.exe` démarre sans rien demander. Si
+l'avertissement apparaît malgré tout : *Informations complémentaires* puis
+*Exécuter quand même*. Ce n'est pas un virus — le programme est compilé par
+GitHub Actions à partir du code source de ce dépôt.
 
 **Linux** — rendez le fichier exécutable si l'archive a perdu le droit :
 

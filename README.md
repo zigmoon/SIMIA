@@ -136,6 +136,18 @@ exécutable si l'archive a perdu le droit : `chmod +x simia-desktop`.
 Sur Windows, le runtime Visual C++ est joint aux moteurs : rien à installer, et
 aucun droit administrateur.
 
+> **Windows — l'avertissement au premier lancement.** Windows prévient pour tout
+> exécutable non signé par un certificat de signature de code, et SIMIA ne l'est
+> pas. Pour ne pas le voir : **avant de décompresser**, clic droit sur le `.zip`
+> → *Propriétés* → cocher *Débloquer* → *OK*. Windows oublie alors que le fichier
+> vient d'Internet et `simia-desktop.exe` démarre directement. S'il apparaît
+> malgré tout : *Informations complémentaires* puis *Exécuter quand même*. Le
+> programme est compilé par GitHub Actions depuis ce dépôt, et l'empreinte
+> SHA-256 de chaque archive est publiée dans la note de version.
+>
+> **macOS** : le binaire n'est pas signé non plus, Gatekeeper le met en
+> quarantaine. `xattr -dr com.apple.quarantine simia-macos-arm64/` puis relancez.
+
 Les exigences ci-dessous ne sont pas des recommandations mais le résultat de ce
 que les binaires déclarent, relevé dans leurs en-têtes (`minos` pour Mach-O,
 symboles `GLIBC_*` pour ELF). Les moteurs viennent de l'amont et ne peuvent pas
@@ -154,11 +166,6 @@ stable-diffusion.cpp est compilé pour macOS 26 et Ubuntu 26.04, et macOS refuse
 de charger un binaire dont le `minos` est supérieur au système. Sur une machine
 plus ancienne, le bouton **Image** reste présent mais le moteur ne démarre pas ;
 la conversation n'est pas affectée.
-
-> **macOS** : le binaire n'est pas signé, Gatekeeper le met en quarantaine.
-> `xattr -dr com.apple.quarantine simia-macos-arm64/` puis relancez.
-> **Windows** : SmartScreen affiche un avertissement à la première ouverture,
-> faute de signature de code.
 
 ## La version web, installable
 

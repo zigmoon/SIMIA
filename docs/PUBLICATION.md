@@ -443,3 +443,48 @@ fonctionne, mais rien n'est servi par votre serveur. Un test rapide :
 ```powershell
 curl.exe -s -o NUL -w "%{http_code}`n" https://app.zigmoon.com/SIMIA/models/catalog.json
 ```
+
+## Signature de code : pourquoi Windows avertit
+
+À chaque premier lancement, Windows affiche « Windows a protégé votre PC » et
+macOS refuse le binaire. Ce n'est pas un défaut de l'archive : c'est l'absence de
+signature. Vérifié sur l'archive v0.1.2 :
+
+```
+Get-AuthenticodeSignature .\simia-desktop.exe
+# Status : NotSigned      SignerCertificate : (vide)
+```
+
+Le mécanisme exact, mesuré : le navigateur pose une marque de l'Internet
+(`Zone.Identifier`) sur le `.zip` ; l'extraction de Windows la recopie sur
+`simia-desktop.exe` ; SmartScreen refuse alors d'ouvrir un exécutable venu
+d'Internet, non signé et sans réputation. Débloquer l'archive **avant** de la
+décompresser supprime le marqueur, et l'avertissement disparaît — c'est ce qui
+est écrit dans le `LISEZ-MOI`, la note de version et la FAQ.
+
+C'est un contournement, pas une solution. La solution est un certificat de
+signature de code :
+
+| Piste | Ce qu'elle donne | Ce qu'elle coûte |
+|---|---|---|
+| Certificat OV (Sectigo, SSL.com, DigiCert…) | signature valide, mais SmartScreen continue d'avertir tant que la réputation ne s'est pas construite : quelques centaines à quelques milliers de téléchargements | ~200 à 500 € par an, clé privée sur jeton USB ou HSM cloud |
+| Certificat EV | réputation immédiate auprès de SmartScreen | sensiblement plus cher, et vérification d'identité plus stricte |
+| Azure Trusted Signing | signature par Microsoft, chaîne de confiance déjà présente sur Windows | abonnement mensuel modeste, sous conditions d'éligibilité (ancienneté vérifiable, vérification d'identité) |
+| Notarisation Apple (Developers Program) | supprime l'avertissement Gatekeeper sur macOS | 99 $ par an |
+
+Depuis juin 2023, la CA/Browser Forum impose que la clé privée d'un certificat
+OV ou EV réside sur un module matériel certifié FIPS 140-2/3. Conséquence
+concrète : **on ne peut plus signer avec un simple `.pfx` posé en secret GitHub
+Actions**. La signature se fait soit avec un jeton physique branché sur le poste,
+soit via l'API d'un HSM cloud, soit avec Azure Trusted Signing. Pour SIMIA, la
+CI de GitHub ne peut donc pas signer en l'état : signer suppose une étape
+manuelle après la compilation, ou un abonnement à un service de signature.
+
+Tant que ce n'est pas fait, les trois contreparties à tenir :
+
+1. Le chemin de contournement est écrit **avant** le téléchargement (carte
+   Windows de la landing, note de version, `LISEZ-MOI`).
+2. Les empreintes SHA-256 sont publiées dans chaque note de version, pour que
+   n'importe qui puisse vérifier l'archive reçue.
+3. Le code source reste public, et les paquets sont produits par GitHub Actions :
+   l'avertissement porte sur l'identité de l'éditeur, pas sur le contenu.
