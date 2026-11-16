@@ -221,6 +221,14 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     steps:
+      # Le checkout vient en premier : son `git clean -ffdx` efface les
+      # fichiers ignores par git, donc `dist/`. Place apres le telechargement
+      # des artefacts, il supprimait silencieusement les paquets et le job
+      # echouait sur un `dist/` vide.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -237,12 +245,6 @@ jobs:
             exit 1
           fi
           ls -la dist
-
-      # Le README porte le tableau des versions telechargeables : il est
-      # regenere ici, une fois les archives attachees a la release.
-      - uses: actions/checkout@v4
-        with:
-          ref: main
 
       # Les notes de release sont redigees a partir des archives reellement
       # presentes : tableau des telechargements, instructions d'installation
