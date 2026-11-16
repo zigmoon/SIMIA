@@ -16,7 +16,7 @@ cd SIMIA-desktop
 powershell -NoProfile -File tools\prepare-ftp.ps1
 ```
 
-Résultat dans **`SIMIA-desktop/dist/SIMIA/`** : 35 fichiers, **3,14 Go**, avec la
+Résultat dans **`SIMIA-desktop/dist/SIMIA/`** : 36 fichiers, **3,14 Go**, avec la
 bonne arborescence. Les gros fichiers sont posés en **liens physiques** : aucune
 copie, aucun espace disque consommé.
 
@@ -47,15 +47,43 @@ que les visiteurs voient en premier.
 
 ```
 app.zigmoon.com/SIMIA/
-+-- index.html                    79 Ko   <- la landing
-+-- .htaccess                     2,8 Ko  <- types MIME + cache + redirection
-+-- service-worker.js             1,3 Ko  <- desinscrit l'ancienne PWA
-+-- robots.txt . sitemap.xml
-+-- agent-api.php . read-url-api.php . web-search-api.php
-+-- app/                                  <- l'application
-+-- models/                               <- les poids
-+-- downloads/                            <- les paquets
+├── index.html                    82 Ko   ← la landing
+├── cookies.js                    21 Ko   ← boîte de consentement (landing + app)
+├── .htaccess                     2,8 Ko  ← types MIME + cache + redirection
+├── service-worker.js             1,3 Ko  ← desinscrit l'ancienne PWA
+├── robots.txt . sitemap.xml
+├── agent-api.php . read-url-api.php . web-search-api.php
+├── app/                                  ← l'application
+├── models/                               ← les poids
+└── downloads/                            ← les paquets
 ```
+
+## La boîte de consentement
+
+`cookies.js` sert les deux pages : la landing le charge à la racine, l'application
+sous `app/`. Un seul fichier source (`deploy/cookies.js`), deux copies, aucune
+divergence possible — `tools/sync-web.ps1` fait la seconde.
+
+Ce n'est pas une bannière décorative. SIMIA ne depose aucun cookie et n'envoie
+aucune donnee, mais trois ressources viennent de tiers : les polices
+d'affichage, la visionneuse 3D (`model-viewer`) et la liste des versions GitHub.
+Elles portent `data-consent-href` ou `data-consent-src` au lieu de `href`/`src`,
+et ne sont chargées qu'apres un accord explicite. Refuser laisse l'application
+entièrement fonctionnelle : le repli système remplace les polices, la visionneuse
+3D ne se charge pas, et la liste des versions affiche le paquet servi par le
+site.
+
+Deux détails qui comptent :
+
+- un `<script>` déjà analysé ne rejoue pas quand on lui pose un `src` ; le script
+  injecte est donc un **nouvel** element, sinon la visionneuse 3D ne se
+  chargerait jamais après un accord donné en cours de visite ;
+- le choix vit dans `simia-consent-v1`, séparé de la sauvegarde de
+  l'application : effacer ses conversations ne le remet pas à zéro.
+
+`cookies-config.js` a été supprimé : il ne servait qu'à l'ancien script commun
+`/zigmoon-cookies.js`, absent de ce site. Si vous le voyez encore en ligne, il
+peut être supprimé sans conséquence.
 
 > **Le fichier `.htaccess` est indispensable.** Apache ne connaît pas
 > `.webmanifest` par défaut : sans lui, le manifeste part en

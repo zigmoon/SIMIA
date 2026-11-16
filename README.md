@@ -138,6 +138,12 @@ Ce que le service worker garde en mémoire, et ce qu'il refuse :
 | `/models/`, `.gguf`, `.safetensors` | jamais mis en cache (plusieurs gigaoctets) |
 | Points d'entrée `.php`, CDN HuggingFace | laissés passer, sans interception |
 
+Les ressources tierces (polices d'affichage, visionneuse 3D, liste des versions
+GitHub) ne sont chargées qu'après un accord explicite dans la boîte de
+consentement : elles portent `data-consent-href` / `data-consent-src` et restent
+inertes tant que le visiteur n'a pas répondu. Refuser laisse l'application
+entièrement fonctionnelle.
+
 Quand une nouvelle version est publiée, un bandeau discret propose de recharger :
 le nouveau service worker attend sagement, plutôt que de recharger la page au
 milieu d'une conversation. Voir

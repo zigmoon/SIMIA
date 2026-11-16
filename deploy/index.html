@@ -30,10 +30,13 @@
 <meta name="twitter:image" content="https://app.zigmoon.com/SIMIA/app/icons/icon-512.png">
 <meta name="twitter:title" content="SIMIA — assistant IA local, privé et hors ligne">
 <meta name="twitter:description" content="Version web ou application de bureau Windows, macOS et Linux. Aucun compte, aucune donnée envoyée.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://api.github.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Polices d'affichage et API GitHub : services tiers, donc charges seulement
+     si les ressources externes sont acceptees. Sans accord, le repli systeme
+     prend le relais et la liste des versions reste sur le paquet local. -->
+<link rel="preconnect" data-consent-preconnect="https://fonts.googleapis.com">
+<link rel="preconnect" data-consent-preconnect="https://fonts.gstatic.com">
+<link rel="preconnect" data-consent-preconnect="https://api.github.com">
+<link rel="stylesheet" data-consent-href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap">
 <script>document.documentElement.classList.add("js");</script>
 <script type="application/ld+json">
 {
@@ -537,6 +540,10 @@
   footer .wrap{display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:center}
   footer a{text-decoration:none; color:var(--muted)}
   footer a:hover{color:var(--ink)}
+  /* Bouton du pied de page : il doit ressembler a un lien, pas a un bouton. */
+  .footer-link{background:none;border:none;padding:0;font:inherit;color:var(--muted);cursor:pointer}
+  .footer-link:hover{color:var(--ink)}
+  .footer-link:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:3px}
 
   /* Animation uniquement si JavaScript est actif : sans script, le contenu
      reste lisible au lieu de demeurer invisible. */
@@ -1055,10 +1062,13 @@
     <span>
       <a href="./app/">Application web</a> ·
       <a href="https://app.zigmoon.com/SIMIA/models/versions.json">Catalogue</a> ·
-      <a href="#faq">FAQ</a>
+      <a href="#faq">FAQ</a> ·
+      <button type="button" class="footer-link" data-simia-cookies-open>Cookies</button>
     </span>
   </div>
 </footer>
+
+<script src="cookies.js" defer></script>
 
 <script>
   /* ------------------------------------------------------------------
@@ -1078,6 +1088,11 @@
   const releaseLinks = [...document.querySelectorAll("[data-release]")];
   const targetOf = name => String(name).replace(/\.(zip|tar\.gz)$/i, "");
   const localBuilds = new Map();
+
+  /* Les ressources externes ne sont chargees qu'avec l'accord du visiteur.
+     Tant que la boite cookies n'a pas repondu, on considere que c'est non :
+     aucune requete ne doit partir vers un tiers sans consentement. */
+  const consentExternal = () => !!(window.SimiaConsent && window.SimiaConsent.external());
 
   /* Trois sources possibles, dans cet ordre : le paquet heberge a cote de la
      landing, puis la release GitHub, puis rien. Un visiteur ne doit jamais
@@ -1135,7 +1150,9 @@
       }
     } catch { /* site sans manifeste : on retombe sur GitHub */ }
 
-    if (!localBuilds.size) {
+    // GitHub n'est interroge que si le visiteur a accepte les ressources
+    // externes : c'est une requete vers un tiers, pas un fichier du site.
+    if (!localBuilds.size && consentExternal()) {
       githubAssets = await fetchGithubAssets();
     }
     renderDownloads(githubAssets);
@@ -1143,6 +1160,7 @@
   }
 
   async function fetchGithubAssets() {
+    if (!consentExternal()) return null;
     try {
       const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
       if (!response.ok) return null;
@@ -1431,6 +1449,10 @@
 
   async function loadReleases() {
     if (!releasesBody) return;
+    if (!consentExternal()) {
+      releasesFallback("La liste des versions vient de GitHub, un service externe.");
+      return;
+    }
     try {
       const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
       if (response.status === 404) {
@@ -1474,17 +1496,34 @@
      Dès qu'un paquet est servi par le site, c'est lui qui compte : inutile
      d'annoncer au visiteur qu'aucune version n'est publiée alors qu'il peut
      télécharger. */
-  loadDownloads().then(result => {
-    if (result.local && releasesBody) {
-      const count = localBuilds.size;
-      releasesBody.innerHTML = `<div class="release-latest">
-          <span class="release-pill">serveur SIMIA</span>
-          <span class="release-date">${count} paquet${count > 1 ? "s" : ""} disponible${count > 1 ? "s" : ""} ici</span>
-        </div>`;
-      return;
+  function refreshDownloads() {
+    return loadDownloads().then(result => {
+      if (result.local && releasesBody) {
+        const count = localBuilds.size;
+        releasesBody.innerHTML = `<div class="release-latest">
+            <span class="release-pill">serveur SIMIA</span>
+            <span class="release-date">${count} paquet${count > 1 ? "s" : ""} disponible${count > 1 ? "s" : ""} ici</span>
+          </div>`;
+        return;
+      }
+      return loadReleases();
+    });
+  }
+
+  /* Au DOMContentLoaded, cookies.js (defer) a fini de s'exécuter : le choix du
+     visiteur est lisible. Un changement de choix recharge ce qui en dépend. */
+  function startDownloads() {
+    refreshDownloads();
+    if (window.SimiaConsent && typeof window.SimiaConsent.onChange === "function") {
+      window.SimiaConsent.onChange(() => refreshDownloads());
     }
-    loadReleases();
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startDownloads);
+  } else {
+    startDownloads();
+  }
 
   // Apparition douce au défilement. Ce qui est déjà visible s'affiche tout de
   // suite, et un filet de sécurité révèle le reste si l'observateur ne réagit pas.

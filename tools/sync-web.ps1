@@ -34,6 +34,14 @@ Get-ChildItem $Source -File | Where-Object {
     $copies++
 }
 
+# La boite cookies est commune a la landing et a l'application : elle vit dans
+# deploy/ (a cote de la landing) et le service worker la precache sous app/.
+# Une seule source, donc pas de divergence entre les deux copies.
+$cookies = Join-Path $PSScriptRoot "..\deploy\cookies.js"
+if (-not (Test-Path $cookies)) { throw "deploy\cookies.js introuvable" }
+Copy-Item $cookies (Join-Path $Target "cookies.js") -Force
+$copies++
+
 # Configuration Apache : elle decrit le site, pas l'application. Elle est
 # desormais versionnee dans deploy/.htaccess.
 
@@ -61,7 +69,8 @@ if (Test-Path $status) {
 
 $expected = @(
     "index.html", "app.js", "styles.css", "code-runner.js", "service-worker.js",
-    "manifest.webmanifest", "offline.html", "icons\icon-192.png", "icons\icon-512.png"
+    "cookies.js", "manifest.webmanifest", "offline.html",
+    "icons\icon-192.png", "icons\icon-512.png"
 )
 $missing = $expected | Where-Object { -not (Test-Path (Join-Path $Target $_)) }
 if ($missing) { throw "Fichiers manquants apres copie : $($missing -join ', ')" }

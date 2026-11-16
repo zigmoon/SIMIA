@@ -17,7 +17,7 @@
  * surprise au milieu d'une conversation.
  */
 
-const VERSION = "4.0.0";
+const VERSION = "4.1.0";
 const CACHE = `simia-app-${VERSION}`;
 
 /* Un cache laisse par une generation precedente signale un worker qui ne se met
@@ -43,7 +43,7 @@ const CORE = [
   "./styles.css",
   "./app.js",
   "./code-runner.js",
-  "./cookies-config.js",
+  "./cookies.js",
   "./manifest.webmanifest",
   "./offline.html",
   "./icon.svg",

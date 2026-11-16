@@ -151,9 +151,9 @@ if (-not (Test-Path $downloadsOut)) { New-Item -ItemType Directory -Path $downlo
 
 Write-Step "Controle"
 $expected = @(
-    "index.html", ".htaccess", "robots.txt", "sitemap.xml", "service-worker.js",
+    "index.html", ".htaccess", "robots.txt", "sitemap.xml", "service-worker.js", "cookies.js",
     "agent-api.php", "web-search-api.php", "read-url-api.php",
-    "app\index.html", "app\app.js", "app\styles.css", "app\service-worker.js",
+    "app\index.html", "app\app.js", "app\styles.css", "app\service-worker.js", "app\cookies.js",
     "app\manifest.webmanifest", "app\offline.html",
     "app\icons\icon-192.png", "app\icons\icon-512.png",
     "models\versions.json", "models\catalog.json", "downloads\manifest.json"
