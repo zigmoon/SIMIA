@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SIMIA — assistant IA local, privé et hors ligne (Windows, macOS, Linux)</title>
-<meta name="description" content="Téléchargez SIMIA : assistant IA local-first pour Windows, macOS et Linux, ou version web dans le navigateur. Conversations, documents et génération d'images sans compte, sans serveur et sans télémétrie. 38 modèles de texte au catalogue, jusqu'à 9,7 Go, et 11 modèles d'image.">
+<meta name="description" content="Assistant IA local-first, privé et sobre : conversations, documents et images calculés sur votre machine. Sans compte, sans serveur. Windows, macOS, Linux.">
 <meta name="keywords" content="SIMIA, assistant IA local, IA hors ligne, IA privée sans compte, télécharger IA locale, application IA Windows, application IA macOS, application IA Linux, génération d'images locale, stable diffusion local, llama.cpp, WebGPU, Zigmoon">
 <meta name="author" content="Zigmoon">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
@@ -19,17 +19,20 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="SIMIA — assistant IA local, privé et hors ligne">
-<meta property="og:description" content="Assistant IA local-first. Conversations, documents et images générées sur votre machine. Version web dans le navigateur, ou application de bureau pour Windows, macOS et Linux.">
+<meta property="og:description" content="Assistant IA local-first : conversations, documents et images générés sur votre machine, sans compte ni serveur. Une IA privée et sobre, pour Windows, macOS et Linux.">
 <meta property="og:url" content="https://app.zigmoon.com/SIMIA/">
 <meta property="og:site_name" content="SIMIA by Zigmoon">
-<meta property="og:image" content="https://app.zigmoon.com/SIMIA/app/icons/icon-512.png">
+<meta property="og:image" content="https://app.zigmoon.com/SIMIA/og-simia.png">
+<meta property="og:image:secure_url" content="https://app.zigmoon.com/SIMIA/og-simia.png">
 <meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="512">
-<meta property="og:image:height" content="512">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://app.zigmoon.com/SIMIA/app/icons/icon-512.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Carte SIMIA : « Votre IA, chez vous. » Conversation, documents et images calculés sur votre machine, sans compte, sans serveur, sans télémétrie. Disponible sur Windows, macOS, Linux et dans le navigateur.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://app.zigmoon.com/SIMIA/og-simia.png">
+<meta name="twitter:image:alt" content="Carte SIMIA : « Votre IA, chez vous. » Une IA locale, privée, sans compte ni serveur, pour Windows, macOS, Linux et le web.">
 <meta name="twitter:title" content="SIMIA — assistant IA local, privé et hors ligne">
-<meta name="twitter:description" content="Version web ou application de bureau Windows, macOS et Linux. Aucun compte, aucune donnée envoyée.">
+<meta name="twitter:description" content="Conversations, documents et images générés sur votre machine, sans compte ni serveur. Une IA privée et sobre, pour Windows, macOS et Linux.">
 <!-- Polices d'affichage et API GitHub : services tiers, donc charges seulement
      si les ressources externes sont acceptees. Sans accord, le repli systeme
      prend le relais et la liste des versions reste sur le paquet local. -->
@@ -51,8 +54,8 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.0",
-      "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie.",
+      "softwareVersion": "0.1.7",
+      "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
@@ -62,11 +65,24 @@
         "Génération d'images locale avec Stable Diffusion",
         "Atelier de code avec exécution JavaScript et Python",
         "Recherche web assistée et dictée vocale",
-        "Export et import des conversations en JSON"
+        "Export et import des conversations en JSON",
+        "Fonctionne réseau coupé : la vie privée par architecture, pas par promesse"
       ],
-      "author": { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" },
+      "author": [
+        { "@type": "Person", "name": "Simon Dupont-Gellert", "jobTitle": "à l'origine de SIMIA" },
+        { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
+      ],
+      "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
       "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/latest",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://app.zigmoon.com/SIMIA/#website",
+      "url": "https://app.zigmoon.com/SIMIA/",
+      "name": "SIMIA",
+      "inLanguage": "fr",
+      "publisher": { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
     },
     {
       "@type": "FAQPage",
@@ -86,6 +102,11 @@
           "@type": "Question",
           "name": "Faut-il une carte graphique puissante pour utiliser SIMIA ?",
           "acceptedAnswer": { "@type": "Answer", "text": "Pas obligatoirement. Une carte récente accélère énormément les réponses et une RTX 2060 suffit pour la génération d'images, mais SIMIA retombe automatiquement sur le processeur." }
+        },
+        {
+          "@type": "Question",
+          "name": "Quel est l'impact énergétique de SIMIA ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "SIMIA supprime la part réseau et serveur d'un assistant en ligne : pas de requête à envoyer, pas de centre de données maintenu allumé en permanence pour vous répondre. Il reste le calcul, effectué par la machine que vous possédez déjà, et dont la durée dépend du modèle choisi : un modèle 1B répond plus vite, et consomme moins, qu'un modèle 14B. Aucun chiffre d'empreinte carbone n'est publié faute de mesure indépendante. En revanche, une fois le modèle téléchargé, une conversation n'échange plus rien avec Internet : réseau coupé, SIMIA continue de répondre." }
         },
         {
           "@type": "Question",
@@ -525,6 +546,23 @@
   }
   .quote b{display:block; margin-top:16px; font:600 11px "DM Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--dim)}
 
+  /* Empreinte : quatre chiffres mesures, pas des estimations. */
+  .eco{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:30px}
+  .eco-card{border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); padding:24px 22px; box-shadow:var(--shadow)}
+  .eco-figure{margin:0; font:800 30px/1 "Manrope",system-ui,sans-serif; letter-spacing:-.03em; color:var(--ink)}
+  .eco-card h3{margin:9px 0 0; font-size:13.5px; color:#4c6b1f; text-transform:uppercase; letter-spacing:.07em; font-family:"DM Mono",monospace; font-weight:600}
+  .eco-card p:last-child{margin:12px 0 0; font-size:13px; color:var(--muted); line-height:1.62}
+  .eco-note{margin-top:22px; max-width:820px; text-transform:none; letter-spacing:0; font-size:11.5px; line-height:1.65; color:var(--dim)}
+
+  /* Origine : une personne nommee, pas un logo anonyme. */
+  .origin{max-width:820px}
+  .origin-lede{font-size:15.5px; line-height:1.65; color:var(--muted); margin:8px 0 26px}
+  .origin-card{display:grid; grid-template-columns:56px 1fr; gap:18px; align-items:start; padding:26px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow)}
+  .origin-mark{width:56px; height:56px; border-radius:14px; background:var(--ink); color:var(--accent); display:grid; place-items:center; font:800 28px/1 "Manrope",system-ui,sans-serif}
+  .origin-name{margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em}
+  .origin-role{margin:3px 0 0; font:500 11px "DM Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:#4c6b1f}
+  .origin-text{margin:12px 0 0; font-size:13.5px; line-height:1.65; color:var(--muted)}
+
   .faq{display:grid; gap:10px; max-width:840px}
   details{border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:16px 20px}
   details[open]{background:#fbfcf7}
@@ -652,6 +690,10 @@
     .hero-float.f1{top:-11px; right:4px}
     .hero-float.f3{right:10px; bottom:-11px}
     .mock-composer{padding:9px 10px}
+    .origin-card{grid-template-columns:1fr; gap:14px; padding:22px}
+    .origin-mark{width:46px; height:46px; border-radius:12px; font-size:23px}
+    .eco-card{padding:20px 18px}
+    .eco-figure{font-size:26px}
   }
 </style>
 </head>
@@ -999,7 +1041,7 @@
     <div class="wrap privacy">
       <div class="reveal">
         <div class="section-head" style="margin-bottom:26px">
-          <p class="mono">Confidentialité</p>
+          <p class="mono">Confidentialité & sobriété</p>
           <h2>Vos mots ne quittent pas votre machine.</h2>
         </div>
         <ul class="privacy-list">
@@ -1013,6 +1055,57 @@
         « Un assistant personnel qui vous ressemble ne devrait pas avoir besoin de vous observer. »
         <b>Principe de conception SIMIA</b>
       </aside>
+    </div>
+  </section>
+
+  <section id="sobriete">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="mono">Empreinte</p>
+        <h2>Moins de serveurs, donc moins d'énergie.</h2>
+        <p>Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite.</p>
+      </div>
+      <div class="eco">
+        <article class="eco-card reveal">
+          <p class="eco-figure">0 octet</p>
+          <h3>par message</h3>
+          <p>Une fois le modèle choisi, une conversation n'échange plus rien avec le réseau. Ce n'est pas une promesse de confidentialité : c'est mesurable en coupant le Wi-Fi, et SIMIA continue de répondre.</p>
+        </article>
+        <article class="eco-card reveal">
+          <p class="eco-figure">1,4 Go</p>
+          <h3>une seule fois</h3>
+          <p>Le paquet de bureau complet, modèle d'image compris, sur Windows, Linux et Mac Apple Silicon. Ensuite, plus aucun téléchargement de modèle pour converser. Un service en ligne, lui, déplace vos données à chaque requête, indéfiniment.</p>
+        </article>
+        <article class="eco-card reveal">
+          <p class="eco-figure">1 appareil</p>
+          <h3>au lieu d'un parc</h3>
+          <p>L'inférence réutilise le processeur ou la carte graphique déjà installés chez vous. Aucun GPU dédié à faire tourner, refroidir et renouveler pour votre seul usage.</p>
+        </article>
+        <article class="eco-card reveal">
+          <p class="eco-figure">0 copie</p>
+          <h3>à conserver</h3>
+          <p>Rien n'est stocké côté serveur, donc rien à sauvegarder, à dupliquer ni à refroidir. Le seul stockage, c'est votre disque, et il vous appartient.</p>
+        </article>
+      </div>
+      <p class="mono eco-note reveal">Chiffres relevés sur cette version : taille réelle du paquet Windows et comportement réseau vérifié réseau coupé. SIMIA ne publie pas d'estimation carbone faute de mesure indépendante, et n'en inventera pas. La fonction Agent web, elle, consulte Internet quand vous l'utilisez, et seulement à ce moment-là.</p>
+    </div>
+  </section>
+
+  <section id="origine">
+    <div class="wrap">
+      <div class="origin reveal">
+        <p class="mono">Origine</p>
+        <h2>Un projet porté, pas assemblé.</h2>
+        <p class="origin-lede">SIMIA est né d'une conviction simple : l'intelligence artificielle n'a pas besoin d'un centre de données pour rendre service, et la vie privée ne devrait pas être une option payante.</p>
+        <div class="origin-card">
+          <div class="origin-mark" aria-hidden="true">S</div>
+          <div>
+            <p class="origin-name">Simon Dupont-Gellert</p>
+            <p class="origin-role">à l'origine de SIMIA</p>
+            <p class="origin-text">Conception, développement et publication du projet, y compris les paquets Windows, macOS et Linux compilés à chaque version. Le choix du local-first n'est pas un argument commercial ajouté après coup : c'est la contrainte de départ, celle qui décide de l'architecture.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1034,6 +1127,11 @@
         <details>
           <summary>Faut-il une carte graphique puissante ?</summary>
           <p>Pas obligatoirement. Une carte récente accélère énormément les réponses (une RTX 2060 suffit pour la génération d'images), mais SIMIA retombe automatiquement sur le processeur. Prévoyez alors davantage de mémoire et un peu de patience.</p>
+        </details>
+        <details>
+          <summary>Quel est l'impact énergétique de SIMIA ?</summary>
+          <p>SIMIA supprime la part réseau et serveur d'un assistant en ligne : pas de requête à envoyer, pas de centre de données maintenu allumé en permanence pour vous répondre. Il reste le calcul, effectué par la machine que vous possédez déjà, sur une durée proportionnelle au modèle choisi : un modèle 1B répond plus vite, et consomme moins, qu'un modèle 14B.</p>
+          <p>Nous ne publions volontairement aucun chiffre d'empreinte carbone : sans mesure indépendante, ce serait un argument commercial et non une donnée. Le chiffre vérifiable, lui, est simple : une fois le modèle téléchargé, une conversation n'échange plus rien avec Internet — coupez le Wi-Fi, SIMIA continue de répondre.</p>
         </details>
         <details>
           <summary>Où sont stockés les modèles ?</summary>
