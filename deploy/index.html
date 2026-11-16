@@ -1453,30 +1453,55 @@
     return name;
   };
 
-  const releasesFallback = message => {
+  /* Les quatre paquets sont toujours listés, même sans l'API GitHub.
+     Le bloc ne doit jamais se réduire à un texte : un visiteur qui refuse les
+     cookies, ou une API limitée, voyait auparavant un paragraphe à la place des
+     boutons de téléchargement. Les liens `releases/latest/download/<nom>` ne
+     demandent aucune requête préalable, donc rien ne justifie de les cacher. */
+  const staticAssetLinks = () => releaseLinks.map(link =>
+    `<a class="release-asset" href="${latestUrlFor(link.dataset.release)}" download>
+        <span>${escapeHtml(assetLabel(link.dataset.release))}</span></a>`).join("");
+
+  const renderReleasesStatic = note => {
     if (!releasesBody) return;
-    releasesBody.innerHTML = `<p class="releases-offline">${message} Les paquets sont sur
+    releasesBody.innerHTML = `
+      <div class="release-latest">
+        <span class="release-pill">dernière version</span>
+        <span class="release-date">les liens ci-dessous pointent toujours sur la plus récente</span>
+      </div>
+      <div class="release-assets">${staticAssetLinks()}</div>
+      ${note ? `<p class="releases-offline">${note}</p>` : ""}`;
+  };
+
+  /* Cas distinct : GitHub répond qu'il n'y a aucune version. Afficher les quatre
+     boutons enverrait alors sur des liens morts, donc on garde un texte. */
+  const releasesEmpty = message => {
+    if (!releasesBody) return;
+    releasesBody.innerHTML = `<p class="releases-offline">${message} Les paquets seront sur
       <a href="${REPO_URL}/releases" target="_blank" rel="noopener">la page Releases de GitHub</a>
-      et se mettent à jour à chaque version.</p>`;
+      dès la première publication.</p>`;
   };
 
   async function loadReleases() {
     if (!releasesBody) return;
     if (!consentExternal()) {
-      releasesFallback("La liste des versions vient de GitHub, un service externe.");
-      return;
+      /* `SimiaConsent.granted()` ne se met pas à jour quand le visiteur répond
+         sans recharger la page : impossible de distinguer « pas encore répondu »
+         de « a refusé ». La phrase couvre donc les deux cas. */
+      renderReleasesStatic(`Le numéro, la date et la taille de chaque paquet s'affichent si vous acceptez les ressources externes ;
+        <a href="${REPO_URL}/releases" target="_blank" rel="noopener">la page Releases</a> les donne aussi.`);      return;
     }
     try {
       const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
       if (response.status === 404) {
-        releasesFallback("Aucune version publiée sur GitHub pour le moment.");
+        releasesEmpty("Aucune version publiée sur GitHub pour le moment.");
         return;
       }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const all = await response.json();
       const releases = (Array.isArray(all) ? all : []).filter(item => !item.draft);
       if (!releases.length) {
-        releasesFallback("Aucune version publiée sur GitHub pour le moment.");
+        releasesEmpty("Aucune version publiée sur GitHub pour le moment.");
         return;
       }
 
@@ -1501,7 +1526,8 @@
           : `<p class="releases-offline">Cette version n'a pas encore de paquet joint : la compilation est peut-être en cours.</p>`}
         ${previous ? `<ul class="release-list">${previous}</ul>` : ""}`;
     } catch {
-      releasesFallback("Le chargement automatique est indisponible (limite de l'API GitHub ou hors ligne).");
+      renderReleasesStatic(`Le détail des versions n'a pas pu être chargé (limite de l'API GitHub ou hors ligne).
+        <a href="${REPO_URL}/releases" target="_blank" rel="noopener">La page Releases</a> reste disponible.`);
     }
   }
 
