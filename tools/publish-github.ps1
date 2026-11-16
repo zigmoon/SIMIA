@@ -102,9 +102,33 @@ $tag = "v$version"
 # ------------------------------------------------------------------------ push
 
 Write-Step "Envoi de la branche $Branch"
-Write-Host "   Git Credential Manager va peut-etre ouvrir une fenetre de connexion." -ForegroundColor Yellow
-& git push -u origin $Branch
-if ($LASTEXITCODE -ne 0) { Write-Err "le push a echoue"; exit 1 }
+Write-Host "   Git Credential Manager va ouvrir une fenetre de connexion GitHub." -ForegroundColor Yellow
+$pushOutput = & git push -u origin $Branch 2>&1
+$pushOutput | ForEach-Object { Write-Host "   $_" }
+
+if ($LASTEXITCODE -ne 0) {
+    $text = ($pushOutput -join "`n")
+    if ($text -match 'rejected|non-fast-forward|fetch first') {
+        Write-Host ""
+        Write-Err "le depot distant contient deja des commits."
+        Write-Host ""
+        Write-Host "   C'est le cas quand le depot a ete cree avec un README, un .gitignore" -ForegroundColor Yellow
+        Write-Host "   ou une licence. Deux solutions :" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "   a) le plus propre : supprimer le depot sur GitHub et le recreer VIDE"
+        Write-Host "      (aucune case cochee), puis relancer ce script ;"
+        Write-Host ""
+        Write-Host "   b) garder le README et forcer l'envoi de notre historique :"
+        Write-Host "      git push -u --force-with-lease origin $Branch" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "   L'option b ecrase l'historique distant. Sans importance ici : le" -ForegroundColor DarkGray
+        Write-Host "   depot vient d'etre cree et ne contient qu'un commit initial." -ForegroundColor DarkGray
+        exit 1
+    }
+    Write-Err "le push a echoue (authentification refusee ou reseau)."
+    Write-Host "   Verifiez que vous etes bien connecte au compte proprietaire de $Repo." -ForegroundColor Yellow
+    exit 1
+}
 Write-Ok "branche envoyee"
 
 if (-not $NoTag) {
