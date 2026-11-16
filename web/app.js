@@ -8,6 +8,13 @@ const NATIVE = typeof window !== "undefined" && window.__SIMIA_NATIVE__ ? window
  * de fichiers complet est sur le disque. */
 const IMAGE = NATIVE && NATIVE.image && NATIVE.image.packsUrl ? NATIVE.image : null;
 
+/* La generation d'images se propose des le premier lancement, meme sans modele
+ * installe : le bouton Image ouvre alors la bibliotheque sur les modeles
+ * d'image. `supported` dit que le moteur sd-server de cette plateforme existe et
+ * demarre ; sur Mac Intel il est absent, donc le bouton resterait une impasse et
+ * n'est pas affiche. */
+const IMAGE_SUPPORTED = Boolean(IMAGE) && IMAGE.supported !== false;
+
 /* Un jeu de fichiers complet est-il utilisable maintenant ? */
 function imageUsable() {
   if (!IMAGE) return false;
@@ -1893,7 +1900,7 @@ async function selectImagePack(id) {
     IMAGE.height = chosen?.px || IMAGE.height;
     IMAGE.steps = chosen?.steps || IMAGE.steps;
     if (chosen?.cfg) IMAGE.cfg = chosen.cfg;
-    if (ui.imageToggle) ui.imageToggle.hidden = !imageUsable();
+    if (ui.imageToggle) ui.imageToggle.hidden = !IMAGE_SUPPORTED;
     renderImageEngineUi();
     renderModelLibrary();
     toast(localizedText("Jeu d'images sélectionné.", "Image model selected.", "Modelo de imagen seleccionado.", "画像モデルを選択しました。"));
@@ -1904,10 +1911,109 @@ async function selectImagePack(id) {
   }
 }
 
+/* ---------- Suivi d'un telechargement, carte par carte --------------------
+   Les poids pesent de quelques centaines de mega-octets a plusieurs giga-octets :
+   cliquer sur « Telecharger » ne doit jamais laisser l'ecran muet. Le lanceur
+   n'expose qu'un emplacement de progression a la fois (un seul telechargement),
+   on retient donc l'identifiant concerne et chaque carte affiche sa propre
+   barre. Le DOM est mis a jour sur place : re-rendre la bibliotheque a chaque
+   sondage ferait sauter le defilement et clignoter les cartes. */
+const downloadState = { id: "", downloaded: 0, total: 0, stage: "", error: "" };
+let downloadTicker = 0;
+let downloadFetching = false;
+
+function downloadPercent() {
+  if (!downloadState.total) return 0;
+  return Math.max(0, Math.min(100, Math.round((downloadState.downloaded / downloadState.total) * 100)));
+}
+
+function downloadProgressText() {
+  const percent = downloadPercent();
+  if (downloadState.stage === "loading") {
+    return localizedText("Chargement du modèle…", "Loading model…", "Cargando el modelo…", "モデルを読み込み中…");
+  }
+  if (!downloadState.total) {
+    return localizedText("Téléchargement…", "Downloading…", "Descargando…", "ダウンロード中…");
+  }
+  return `${percent} % · ${formatBytes(downloadState.downloaded)} / ${formatBytes(downloadState.total)}`;
+}
+
+/* Met a jour les barres deja presentes dans la bibliotheque, sans la reconstruire.
+   Seuls les boutons de telechargement sont touches : « Fichiers a placer » et
+   « Image active » sont des boutons desactives par construction, les reactiver
+   ici les rendrait cliquables pour rien. */
+function paintDownloadState() {
+  ui.modelCards?.querySelectorAll(".model-card").forEach(card => {
+    const box = card.querySelector("[data-download]");
+    const button = card.querySelector(".model-card-footer button[data-model-id], .model-card-footer button[data-image-pack-download]");
+    const mine = Boolean(downloadState.id) && box?.dataset.download === downloadState.id;
+    card.classList.toggle("is-downloading", mine);
+    if (box) {
+      box.hidden = !mine;
+      if (mine) {
+        const percent = downloadPercent();
+        const fill = box.querySelector(".card-progress-fill");
+        if (fill) fill.style.width = `${percent}%`;
+        const track = box.querySelector(".card-progress-track");
+        if (track) track.setAttribute("aria-valuenow", String(percent));
+        const text = box.querySelector(".card-progress-text");
+        if (text) text.textContent = downloadProgressText();
+      }
+    }
+    if (!button) return;
+    if (button.dataset.idleLabel === undefined) button.dataset.idleLabel = button.textContent;
+    button.disabled = mine;
+    button.textContent = mine ? `${downloadPercent()} %` : button.dataset.idleLabel;
+  });
+}
+
+async function pollDownloadProgress() {
+  if (downloadFetching || !downloadState.id) return;
+  downloadFetching = true;
+  try {
+    const response = await fetch(new URL("/_simia/progress", location.href).href, { cache: "no-store" });
+    const progress = await response.json();
+    if (!progress.active || progress.id !== downloadState.id) return;
+    downloadState.downloaded = Number(progress.downloaded) || 0;
+    downloadState.total = Number(progress.total) || 0;
+    downloadState.stage = String(progress.stage || "");
+    downloadState.error = progress.error ? String(progress.error) : "";
+    paintDownloadState();
+  } catch { /* le lanceur peut etre occupe par une autre requete */ }
+  finally { downloadFetching = false; }
+}
+
+function beginDownload(id) {
+  downloadState.id = id;
+  downloadState.downloaded = 0;
+  downloadState.total = 0;
+  downloadState.stage = "download";
+  downloadState.error = "";
+  paintDownloadState();
+  if (!downloadTicker) downloadTicker = setInterval(pollDownloadProgress, 600);
+}
+
+function endDownload() {
+  downloadState.id = "";
+  downloadState.stage = "";
+  if (downloadTicker) { clearInterval(downloadTicker); downloadTicker = 0; }
+  renderModelLibrary();
+}
+
+/* Bloc de progression place dans chaque carte, masque tant que rien ne se passe.
+   Le rendre des le depart evite de reconstruire la carte au moment du clic. */
+function downloadBlock(id) {
+  return `<div class="card-progress" data-download="${escapeHtml(id)}" hidden>
+      <div class="card-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="card-progress-fill"></i></div>
+      <p class="card-progress-text"></p>
+    </div>`;
+}
+
 async function downloadImagePack(id) {
   if (!IMAGE || !id) return;
   const pack = state.imagePacks.find(item => item.id === id);
   toast(localizedText(`Téléchargement de ${pack?.name || id}…`, `Downloading ${pack?.name || id}…`, `Descargando ${pack?.name || id}…`, `${pack?.name || id} をダウンロード中…`));
+  beginDownload(id);
   renderModelLibrary();
   try {
     const response = await fetch(IMAGE.downloadPackUrl, {
@@ -1928,13 +2034,13 @@ async function downloadImagePack(id) {
       IMAGE.steps = chosen.steps || IMAGE.steps;
       if (chosen.cfg) IMAGE.cfg = chosen.cfg;
     }
-    if (ui.imageToggle) ui.imageToggle.hidden = !imageUsable();
+    if (ui.imageToggle) ui.imageToggle.hidden = !IMAGE_SUPPORTED;
     renderImageEngineUi();
     toast(localizedText("Modèle d'image prêt.", "Image model ready.", "Modelo de imagen listo.", "画像モデルの準備ができました。"));
   } catch {
     toast(localizedText("Le téléchargement a échoué.", "The download failed.", "La descarga falló.", "ダウンロードに失敗しました。"), "error");
   }
-  renderModelLibrary();
+  endDownload();
 }
 
 function imageStageLabel(status) {
@@ -2132,6 +2238,10 @@ function renderImageEngineUi() {
   const ready = Boolean(pack && pack.local);
   const stepsLabel = localizedText("pas", "steps", "pasos", "ステップ");
   const meta = pack ? `${pack.px} px · ${pack.steps} ${stepsLabel}` : "";
+
+  /* Le bouton reste visible sans modele installe, mais en pointille : on voit
+     que la fonction existe et qu'il reste un telechargement a faire. */
+  if (ui.imageToggle) ui.imageToggle.classList.toggle("is-pending", !ready);
 
   if (ui.imageEngine) {
     ui.imageEngine.hidden = !ready;
@@ -5109,16 +5219,23 @@ function applyLanguage() {
   renderInfoContent();
   setAgentMode(state.agentMode);
   if (ui.imageToggle) {
-    ui.imageToggle.hidden = !imageUsable();
+    ui.imageToggle.hidden = !IMAGE_SUPPORTED;
     ui.imageToggle.textContent = localizedText("Image", "Image", "Imagen", "画像");
     ui.imageToggle.setAttribute("aria-pressed", String(state.imageMode));
-    ui.imageToggle.title = localizedText(
-      "Générer une image (application de bureau)",
-      "Generate an image (desktop app)",
-      "Generar una imagen (aplicación de escritorio)",
-      "画像を生成（デスクトップアプリ）"
-    );
-    if (state.imageMode) setImageMode(true);
+    ui.imageToggle.title = imageUsable()
+      ? localizedText(
+          "Générer une image (application de bureau)",
+          "Generate an image (desktop app)",
+          "Generar una imagen (aplicación de escritorio)",
+          "画像を生成（デスクトップアプリ）"
+        )
+      : localizedText(
+          "Choisir un modèle d'image : un seul téléchargement, puis tout reste sur ce disque",
+          "Choose an image model: one download, then everything stays on this disk",
+          "Elegir un modelo de imagen: una sola descarga y todo queda en este disco",
+          "画像モデルを選択：一度ダウンロードすれば、あとはこのPC上で動作します"
+        );
+    if (state.imageMode && imageUsable()) setImageMode(true);
   }
   renderImageEngineUi();
   renderCustomModelText();
@@ -5297,7 +5414,7 @@ function renderModelLibrary() {
     const styleTag = pack.lora
       ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("STYLE SIMIA", "SIMIA STYLE", "ESTILO SIMIA", "SIMIA スタイル"))}</span>`
       : "";
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(pack.note || "")}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(pack.note || "")}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${downloadBlock(pack.id)}`;
     return card;
   });
   const oversized = NATIVE ? [] : MODELS.filter(model => !modelNeedsUnavailableFeature(model) && modelSizeMB(model) > WEB_MAX_MODEL_MB);
@@ -5324,7 +5441,7 @@ function renderModelLibrary() {
     const note = state.cachedModelId === model.id ? ` <span class="model-card-note">${escapeHtml(text.stored)}</span>` : "";
     const card = document.createElement("article");
     card.className = `model-card${active ? " selected" : ""}${model.recommended ? " recommended" : ""}${remote ? " remote" : ""}`;
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(model.size)}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(active ? text.selected : remote ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード") : text.choose)}</button></div>`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(model.size)}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(active ? text.selected : remote ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード") : text.choose)}</button></div>${downloadBlock(model.id)}`;
     return card;
   }), ...desktopCard);
   if (!customCards.length && !visibleModels.length && !imageCards.length && !desktopCard.length) {
@@ -5333,6 +5450,9 @@ function renderModelLibrary() {
     empty.textContent = text.empty;
     ui.modelCards.append(empty);
   }
+  /* Un telechargement peut etre en cours pendant qu'on reconstruit la liste :
+     les cartes neuves reprennent alors la barre et le bouton desactive. */
+  if (downloadState.id) paintDownloadState();
 }
 
 function openModelLibrary(filter = "all") {
@@ -5995,7 +6115,23 @@ document.querySelector("#new-chat").addEventListener("click", newConversation);
 document.querySelector("#clear-chat").addEventListener("click", clearChat);
 ui.voice.addEventListener("click", toggleVoiceInput);
 ui.agentToggle.addEventListener("click", () => setAgentMode(!state.agentMode));
-ui.imageToggle?.addEventListener("click", () => setImageMode(!state.imageMode));
+ui.imageToggle?.addEventListener("click", () => {
+  /* Aucun jeu d'images complet sur le disque : plutot qu'un bouton muet, on
+     ouvre la bibliotheque deja filtree sur les modeles d'image. Le telechargement
+     s'y fait avec sa propre barre de progression. */
+  if (!imageUsable()) {
+    openModelLibrary("image");
+    toast(localizedText(
+      "Choisissez un modèle d'image : il se télécharge une seule fois, puis reste sur ce disque.",
+      "Choose an image model: it downloads once, then stays on this disk.",
+      "Elige un modelo de imagen: se descarga una sola vez y queda en este disco.",
+      "画像モデルを選んでください。一度ダウンロードすれば、このPCに残ります。"
+    ));
+    return;
+  }
+  setImageMode(!state.imageMode);
+});
+
 ui.chat.addEventListener("click", async event => {
   const button = event.target.closest("[data-image-action]");
   if (!button) return;
@@ -6157,9 +6293,25 @@ ui.modelLibrary.addEventListener("click", event => {
   }
   const choice = event.target.closest("button[data-model-id]");
   if (!choice) return;
-  selectModelById(choice.dataset.modelId);
-  ui.settings.hidden = false;
-  ui.modelLibrary.close();
+  /* Le modele n'est pas sur le disque : le lanceur va telecharger plusieurs
+     centaines de mega-octets. Fermer la bibliotheque tout de suite priverait le
+     visiteur de la seule barre de progression visible, donc on la garde ouverte
+     jusqu'a la fin. Le basculement instantane (modele deja present) ferme comme
+     avant. */
+  const target = MODELS.find(model => model.id === choice.dataset.modelId);
+  const downloads = Boolean(NATIVE) && Boolean(target) && target.nativeLocal === false;
+  if (downloads) {
+    beginDownload(choice.dataset.modelId);
+  } else {
+    ui.settings.hidden = false;
+    ui.modelLibrary.close();
+  }
+  selectModelById(choice.dataset.modelId).finally(() => {
+    if (!downloads) return;
+    endDownload();
+    ui.settings.hidden = false;
+    ui.modelLibrary.close();
+  });
 });
 ui.chat.addEventListener("click", event => {
   if (event.target.closest(".open-model-library")) openModelLibrary();

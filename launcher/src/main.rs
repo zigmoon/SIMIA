@@ -2493,8 +2493,9 @@ fn native_script(state: &Shared) -> String {
         Ok(guard) => {
             let selected = guard.selected_model.clone();
             let image = format!(
-                "{{\"available\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"generateUrl\":\"/sdcpp/v1/img_gen\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
+                "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"generateUrl\":\"/sdcpp/v1/img_gen\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
                 guard.image.available(),
+                guard.image.bin.is_some() && guard.image.probe.is_none(),
                 guard.image.current().map(|pack| guard.image.size_override.unwrap_or(pack.px_or(DEFAULT_IMG_WIDTH))).unwrap_or(0),
                 guard.image.current().map(|pack| guard.image.size_override.unwrap_or(pack.px_or(DEFAULT_IMG_WIDTH))).unwrap_or(0),
                 guard.image.current().map(|pack| guard.image.steps_override.unwrap_or(pack.steps_or(DEFAULT_IMG_STEPS))).unwrap_or(0),
