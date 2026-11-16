@@ -133,6 +133,12 @@ Les moteurs et l'interface sont inclus ; les poids des modèles se téléchargen
 depuis l'application, au premier choix. Sur macOS et Linux, rendez le fichier
 exécutable si l'archive a perdu le droit : `chmod +x simia-desktop`.
 
+Sur Windows, le runtime Visual C++ est joint aux moteurs : rien à installer, et
+aucun droit administrateur. Sur Linux, le lanceur demande glibc 2.35 (Ubuntu
+22.04 et plus récent) ; la génération d'images demande glibc 2.38, soit Ubuntu
+24.04, parce que le binaire `sd-server` vient de l'amont. Conversation et
+atelier de code fonctionnent dès 22.04.
+
 > **macOS** : le binaire n'est pas signé, Gatekeeper le met en quarantaine.
 > `xattr -dr com.apple.quarantine simia-macos-arm64/` puis relancez.
 > **Windows** : SmartScreen affiche un avertissement à la première ouverture,
@@ -270,9 +276,10 @@ SIMIA-desktop/
 │   ├── *.php                       agent web, recherche, lecture d'URL
 │   └── downloads/                  paquets à télécharger + manifest.json
 ├── packaging/LISEZ-MOI.txt         fichier livré dans chaque archive
+├── runtime/msvc-x64/               runtime VC++ embarqué dans le paquet Windows
 ├── dist/SIMIA/                     dossier prêt à téléverser (tools/prepare-ftp.ps1)
 ├── .github/workflows/build.yml     CI Windows / macOS / Linux
-├── vendor/llama/win-vulkan/        llama.cpp + DLL Vulkan + runtime VC++
+├── vendor/llama/win-vulkan/        llama.cpp + DLL Vulkan (local, non versionné)
 ├── vendor/sd/win-vulkan/           stable-diffusion.cpp (sd-server) + DLL
 ├── models/*.gguf                   poids des modèles de texte
 ├── models/image/                   packs d'images + catalog.json
@@ -351,8 +358,10 @@ officielles :
 Sur macOS Intel, la génération d'images est simplement masquée : le bouton
 **Image** n'apparaît pas tant que `sd-server` est absent, sans erreur.
 
-Chaque paquet contient `simia-desktop`, `web/`, `vendor/`, `models/*.json` et
-`LISEZ-MOI.txt`. Les poids ne sont pas inclus : le catalogue pointe vers le CDN.
+Chaque paquet contient `simia-desktop`, `web/`, `vendor/`, `models/*.json`,
+`models/image/loras/` et `LISEZ-MOI.txt`. Les poids ne sont pas inclus : le
+catalogue pointe vers le CDN. Sur Windows, le runtime VC++ est joint aux
+moteurs, donc rien à installer.
 
 Le corps de la release n'est pas laissé au « Full Changelog » automatique de
 GitHub : [tools/release-body.mjs](tools/release-body.mjs) le rédige à partir des
@@ -482,9 +491,15 @@ Pour entraîner votre propre style, voir [tools/lora/README.md](tools/lora/READM
 
 ## Points d'attention
 
-- **Runtime VC++** : les binaires officiels de `llama.cpp` sont compilés avec MSVC
-  et exigent `vcruntime140.dll`, `vcruntime140_1.dll` et `msvcp140.dll`. Ils sont
-  fournis dans `vendor/llama/win-vulkan/` (redistribution autorisée par Microsoft).
+- **Runtime VC++** : les binaires officiels de `llama.cpp` et de
+  `stable-diffusion.cpp` sont compilés avec MSVC et importent
+  `vcruntime140.dll`, `vcruntime140_1.dll`, `msvcp140.dll` et
+  `msvcp140_codecvt_ids.dll` — `simia-desktop.exe` lui-même importe la
+  première. Depuis la version b12413, l'archive Windows de `llama.cpp` ne les
+  contient plus : elles sont donc versionnées dans
+  [runtime/msvc-x64/](runtime/msvc-x64/) (redistribution app-local autorisée
+  par Microsoft) et copiées dans les deux dossiers de moteurs par la CI. Le
+  paquet reste ainsi autonome, sans redistribuable à installer.
 - **Modèles à raisonnement** (Qwen 3.x) : sans réglage, la réponse part dans
   `reasoning_content` et `content` reste vide. `app.js` envoie donc
   `chat_template_kwargs: { enable_thinking: false }`.

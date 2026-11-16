@@ -55,7 +55,13 @@ jobs:
             sd: ""
             archive: tar.gz
           - target: linux-x64
-            os: ubuntu-24.04
+            # 22.04 et non 24.04 : la glibc liee est celle du runner, et le
+            # lanceur compile sur 24.04 exigeait GLIBC_2.39, donc refusait de
+            # demarrer sur Ubuntu 22.04 LTS. Les moteurs, eux, viennent de
+            # binaires amont precompiles : llama-server demande 2.34 (compatible)
+            # et sd-server 2.38 (24.04+), ce qui ne bloque que la generation
+            # d'images. Conversation et atelier de code fonctionnent des 22.04.
+            os: ubuntu-22.04
             llama: llama-b12413-bin-ubuntu-vulkan-x64.tar.gz
             sd: sd-master-5dcfa79-bin-Linux-Ubuntu-26.04-x86_64-vulkan.zip
             archive: tar.gz
@@ -187,7 +193,42 @@ jobs:
           fi
 
           cp -r vendor "$stage/vendor"
-          cp packaging/LISEZ-MOI.txt "$stage/"
+
+          # Runtime MSVC app-local. Les archives officielles de llama.cpp ne
+          # contiennent plus msvcp140.dll ni vcruntime140*.dll depuis b12413, et
+          # simia-desktop.exe lui-meme importe VCRUNTIME140.dll : sans ces
+          # fichiers, l'application ne demarre pas sur une machine sans le
+          # redistribuable VC++. Ils sont donc versionnes dans runtime/msvc-x64/.
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            runtime="runtime/msvc-x64"
+            if ! ls "$runtime"/*.dll >/dev/null 2>&1; then
+              echo "::error::runtime/msvc-x64/ ne contient aucune DLL"
+              exit 1
+            fi
+            for dir in "$stage/vendor/llama/${{ matrix.target }}" "$stage/vendor/sd/${{ matrix.target }}"; do
+              [ -d "$dir" ] || continue
+              cp "$runtime"/*.dll "$dir/"
+            done
+            # Verification par la table d'import : un fichier manquant doit
+            # faire echouer la compilation, pas l'utilisateur.
+            for need in VCRUNTIME140.dll MSVCP140.dll VCRUNTIME140_1.dll MSVCP140_CODECVT_IDS.dll; do
+              found=$(find "$stage/vendor" -maxdepth 4 -iname "$need" -print 2>/dev/null)
+              if [ -z "$found" ]; then
+                echo "::error::$need absent du paquet Windows"
+                exit 1
+              fi
+            done
+            echo "runtime MSVC : $(find "$stage/vendor" -iname 'vcruntime140*.dll' | wc -l) fichier(s) copie(s)"
+          fi
+
+          cp packaging/LISEZ-MOI.txt "$stage/LISEZ-MOI.txt"
+          # Le meme fichier sert les quatre archives : le nom de la cible y est
+          # injecte pour que le lecteur sache laquelle il a decompressee.
+          sed -i "s/{{TARGET}}/${{ matrix.target }}/" "$stage/LISEZ-MOI.txt"
+          if grep -q "{{TARGET}}" "$stage/LISEZ-MOI.txt"; then
+            echo "::error::le jeton {{TARGET}} n'a pas ete remplace dans LISEZ-MOI.txt"
+            exit 1
+          fi
 
           # Dernier garde-fou : un paquet sans moteur ne doit jamais partir.
           found=$(find "$stage/vendor" -type f -name "llama-server*" -print 2>/dev/null)
@@ -196,6 +237,14 @@ jobs:
             exit 1
           fi
           echo "taille des moteurs : $(du -sh "$stage/vendor" | cut -f1)"
+
+          # L'amont livre les deux scripts d'aide dans le meme dossier : celui
+          # de l'autre systeme n'a aucun usage ici.
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            find "$stage/vendor" -name "start-server.sh" -delete
+          else
+            find "$stage/vendor" -name "start-server.bat" -delete
+          fi
 
           if [ "${{ matrix.archive }}" = "zip" ]; then
             (cd "$RUNNER_TEMP" && 7z a -tzip -mx=3 "$name.zip" "$name" > /dev/null)

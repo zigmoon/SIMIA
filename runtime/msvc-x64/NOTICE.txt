@@ -1,0 +1,46 @@
+Runtime Microsoft Visual C++ 2015-2022 (x64), fichiers app-local
+================================================================
+
+Ces quatre DLL sont redistribuees avec l'application, comme le permet la
+licence du Microsoft Visual C++ Redistributable pour un deploiement
+« app-local » : chaque application embarque les fichiers dont elle a besoin,
+sans installation systeme ni droit administrateur.
+
+  msvcp140.dll               bibliotheque standard C++ de MSVC
+  msvcp140_codecvt_ids.dll   facettes de conversion de codecvt (requise par
+                             stable-diffusion.dll)
+  vcruntime140.dll           runtime C de MSVC
+  vcruntime140_1.dll         support des exceptions C++ (x64)
+
+Pourquoi elles sont ici
+-----------------------
+
+Les binaires officiels de llama.cpp et de stable-diffusion.cpp sont compiles
+avec MSVC et les importent. Jusqu'a la version b12360, l'archive Windows de
+llama.cpp les incluait ; depuis b12413 elle ne les contient plus. Sans elles,
+simia-desktop.exe ne demarre pas du tout sur une machine qui n'a pas le
+redistribuable VC++ installe.
+
+La liste a ete etablie a partir des tables d'import PE des binaires livres,
+pas par precaution : ce sont exactement les quatre DLL non systeme dont
+dependent simia-desktop.exe, llama-server.exe, llama-server-impl.dll,
+sd-server.exe et stable-diffusion.dll. vcomp140.dll n'est pas du lot :
+aucun binaire ne l'importe.
+
+Emplacement attendu dans le paquet
+----------------------------------
+
+  simia-windows-x64/simia-desktop.exe
+  simia-windows-x64/vendor/llama/windows-x64/*.dll
+  simia-windows-x64/vendor/sd/windows-x64/*.dll
+
+Windows cherche une DLL d'abord dans le dossier de l'executable, puis dans
+celui de la DLL qui l'importe. Les fichiers sont donc copies dans les deux
+dossiers de moteurs par le workflow, pas a la racine.
+
+Mise a jour
+-----------
+
+Ces fichiers proviennent du redistribuable officiel Microsoft. En cas de
+changement de version des moteurs, revalider la liste en relisant les imports
+des binaires plutot que de recopier ce dossier tel quel.
