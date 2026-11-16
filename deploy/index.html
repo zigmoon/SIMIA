@@ -1150,9 +1150,10 @@
       }
     } catch { /* site sans manifeste : on retombe sur GitHub */ }
 
-    // GitHub n'est interroge que si le visiteur a accepte les ressources
-    // externes : c'est une requete vers un tiers, pas un fichier du site.
-    if (!localBuilds.size && consentExternal()) {
+    // GitHub est interroge des que le visiteur a accepte les ressources
+    // externes, meme si un paquet local existe : sinon Windows, heberge ici,
+    // masquerait macOS et Linux, qui ne viennent que des releases.
+    if (consentExternal()) {
       githubAssets = await fetchGithubAssets();
     }
     renderDownloads(githubAssets);
@@ -1492,21 +1493,20 @@
     }
   }
 
-  /* Le bloc « Versions publiées » parle de GitHub quand il n'y a rien d'autre.
-     Dès qu'un paquet est servi par le site, c'est lui qui compte : inutile
-     d'annoncer au visiteur qu'aucune version n'est publiée alors qu'il peut
-     télécharger. */
+  /* Deux sources coexistent : le paquet Windows heberge ici, et les releases
+     GitHub pour le reste. Le bloc doit montrer les deux, sinon il annonce
+     « 1 paquet » alors que quatre sont telechargeables. */
   function refreshDownloads() {
     return loadDownloads().then(result => {
-      if (result.local && releasesBody) {
+      return loadReleases().then(() => {
+        if (!result.local || !releasesBody) return;
         const count = localBuilds.size;
-        releasesBody.innerHTML = `<div class="release-latest">
+        const pill = `<div class="release-latest" style="margin-bottom:10px">
             <span class="release-pill">serveur SIMIA</span>
-            <span class="release-date">${count} paquet${count > 1 ? "s" : ""} disponible${count > 1 ? "s" : ""} ici</span>
+            <span class="release-date">${count} paquet${count > 1 ? "s" : ""} hébergé${count > 1 ? "s" : ""} ici, sans passer par GitHub</span>
           </div>`;
-        return;
-      }
-      return loadReleases();
+        releasesBody.innerHTML = pill + releasesBody.innerHTML;
+      });
     });
   }
 
