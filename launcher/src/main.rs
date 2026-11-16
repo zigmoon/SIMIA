@@ -155,6 +155,9 @@ impl ImagePack {
 /// Le processus est demarre a la demande puis libere apres une periode d'inactivite.
 struct ImageEngine {
     bin: Option<PathBuf>,
+    /// Pourquoi le binaire ne peut pas demarrer sur ce systeme, s'il est present
+    /// mais refuse par le chargeur dynamique (minos macOS, glibc Linux).
+    probe: Option<String>,
     dir: PathBuf,
     packs: Vec<ImagePack>,
     selected: Option<String>,
@@ -203,14 +206,22 @@ impl ImageEngine {
         !pack.file_names().is_empty() && self.missing_of(pack).is_empty()
     }
 
-    /// Un pack est disponible des que le binaire et tous ses fichiers sont la.
+    /// Un pack est disponible des que le binaire demarre et que tous ses
+    /// fichiers sont la.
     fn available(&self) -> bool {
-        self.bin.is_some() && self.current().map(|pack| self.local_of(pack)).unwrap_or(false)
+        self.bin.is_some()
+            && self.probe.is_none()
+            && self.current().map(|pack| self.local_of(pack)).unwrap_or(false)
     }
 
     fn missing_reason(&self) -> Option<String> {
         if self.bin.is_none() {
             return Some("sd-server introuvable (vendor/sd/<plateforme>/)".to_string());
+        }
+        if let Some(reason) = &self.probe {
+            return Some(format!(
+                "sd-server ne peut pas demarrer sur ce systeme : {reason} (voir les versions minimales du LISEZ-MOI)"
+            ));
         }
         match self.current() {
             None => Some("aucun jeu de modeles d'image dans models/image/catalog.json".to_string()),
@@ -416,23 +427,32 @@ fn main() {
     println!("  backend     : 127.0.0.1:{llama_port}");
     println!("  contexte    : {ctx_size} tokens");
 
-    let child = match spawn_llama(&llama_bin, &start.path, start.mmproj.as_deref(), llama_port, ctx_size) {
-        Ok(child) => child,
+    let (mut child, llama_log) = match spawn_llama(&llama_bin, &start.path, start.mmproj.as_deref(), llama_port, ctx_size) {
+        Ok(pair) => pair,
         Err(err) => fail(&format!("Impossible de demarrer llama-server : {err}")),
     };
     let pid_file = write_pid_file(llama_port, child.id());
 
     println!("Chargement de {} dans le GPU.", start.name);
-    if !wait_healthy(llama_port) {
+    if let Err(reason) = wait_healthy(&mut child, llama_port, &llama_log) {
         let _ = fs::remove_file(&pid_file);
-        fail("llama-server n'a pas repondu. Verifiez que le GPU est disponible (pilote Vulkan / Metal) et que le modele n'est pas corrompu.");
+        fail(&format!(
+            "{reason}\n\nVerifiez que le GPU est disponible (pilote Vulkan / Metal), que le modele n'est pas corrompu, et que le systeme satisfait les versions minimales indiquees dans le LISEZ-MOI."
+        ));
     }
 
     let sd_bin = find_sd_server(sd_arg.as_deref());
+    // Sonde une seule fois au demarrage : « sd-server --help » sort en quelques
+    // millisecondes et ne charge aucun poids. C'est le moyen le moins couteux de
+    // savoir si le chargeur dynamique accepte le binaire sur ce systeme.
+    let sd_probe = sd_bin
+        .as_ref()
+        .and_then(|bin| probe_binary(bin, "--help", Duration::from_secs(15)).err());
     let image_dir = models_dir.join("image");
     let image_packs = load_image_packs(&image_dir);
     let mut image_engine = ImageEngine {
         bin: sd_bin,
+        probe: sd_probe,
         dir: image_dir,
         packs: image_packs,
         selected: None,
@@ -1246,13 +1266,12 @@ fn ensure_llama(state: &Shared) -> Result<(), String> {
             .ok_or_else(|| format!("modele inconnu : {model_id}"))?;
         (entry.path.clone(), entry.mmproj.clone())
     };
-    let child = spawn_llama(&bin, &path, mmproj.as_deref(), port, ctx)
+    let (mut child, log_path) = spawn_llama(&bin, &path, mmproj.as_deref(), port, ctx)
         .map_err(|error| format!("demarrage impossible : {error}"))?;
-    if !wait_healthy(port) {
-        let mut child = child;
+    if let Err(reason) = wait_healthy(&mut child, port, &log_path) {
         let _ = child.kill();
         let _ = child.wait();
-        return Err("le modele n'a pas redemarre".to_string());
+        return Err(reason);
     }
     if let Ok(mut guard) = state.lock() {
         guard.running = Some(Running { child, model_id });
@@ -1614,7 +1633,84 @@ fn download_image_pack(state: &Shared, id: &str) -> Result<(), String> {
     }
 }
 
-fn spawn_llama(bin: &Path, model: &Path, mmproj: Option<&Path>, port: u16, ctx: u32) -> std::io::Result<Child> {
+/// Lance un binaire avec un argument d'information et rend Ok s'il demarre.
+///
+/// Sert a distinguer « binaire absent » de « binaire present mais refuse par le
+/// systeme » : sur macOS, dyld refuse un binaire dont le `minos` depasse le
+/// systeme ; sous Linux, ld.so refuse quand une version de glibc manque. Dans
+/// les deux cas le processus sort en erreur aussitot, avec un message utile sur
+/// stderr. Sans cette sonde, le lanceur attendait un serveur qui ne demarrerait
+/// jamais et concluait a un probleme de GPU.
+fn probe_binary(bin: &Path, arg: &str, timeout: Duration) -> Result<(), String> {
+    let mut command = Command::new(bin);
+    command
+        .arg(arg)
+        .current_dir(bin.parent().unwrap_or_else(|| Path::new(".")))
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    let mut child = command
+        .spawn()
+        .map_err(|err| format!("ne peut pas etre lance ({err})"))?;
+    let deadline = Instant::now() + timeout;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                if status.success() {
+                    return Ok(());
+                }
+                let mut text = String::new();
+                if let Some(stderr) = child.stderr.as_mut() {
+                    let _ = stderr.read_to_string(&mut text);
+                }
+                if text.trim().is_empty() {
+                    if let Some(stdout) = child.stdout.as_mut() {
+                        let _ = stdout.read_to_string(&mut text);
+                    }
+                }
+                let line = text
+                    .lines()
+                    .map(str::trim)
+                    .find(|line| !line.is_empty())
+                    .unwrap_or("sortie en erreur, sans message");
+                return Err(line.to_string());
+            }
+            Ok(None) => {
+                if Instant::now() >= deadline {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(format!("ne repond pas a {arg} apres {} s", timeout.as_secs()));
+                }
+                thread::sleep(Duration::from_millis(50));
+            }
+            Err(err) => return Err(format!("etat du processus illisible ({err})")),
+        }
+    }
+}
+
+/// Dernieres lignes utiles d'un journal de moteur, pour un message d'erreur qui
+/// dise ce qui s'est reellement passe.
+fn tail_of(path: &Path, lines: usize) -> String {
+    let text = fs::read_to_string(path).unwrap_or_default();
+    let all: Vec<&str> = text.lines().filter(|line| !line.trim().is_empty()).collect();
+    let start = all.len().saturating_sub(lines);
+    all[start..]
+        .iter()
+        .map(|line| line.trim())
+        .collect::<Vec<_>>()
+        .join(" | ")
+}
+
+fn spawn_llama(bin: &Path, model: &Path, mmproj: Option<&Path>, port: u16, ctx: u32) -> std::io::Result<(Child, PathBuf)> {
+    let log_path = env::temp_dir().join(format!("simia-llama-{port}.log"));
+    let log = fs::File::create(&log_path)?;
+    let log_out = log.try_clone()?;
     let mut command = Command::new(bin);
     command
         .arg("-m")
@@ -1638,32 +1734,52 @@ fn spawn_llama(bin: &Path, model: &Path, mmproj: Option<&Path>, port: u16, ctx: 
         .arg("--no-webui")
         .current_dir(bin.parent().unwrap_or_else(|| Path::new(".")))
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        // Les deux flux partent dans le meme journal plutot que dans le neant :
+        // c'est la seule facon de rapporter pourquoi le moteur n'a pas demarre.
+        .stdout(Stdio::from(log_out))
+        .stderr(Stdio::from(log));
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         command.creation_flags(CREATE_NO_WINDOW);
     }
-    command.spawn()
+    command.spawn().map(|child| (child, log_path))
 }
 
-fn wait_healthy(port: u16) -> bool {
+/// Attend que le moteur reponde, en s'arretant des que le processus meurt.
+/// Un binaire incompatible sort en quelques millisecondes : l'ancienne boucle
+/// attendait alors jusqu'a 240 s avant d'accuser le GPU.
+fn wait_healthy(child: &mut Child, port: u16, log_path: &Path) -> Result<(), String> {
     print!("Chargement du modele dans le GPU");
     let _ = std::io::stdout().flush();
     let deadline = Instant::now() + HEALTH_TIMEOUT;
     while Instant::now() < deadline {
         if let Ok((200, _, _)) = http_call(port, "GET", "/health", None, Duration::from_secs(2)) {
             println!();
-            return true;
+            return Ok(());
+        }
+        if let Ok(Some(status)) = child.try_wait() {
+            println!();
+            let detail = tail_of(log_path, 2);
+            let mut message = format!("le moteur s'est arrete pendant le chargement ({status})");
+            if !detail.is_empty() {
+                message.push_str(" : ");
+                message.push_str(&detail);
+            }
+            return Err(message);
         }
         print!(".");
         let _ = std::io::stdout().flush();
         thread::sleep(Duration::from_millis(400));
     }
     println!();
-    false
+    let detail = tail_of(log_path, 2);
+    Err(if detail.is_empty() {
+        "le moteur n'a pas repondu dans le delai imparti".to_string()
+    } else {
+        format!("le moteur n'a pas repondu dans le delai imparti. {detail}")
+    })
 }
 
 /// Arrete le modele courant, telecharge le modele demande s'il est absent du
@@ -1721,26 +1837,16 @@ fn switch_model(state: &Shared, bin: &Path, model_id: &str) -> Result<(), String
     }
 
     set_progress(state, model_id, 0, 0, "loading", None);
-    let mut child = spawn_llama(bin, &model.path, model.mmproj.as_deref(), port, ctx_size).map_err(|err| {
+    let (mut child, log_path) = spawn_llama(bin, &model.path, model.mmproj.as_deref(), port, ctx_size).map_err(|err| {
         set_progress(state, model_id, 0, 0, "error", Some(err.to_string()));
         err.to_string()
     })?;
 
-    let deadline = Instant::now() + HEALTH_TIMEOUT;
-    let mut ready = false;
-    while Instant::now() < deadline {
-        if let Ok((200, _, _)) = http_call(port, "GET", "/health", None, Duration::from_secs(2)) {
-            ready = true;
-            break;
-        }
-        thread::sleep(Duration::from_millis(400));
-    }
-
-    if !ready {
+    if let Err(reason) = wait_healthy(&mut child, port, &log_path) {
         let _ = child.kill();
         let _ = child.wait();
-        set_progress(state, model_id, 0, 0, "error", Some("le modele n'a pas demarre".to_string()));
-        return Err("le modele n'a pas demarre".to_string());
+        set_progress(state, model_id, 0, 0, "error", Some(reason.clone()));
+        return Err(reason);
     }
 
     if let Ok(mut guard) = state.lock() {

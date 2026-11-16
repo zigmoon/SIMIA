@@ -57,7 +57,7 @@ Le même code d'interface sert les deux versions ; seule l'exécution diffère :
 | | Version bureau | Version web |
 |---|---|---|
 | Moteur | `llama.cpp` et `stable-diffusion.cpp` en natif (Vulkan, D3D12, Metal, CPU) | WebGPU, via WebLLM, dans l'onglet |
-| Systèmes | Windows 10/11, macOS 12+ (Intel et Apple Silicon), Linux x86_64 | Chrome et Edge avec WebGPU |
+| Systèmes | Windows 10/11, macOS 13.3+ (Intel et Apple Silicon), Linux x86_64 | Chrome et Edge avec WebGPU |
 | Modèles de texte | tout le catalogue, jusqu'à 9,7 Go | uniquement sous **1,9 Go** (mémoire du navigateur) |
 | Génération d'images | 7 packs, jusqu'à 1024 px, aucun filtre de contenu | — |
 | Installation | archive à décompresser, aucun installateur | un clic dans le navigateur (PWA) |
@@ -134,10 +134,26 @@ depuis l'application, au premier choix. Sur macOS et Linux, rendez le fichier
 exécutable si l'archive a perdu le droit : `chmod +x simia-desktop`.
 
 Sur Windows, le runtime Visual C++ est joint aux moteurs : rien à installer, et
-aucun droit administrateur. Sur Linux, le lanceur demande glibc 2.35 (Ubuntu
-22.04 et plus récent) ; la génération d'images demande glibc 2.38, soit Ubuntu
-24.04, parce que le binaire `sd-server` vient de l'amont. Conversation et
-atelier de code fonctionnent dès 22.04.
+aucun droit administrateur.
+
+Les exigences ci-dessous ne sont pas des recommandations mais le résultat de ce
+que les binaires déclarent, relevé dans leurs en-têtes (`minos` pour Mach-O,
+symboles `GLIBC_*` pour ELF). Les moteurs viennent de l'amont et ne peuvent pas
+être recompilés ici.
+
+| Système | Conversation et code | Génération d'images |
+|---|---|---|
+| Windows 10/11 | ✔ | ✔ |
+| macOS Apple Silicon | 13.3 (Ventura) et plus | **macOS 26** et plus |
+| macOS Intel | 13.3 (Ventura) et plus | — aucun binaire amont |
+| Linux x86_64 | glibc 2.34 → Ubuntu 22.04 et plus | **glibc 2.43 → Ubuntu 26.04** et plus |
+
+La conversation et l'atelier de code fonctionnent donc dès macOS 13.3 et Ubuntu
+22.04. La génération d'images est plus exigeante : le `sd-server` publié par
+stable-diffusion.cpp est compilé pour macOS 26 et Ubuntu 26.04, et macOS refuse
+de charger un binaire dont le `minos` est supérieur au système. Sur une machine
+plus ancienne, le bouton **Image** reste présent mais le moteur ne démarre pas ;
+la conversation n'est pas affectée.
 
 > **macOS** : le binaire n'est pas signé, Gatekeeper le met en quarantaine.
 > `xattr -dr com.apple.quarantine simia-macos-arm64/` puis relancez.

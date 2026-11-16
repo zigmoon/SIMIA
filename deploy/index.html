@@ -50,7 +50,7 @@
       "url": "https://app.zigmoon.com/SIMIA/",
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
-      "operatingSystem": ["Windows 10", "Windows 11", "macOS 12+", "Linux x86_64", "Web"],
+      "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
       "softwareVersion": "0.1.0",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie.",
       "inLanguage": ["fr", "en", "es", "ja"],
@@ -918,9 +918,9 @@
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.7c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.6.9-.8 0-1.9-.9-3.1-.8-1.6 0-3.1.9-3.9 2.4-1.7 2.9-.4 7.2 1.2 9.5.8 1.2 1.7 2.4 3 2.4 1.2 0 1.6-.8 3.1-.8s1.8.8 3.1.7c1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.6-1-2.6-3.8zM14 5.2c.7-.8 1.1-2 1-3.2-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.5 2.9-1.3z"/></svg>
               macOS
             </div>
-            <span class="tag-soon">12+</span>
+            <span class="tag-soon">13.3+</span>
           </div>
-          <p class="req">macOS 12 ou plus récent. La génération d'images est disponible sur les Mac Apple Silicon ; sur Mac Intel, la conversation et le code fonctionnent normalement.</p>
+          <p class="req">macOS 13.3 (Ventura) ou plus récent : le moteur de conversation est compilé pour cette version. La génération d'images demande macOS 26 sur les Mac Apple Silicon ; sur Mac Intel, la conversation et l'atelier de code fonctionnent normalement, sans le bouton Image.</p>
           <div class="files">
             <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
             <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
@@ -935,7 +935,7 @@
             </div>
             <span class="tag-soon">x86_64</span>
           </div>
-          <p class="req">Distribution récente avec Vulkan ou processeur seul. Testé sur Ubuntu 24.04 et dérivées.</p>
+          <p class="req">Ubuntu 22.04 ou plus récent, Vulkan recommandé et repli processeur. Le lanceur demande glibc 2.34 ; la génération d'images demande glibc 2.43, donc Ubuntu 26.04 ou une distribution aussi récente.</p>
           <div class="files">
             <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>

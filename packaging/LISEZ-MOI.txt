@@ -16,17 +16,23 @@ Selon votre systeme
            dont l'application a besoin est inclus dans l'archive : rien a
            installer.
 
-  macOS    Le binaire n'est pas signe. Au premier lancement, macOS le bloque :
+  macOS    macOS 13.3 (Ventura) ou plus recent est necessaire : le moteur de
+           conversation est compile pour cette version et macOS refuse de
+           charger un binaire plus recent que le systeme.
+           Le binaire n'est pas signe. Au premier lancement, macOS le bloque :
              xattr -dr com.apple.quarantine .
-           puis relancez. La generation d'images demande un Mac Apple Silicon ;
-           sur Mac Intel, la conversation et l'atelier de code fonctionnent
-           normalement, sans le bouton Image.
+           puis relancez.
+           La generation d'images demande en plus macOS 26, et un Mac Apple
+           Silicon. Sur Mac Intel il n'existe aucun binaire amont : la
+           conversation et l'atelier de code fonctionnent, sans le bouton Image.
 
   Linux    chmod +x simia-desktop avant le premier lancement. Vulkan est
            utilise s'il est disponible, sinon le processeur prend le relais.
-           Le lanceur demande glibc 2.35 (Ubuntu 22.04 et plus recent) ; la
-           generation d'images demande 2.38, soit Ubuntu 24.04, car le binaire
-           sd-server vient de l'amont. Conversation et code marchent des 22.04.
+           Ubuntu 22.04 ou plus recent suffit pour la conversation (glibc 2.34).
+           La generation d'images demande glibc 2.43, donc Ubuntu 26.04 : les
+           binaires sd-server de l'amont sont compiles la. Sur une distribution
+           plus ancienne le bouton Image echoue au demarrage du moteur, sans
+           affecter la conversation.
 
 Ce que contient cette archive
   simia-desktop        le lanceur : il sert l'interface et pilote les moteurs
