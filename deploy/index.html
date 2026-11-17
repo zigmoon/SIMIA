@@ -2070,23 +2070,24 @@
        ressorts, leur flou et leur amplitude de rotation different, ce qui suffit
        a creer la profondeur sans second plan encombre. */
     /* Deux feuilles : la grande au premier plan, la petite plus loin. Leurs
-       ressorts, leur flou et leur amplitude de rotation different, ce qui suffit
-       a creer la profondeur sans second plan encombre.
+       ressorts, leur flou et leur trajectoire different, ce qui suffit a creer
+       la profondeur sans second plan encombre.
        La rotation part de couchee — la feuille est presque horizontale, comme
        posee sur le sol — et se redresse au fil du parcours. La valeur de depart
        est tres au-dela de 45 degres : c'est cette bascule qui se voit.
-       Les valeurs de fromVh/toVh tiennent compte du fait que le dessin occupe
-       le bas du canevas : elles placent le pied de la feuille, pas le haut de
-       la boite, sinon elle demarrerait sous l'ecran. */
+       `toX` est le point le plus a gauche du parcours, en fraction de la largeur
+       de la fenetre : la feuille traverse donc vraiment la page au lieu de
+       rester collee a la marge droite. La petite feuille suit un chemin plus
+       court et plus haut, sinon les deux se superposeraient tout du long. */
     const props = [
       {
         el: mainPaint ? holder : still,
         paint: mainPaint,
         y: 0, vy: 0, rot: 0, vrot: 0,
         stiff: 0.055, damp: 0.84,
-        fromVh: 0.25, toVh: 0.22, rotA: -82, rotB: 26,
-        sizeBase: 0.58, sizePeak: 1.00,
-        swayA: -8, swayB: 26,
+        fromVh: 0.26, toVh: 0.16, rotA: -82, rotB: 26,
+        sizeBase: 0.50, sizePeak: 1.32,
+        toX: 0.40, driftAmp: 14,
         alpha: 1, blurMin: 0, blurMax: 6.5, dofGain: 5,
         phase: 0.4, flutter: 0.55, twistBase: 0.12, twistAmp: 0.45
       },
@@ -2095,9 +2096,9 @@
         paint: backPaint,
         y: 0, vy: 0, rot: 0, vrot: 0,
         stiff: 0.030, damp: 0.90,
-        fromVh: 0.30, toVh: 0.26, rotA: -66, rotB: -8,
-        sizeBase: 0.62, sizePeak: 0.96,
-        swayA: 22, swayB: -30,
+        fromVh: 0.16, toVh: 0.28, rotA: -66, rotB: -8,
+        sizeBase: 0.54, sizePeak: 1.16,
+        toX: 0.62, driftAmp: 20,
         alpha: 0.5, blurMin: 1.6, blurMax: 7, dofGain: 3.4,
         phase: 2.6, flutter: 0.41, twistBase: -0.16, twistAmp: 0.38
       }
@@ -2106,22 +2107,43 @@
     let raf = 0, last = 0, running = false, lowPower = false, slow = 0;
     const column = document.querySelector("header .wrap") || document.querySelector(".wrap");
 
-    /* Place la feuille a cheval sur le bord droit de la colonne : 45 % de sa
-       largeur passe derriere les cartes, le reste tient dans la marge. Sans ce
-       calage elle disparaissait presque entierement sous les blocs, la marge
-       d'une page de 1440 px n'etant large que d'une centaine de pixels. Le
-       centre est borne pour que le dessin ne sorte jamais de sa boite, sinon le
-       bord de l'ecran le couperait net. */
-    const centreFor = p => {
-      const boxW = p.el.offsetWidth || 1;
-      const half = 0.235 * boxW;
-      const lo = Math.min(0.70, (half + boxW * 0.03) / boxW);
-      const hi = Math.max(lo, 1 - (half + boxW * 0.03) / boxW);
-      if (!column) return Math.min(hi, Math.max(lo, 0.6));
-      const wrapRight = column.getBoundingClientRect().right;
-      // 0.0235 de boite = 5 % de la largeur du limbe au-dela du bord.
-      const want = (wrapRight + boxW * 0.0235 - (window.innerWidth - boxW)) / boxW;
-      return Math.min(hi, Math.max(lo, want));
+    /* Mesure une fois pour toutes : lire offsetWidth depuis la boucle de rendu
+       force un recalcul de mise en page a chaque image, juste apres l'ecriture
+       d'une transformation. */
+    const measure = () => {
+      for (const p of props) {
+        p.boxW = p.el.offsetWidth || 1;
+        p.boxH = p.el.offsetHeight || 1;
+      }
+    };
+
+    /* Trajectoire horizontale. La feuille est dessinee au centre de sa boite, et
+       la boite est collee au bord droit : au repos elle occupe donc la marge.
+       On deplace la boite vers la gauche en rampe monotone, du haut de page
+       jusqu'au bas, sans jamais revenir sur ses pas. Le calcul se fait ici et
+       non dans le dessin : deplacer la boite coute une transformation, alors
+       que redessiner a une autre abscisse obligerait a elargir le canevas a
+       tout l'ecran. */
+    const travelX = (p, progress, time, snap) => {
+      const vw = window.innerWidth;
+      const boxW = p.boxW || p.el.offsetWidth || 1;
+      const restCentre = vw - boxW * 0.5;
+      const farCentre = vw * p.toX;
+      /* Rampe : depart rapide depuis la marge, arrivee posee a gauche. */
+      const ramp = progress * progress * (3 - 2 * progress);
+      const drift = snap ? 0 : Math.sin(time * 0.42 + p.phase) * p.driftAmp;
+      return (farCentre - restCentre) * ramp + drift;
+    };
+
+    /* Sur sa traversee, la feuille passe sous le texte des sections, dont le fond
+       est transparent. Elle s'y efface donc progressivement : le texte garde son
+       contraste, la feuille reste perceptible. Sous les cartes, qui sont opaques,
+       elle disparait de toute facon completement. */
+    const overText = (screenX, p) => {
+      if (!column) return 0;
+      const box = column.getBoundingClientRect();
+      const inner = box.right - Math.min(220, box.width * 0.25);
+      return clamp01((inner - screenX) / 200);
     };
 
     const paintFrame = (time, k, snap) => {
@@ -2136,7 +2158,15 @@
       layer.classList.add("is-on");
 
       for (const p of props) {
-        const targetY = vh * (p.fromVh - progress * p.toVh);
+        const boxH = p.boxH || p.el.offsetHeight || 1;
+        const boxW = p.boxW || p.el.offsetWidth || 1;
+        /* Le pied de la feuille est dessine a 96 % du bas du canevas : on place
+           le haut de la boite pour que ce pied reste dans l'ecran, quelle que
+           soit la hauteur de fenetre. Sans ce garde-fou, une fenetre basse
+           coupait la feuille au ras du bord. */
+        const footSpan = boxH * 0.97;
+        const wanted = vh * (p.fromVh - progress * p.toVh);
+        const targetY = Math.max(-boxH * 0.05, Math.min(wanted, vh - footSpan - 12));
         const targetRot = p.rotA + progress * (p.rotB - p.rotA);
 
         if (snap) {
@@ -2153,35 +2183,45 @@
         /* Flou de mouvement : la feuille se traine quand on defile vite. Puis
            flou de champ : nette au milieu de la page, douce en haut et en bas. */
         const speed = Math.abs(p.vy) / vh;
-        const centre = (p.y + p.el.offsetHeight * 0.5) / vh;
+        const centre = (p.y + boxH * 0.5) / vh;
         const dof = Math.abs(centre - 0.45) * p.dofGain;
         const blur = snap ? 0 : Math.min(p.blurMax, p.blurMin + dof + speed * 110);
 
         const appear = clamp01(progress / 0.05);
         const vanish = clamp01((1 - progress) / 0.06);
-        /* Le pied de page arrive avec ses liens a droite : la feuille s'efface
-           sur les derniers 35 % d'ecran pour ne jamais passer sous un texte. */
-        const footIn = clamp01((scroll + vh - footerTop) / (vh * 0.35));
-        const opacity = (snap ? p.alpha : appear * vanish * p.alpha) * (1 - footIn);
+        /* Le pied de page arrive avec ses liens : la feuille s'efface largement
+           avant, pour ne jamais passer sous un texte qu'on vient lire. */
+        const footIn = clamp01((scroll + vh - footerTop) / (vh * 0.55));
 
         /* Taille : la feuille s'approche jusqu'au milieu de sa course puis
            s'eloigne. Un souffle lent l'anime aussi a l'arret, sinon elle
            paraitrait figee des que la page ne defile plus. */
         const bell = Math.pow(Math.sin(Math.PI * progress), 0.9);
-        const breathe = snap ? 1 : 1 + Math.sin(time * 0.9 + p.phase) * 0.04;
+        const breathe = snap ? 1 : 1 + Math.sin(time * 0.9 + p.phase) * 0.06;
         const size = (p.sizeBase + (p.sizePeak - p.sizeBase) * bell) * breathe;
-        const sway = p.swayA + Math.sin(progress * Math.PI) * p.swayB;
 
-        p.el.style.transform = `translate3d(${sway.toFixed(1)}px,${p.y.toFixed(1)}px,0) rotate(${p.rot.toFixed(2)}deg)`;
+        const x = travelX(p, progress, time, snap);
+        const screenX = window.innerWidth - boxW * 0.5 + x;
+        const behind = overText(screenX, p);
+        /* Sous un paragraphe, la feuille passe en arriere-plan : on laisse
+           plus de presence mais on l'ouvre au flou, comme un premier plan
+           photographique. Le texte garde ainsi son contraste et la feuille
+           cesse de ressembler a une tache. */
+        const fade = 1 - 0.45 * behind;
+        const depthBlur = behind * 2.2;
+        const opacity = (snap ? p.alpha : appear * vanish * p.alpha) * (1 - 0.85 * footIn) * fade;
+
+        p.el.style.transform = `translate3d(${x.toFixed(1)}px,${p.y.toFixed(1)}px,0) rotate(${p.rot.toFixed(2)}deg)`;
         p.el.style.opacity = opacity.toFixed(3);
-        p.el.style.filter = blur > 0.25 ? `blur(${blur.toFixed(2)}px)` : "none";
+        const soft = blur + depthBlur;
+        p.el.style.filter = soft > 0.25 ? `blur(${soft.toFixed(2)}px)` : "none";
 
         if (!p.paint || opacity < 0.01) continue;
         const wind = Math.min(0.3, speed * 26);
         p.paint.draw({
           size: size,
           tilt: p.rot,
-          cx: centreFor(p),
+          cx: 0.5,
           twist: p.twistBase + Math.sin(time * p.flutter + p.phase) * (p.twistAmp + wind),
           flutter: 0.09,
           phase: time * p.flutter * 0.7 + p.phase,
@@ -2226,6 +2266,7 @@
     const apply = () => {
       const visible = desktop.matches && !document.hidden;
       if (visible && !calm.matches) {
+        measure();
         if (!running) {
           running = true;
           last = 0;
@@ -2239,6 +2280,7 @@
         return;
       }
       for (const p of props) p.paint && p.paint.resize();
+      measure();
       paintFrame(0.35, 1, true);
     };
 
@@ -2249,6 +2291,7 @@
       if (!running) apply();
     }, { passive: true });
     window.addEventListener("resize", () => {
+      measure();
       for (const p of props) p.paint && p.paint.resize();
       if (calm.matches) { paintFrame(0.35, 1, true); return; }
       if (!running) apply();
@@ -2261,6 +2304,7 @@
 
     apply();
     window.addEventListener("load", () => {
+      measure();
       for (const p of props) p.paint && p.paint.resize();
       apply();
     });
