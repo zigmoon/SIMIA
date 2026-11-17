@@ -16,7 +16,7 @@ cd SIMIA-desktop
 powershell -NoProfile -File tools\prepare-ftp.ps1
 ```
 
-Résultat dans **`SIMIA-desktop/dist/SIMIA/`** : 35 fichiers, **3,00 Go**, avec la
+Résultat dans **`SIMIA-desktop/dist/SIMIA/`** : 37 fichiers, **2,99 Go**, avec la
 bonne arborescence. Les gros fichiers sont posés en **liens physiques** : aucune
 copie, aucun espace disque consommé.
 
@@ -27,7 +27,7 @@ copie, aucun espace disque consommé.
 |---|---|---|
 | *(racine)* | `index.html`, `.htaccess`, `robots.txt`, `sitemap.xml`, `service-worker.js`, 3 `.php` | la landing et ses fichiers de site |
 | `app/` | 18 fichiers | l'application web installable (PWA) |
-| `models/` | 3 GGUF + LoRA + `versions.json` + `catalog.json` | modèles servis par le serveur |
+| `models/` | 3 GGUF + LoRA + `versions.json` + `catalog.json` + `image/catalog.json` | modèles servis par le serveur |
 | `downloads/` | `manifest.json` seul | l'état des paquets de bureau |
 
 `models/` ne reçoit **que** les fichiers déclarés dans `models/versions.json`.
@@ -56,9 +56,9 @@ que les visiteurs voient en premier.
 
 ```
 app.zigmoon.com/SIMIA/
-├── index.html                    82 Ko   ← la landing
+├── index.html                   145 Ko   ← la landing
 ├── cookies.js                    21 Ko   ← boîte de consentement (landing + app)
-├── .htaccess                     2,8 Ko  ← types MIME + cache + redirection
+├── .htaccess                     2,7 Ko  ← types MIME + cache + redirection
 ├── service-worker.js             1,3 Ko  ← desinscrit l'ancienne PWA
 ├── robots.txt . sitemap.xml
 ├── agent-api.php . read-url-api.php . web-search-api.php
@@ -103,21 +103,21 @@ peut être supprimé sans conséquence.
 
 ## 2. L'application (`app.zigmoon.com/SIMIA/app/`)
 
-18 fichiers, **1,4 Mo** :
+18 fichiers, **1,5 Mo** :
 
 ```
 app.zigmoon.com/SIMIA/app/
-+-- index.html                    30,1 Ko
-+-- app.js                       393,0 Ko
-+-- styles.css                    58,8 Ko
-+-- code-runner.js                 3,8 Ko
-+-- cookies-config.js
-+-- service-worker.js              8,5 Ko   <- simia-app-4.0.0
++-- index.html                    30,6 Ko
++-- app.js                       415,0 Ko
++-- styles.css                    66,1 Ko
++-- code-runner.js                 3,7 Ko
++-- cookies.js                    21,6 Ko
++-- service-worker.js              8,2 Ko   <- simia-app-4.8.1
 +-- manifest.webmanifest           2,3 Ko
 +-- offline.html                   2,5 Ko
 +-- icon.svg . simia-logo.svg . simia-logo-white.svg
 +-- icons/                         4 PNG, 17,5 Ko
-+-- screenshots/                   2 PNG, 121 Ko
++-- screenshots/                   2 PNG, 120,6 Ko
 +-- models/hosting-status.json
 ```
 
