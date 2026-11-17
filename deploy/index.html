@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.11",
+      "softwareVersion": "0.1.12",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -947,7 +947,7 @@
           </div>
 
           <div class="mega-foot">
-            <span><b>38</b> modèles de texte · <b>14</b> packs d'image · filtres par usage</span>
+            <span><b>38</b> modèles de texte · <b>14</b> modèles d'image · filtres par usage</span>
             <a href="#modeles">Voir le catalogue complet →</a>
           </div>
         </div>
@@ -1193,15 +1193,15 @@
         <div class="reveal">
           <p class="mono">Atelier de code</p>
           <h2>Le code s'ouvre, s'explique et s'exécute ici.</h2>
-          <p class="atelier-lede">Une réponse contient du code ? Un clic l'ouvre dans l'atelier : coloration, numéros de ligne, fichiers gardés d'une session à l'autre. Deux boutons suffisent à faire tourner JavaScript et Python, sans quitter SIMIA.</p>
+          <p class="atelier-lede">Une réponse contient du code ? Un clic l'ouvre dans l'atelier : coloration, numéros de ligne, fichiers gardés d'une session à l'autre. Le bouton <b>Exécuter</b> fait tourner JavaScript immédiatement ; Python demande un téléchargement unique d'environ 12 Mo (Pyodide), puis tout reste hors ligne.</p>
           <ul class="atelier-list">
             <li>
               <i>01</i>
-              <div><b>Ouvrir dans l'atelier</b><span>Chaque bloc de code d'une réponse devient un fichier éditable, avec son langage déjà reconnu et son onglet.</span></div>
+              <div><b>Ouvrir dans l'atelier</b><span>Chaque bloc de code d'une réponse devient un fichier éditable, avec son langage déjà reconnu et son onglet. Un bouton permanent ouvre aussi l'atelier sur une page blanche.</span></div>
             </li>
             <li>
               <i>02</i>
-              <div><b>Exécuter JavaScript et Python</b><span>Le code tourne dans un worker séparé, sans accès à l'interface ni aux conversations. Python arrive par Pyodide, une seule fois.</span></div>
+              <div><b>Exécuter JavaScript et Python</b><span>JavaScript tourne dans un worker séparé, sans accès à l'interface ni aux conversations. Python utilise Pyodide, téléchargé une seule fois depuis un CDN (environ 12 Mo) et ensuite mis en cache.</span></div>
             </li>
             <li>
               <i>03</i>
@@ -1209,7 +1209,7 @@
             </li>
             <li>
               <i>04</i>
-              <div><b>Rien ne sort de la machine</b><span>Ni le code, ni la sortie, ni le fichier : l'exécution et le modèle restent sur l'appareil.</span></div>
+              <div><b>Le code ne part nulle part</b><span>Ni le code, ni la sortie, ni le fichier ne sont envoyés. Seul le premier lancement de Python télécharge Pyodide ; ensuite, tout se passe sur la machine.</span></div>
             </li>
           </ul>
           <div class="atelier-actions">
@@ -1520,7 +1520,7 @@
       <div class="faq reveal">
         <details>
           <summary>Que fait exactement l'atelier de code ?</summary>
-          <p>Un bloc de code dans une réponse s'ouvre dans l'atelier d'un clic. L'éditeur le garde comme un fichier, avec son langage, ses onglets et ses numéros de ligne. Le bouton <b>Exécuter</b> fait tourner JavaScript directement et Python via Pyodide, et la sortie s'affiche sous l'éditeur. Les boutons <b>Expliquer</b>, <b>Corriger</b>, <b>Optimiser</b> et <b>Tests</b> envoient le fichier ouvert au modèle local avec la consigne correspondante : la réponse revient dans la conversation, à côté.</p>
+          <p>Un bloc de code dans une réponse s'ouvre dans l'atelier d'un clic. L'éditeur le garde comme un fichier, avec son langage, ses onglets et ses numéros de ligne. Le bouton <b>Exécuter</b> fait tourner JavaScript directement ; Python passe par Pyodide, téléchargé une seule fois (environ 12 Mo) puis gardé en cache, et la sortie s'affiche sous l'éditeur. Les boutons <b>Expliquer</b>, <b>Corriger</b>, <b>Optimiser</b> et <b>Tests</b> envoient le fichier ouvert au modèle local avec la consigne correspondante : la réponse revient dans la conversation, à côté. Un bouton permanent, dans le panneau latéral et sur l'écran d'accueil, ouvre l'atelier même sans bloc de code.</p>
           <p>Il fonctionne dans la version web comme dans l'application de bureau, sans compte et sans serveur. Le code s'exécute dans un Web Worker : il n'a accès ni à l'interface, ni au stockage où vivent vos conversations. Il peut en revanche lire l'IndexedDB (les fichiers de l'atelier et les images), appeler le réseau et consommer du processeur : n'exécutez pas un script dont vous ne connaissez pas l'origine.</p>
         </details>
         <details>

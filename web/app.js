@@ -290,6 +290,7 @@ const ui = {
   languageMenu: document.querySelector("#language-menu"),
   appMenu: document.querySelector("#app-menu"),
   appMenuToggle: document.querySelector("#app-menu-toggle"),
+  appMenuCode: document.querySelector("#app-menu-code"),
   appMenuSettings: document.querySelector("#app-menu-settings"),
   appMenuInfo: document.querySelector("#app-menu-info"),
   appMenuExport: document.querySelector("#app-menu-export"),
@@ -309,6 +310,8 @@ const ui = {
   downloadInfo: document.querySelector("#download-info"),
   modelPicker: document.querySelector("#model-picker"),
   homeModelButton: document.querySelector("#home-model-button"),
+  homeCodeButton: document.querySelector("#home-code-button"),
+  sidebarCode: document.querySelector("#sidebar-code"),
   modelLibrary: document.querySelector("#model-library"),
   modelFilters: document.querySelector("#model-filters"),
   modelCards: document.querySelector("#model-cards"),
@@ -569,7 +572,7 @@ const JA_PHRASES = {
   "WebGPU est requis pour analyser des images. Utilisez Chrome ou Edge récent.": "画像の解析にはWebGPUが必要です。新しいChromeまたはEdgeをご利用ください。",
   "WebGPU n'est pas disponible dans ce navigateur. Utilisez Chrome ou Edge récent avec WebGPU activé.": "このブラウザではWebGPUを利用できません。WebGPUが有効な新しいChromeまたはEdgeをご利用ください。",
   "WebGPU requis": "WebGPUが必要",
-  "rechargé depuis ce navigateur": "このブラウザから再読み込み",
+  "rechargé depuis cet appareil": "このデバイスから再読み込み",
   "À propos de moi (optionnel)": "あなたについて（任意）"
 };
 
@@ -594,7 +597,7 @@ const JA_PATTERNS = [
   [/^MODÈLE PERSO · (.+)$/, m => `マイモデル · ${m[1]}`],
   [/^« (.+) » : vos consignes permanentes[\s\S]*$/, m => `「${m[1]}」：あなたの永続的な指示がベースモデルに追加されます。「マイモデル」ボタンで編集できます。`],
   [/^(\d+) documents? prêts? · (\d+) passages? indexés?$/, m => `${m[1]}件の文書 · ${m[2]}個の箇所を索引化`],
-  [/^(\d+) document\(s\) rechargé\(s\) depuis ce navigateur[\s\S]*$/, m => `${m[1]}件の文書をこのブラウザから再読み込みしました。ファイルを添付し直さずに質問できます。`],
+  [/^(\d+) document\(s\) rechargé\(s\) depuis cet appareil[\s\S]*$/, m => `${m[1]}件の文書をこのデバイスから再読み込みしました。ファイルを添付し直さずに質問できます。`],
   [/^(.+) : ([\s\S]+)$/, m => `${m[1]}：${m[2]}`],
   [/^Analyse partie (\d+)\/(\d+)…$/, m => `部分 ${m[1]}/${m[2]} を解析中…`],
   [/^« (.+) » — partie (\d+)\/(\d+) \((\d+)\/(\d+)\)$/, m => `「${m[1]}」— 部分 ${m[2]}/${m[3]}（${m[4]}/${m[5]}）`],
@@ -1447,6 +1450,29 @@ function refreshCodeActions() {
   });
 }
 
+/* Pyodide (Python dans le navigateur) vient d'un CDN. Le charger sans accord
+   contredirait la promesse tenue par la boite cookies : hors ligne, ou apres un
+   refus, on explique au lieu de partir en silence sur le reseau. */
+function pythonBlockedMessage() {
+  return localizedText(
+    "Python s'exécute avec Pyodide, téléchargé une seule fois depuis un CDN (environ 12 Mo). Autorisez les ressources externes dans la fenêtre « Cookies », puis relancez. JavaScript, lui, fonctionne sans réseau.",
+    "Python runs on Pyodide, downloaded once from a CDN (about 12 MB). Allow external resources in the “Cookies” window, then run again. JavaScript works without a network.",
+    "Python se ejecuta con Pyodide, que se descarga una vez desde un CDN (unos 12 MB). Permite los recursos externos en la ventana «Cookies» y vuelve a ejecutar. JavaScript funciona sin red.",
+    "Python は Pyodide で実行され、初回のみ CDN から約 12MB をダウンロードします。Cookie 設定で外部リソースを許可してから再実行してください。JavaScript はオフラインでも動きます。"
+  );
+}
+
+function refusePythonRun() {
+  if (!ui.codeOutput) return;
+  if (ui.codeOutputState) {
+    ui.codeOutputState.className = "code-output-state";
+    ui.codeOutputState.textContent = localizedText("Autorisation requise", "Permission required", "Permiso necesario", "許可が必要");
+  }
+  ui.codeOutput.hidden = false;
+  renderCodeOutput({ lines: [{ kind: "error", text: pythonBlockedMessage() }] });
+  refreshCodeActions();
+}
+
 async function executeActiveFile() {
   const file = activeCodeFile();
   if (!file || activeCodeRun) return;
@@ -1465,6 +1491,10 @@ async function executeActiveFile() {
   const code = file.content;
   if (!code.trim()) {
     toast(localizedText("Le fichier est vide.", "The file is empty.", "El archivo está vacío.", "ファイルが空です。"), "error");
+    return;
+  }
+  if (file.language === "python" && !(window.SimiaConsent && window.SimiaConsent.external())) {
+    refusePythonRun();
     return;
   }
 
@@ -1661,6 +1691,20 @@ function openCodeWorkspace(seed) {
     renderCodeEditor();
   } else {
     createCodeFile({ language, code: seed.code });
+  }
+  enterCodeMode("code");
+}
+
+/* Entree permanente dans l'atelier : sans elle, la seule porte etait un bloc
+   de code dans une reponse. Un visiteur qui voulait ecrire son propre script
+   n'avait aucun bouton a cliquer. */
+function openCodeWorkspaceEmpty() {
+  if (!ui.codePane) return;
+  closeAppMenu();
+  if (!state.code.files.length) createCodeFile({ language: "javascript" });
+  else {
+    renderCodeTabs();
+    renderCodeEditor();
   }
   enterCodeMode("code");
 }
@@ -1904,10 +1948,10 @@ async function selectImagePack(id) {
     if (ui.imageToggle) ui.imageToggle.hidden = !IMAGE_SUPPORTED;
     renderImageEngineUi();
     renderModelLibrary();
-    toast(localizedText("Jeu d'images sélectionné.", "Image model selected.", "Modelo de imagen seleccionado.", "画像モデルを選択しました。"));
+    toast(localizedText("Modèle d'image sélectionné.", "Image model selected.", "Modelo de imagen seleccionado.", "画像モデルを選択しました。"));
     return true;
   } catch {
-    toast(localizedText("Impossible de changer de jeu d'images.", "Could not switch the image model.", "No se pudo cambiar el modelo de imagen.", "画像モデルを切り替えられませんでした。"), "error");
+    toast(localizedText("Impossible de changer de modèle d'image.", "Could not switch the image model.", "No se pudo cambiar el modelo de imagen.", "画像モデルを切り替えられませんでした。"), "error");
     return false;
   }
 }
@@ -2067,7 +2111,7 @@ async function downloadImagePack(id) {
 
 function imageStageLabel(status) {
   if (status.state === "loading") {
-    return localizedText("Préparation du moteur d'image…", "Preparing the image engine…", "Preparando el motor de imágenes…", "画像エンジンを準備中…");
+    return localizedText("Préparation du modèle d'image…", "Preparing the image model…", "Preparando el modelo de imagen…", "画像モデルを準備中…");
   }
   const stage = status.stage || "";
   const labels = {
@@ -2208,7 +2252,7 @@ async function requestImage(prompt) {
   const bubble = renderMessage("assistant", "", false, [], null, { image: null, tools: false, last: false });
   const content = bubble.querySelector(".message-content");
   content.querySelector(".message-text")?.remove();
-  content.insertAdjacentHTML("beforeend", imageProgressMarkup(localizedText("Préparation du moteur d'image…", "Preparing the image engine…", "Preparando el motor de imágenes…", "画像エンジンを準備中…")));
+  content.insertAdjacentHTML("beforeend", imageProgressMarkup(localizedText("Préparation du modèle d'image…", "Preparing the image model…", "Preparando el modelo de imagen…", "画像モデルを準備中…")));
   scrollChatToLatest();
   imageBusy = { bubble, prompt: clean };
 
@@ -2253,10 +2297,10 @@ async function requestImage(prompt) {
       ? localizedText("Génération annulée.", "Generation cancelled.", "Generación cancelada.", "生成を中止しました。")
       : detail
         ? localizedText(
-            `L'image n'a pas pu être générée. Le moteur d'image a signalé : ${detail}`,
-            `The image could not be generated. The image engine reported: ${detail}`,
-            `No se pudo generar la imagen. El motor de imagen informó: ${detail}`,
-            `画像を生成できませんでした。画像エンジンからの報告: ${detail}`
+            `L'image n'a pas pu être générée. Le modèle d'image a signalé : ${detail}`,
+            `The image could not be generated. The image model reported: ${detail}`,
+            `No se pudo generar la imagen. El modelo de imagen informó: ${detail}`,
+            `画像を生成できませんでした。画像モデルからの報告: ${detail}`
           )
         : localizedText(
             "L'image n'a pas pu être générée, même après redémarrage du moteur. Fermez les autres applications qui utilisent la carte graphique, puis réessayez avec une taille plus petite.",
@@ -2323,10 +2367,10 @@ function renderImageEngineUi() {
     if (ready) {
       ui.imageEngine.innerHTML = `<svg class="engine-chip-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><b>${escapeHtml(shortImageName(pack))}</b>`;
       ui.imageEngine.title = localizedText(
-        `Moteur d'images : ${pack.name} (${meta}). Cliquez pour changer.`,
-        `Image engine: ${pack.name} (${meta}). Click to change.`,
-        `Motor de imágenes: ${pack.name} (${meta}). Haz clic para cambiar.`,
-        `画像エンジン: ${pack.name}（${meta}）。クリックで変更。`
+        `Modèle d'image : ${pack.name} (${meta}). Cliquez pour changer.`,
+        `Image model: ${pack.name} (${meta}). Click to change.`,
+        `Modelo de imagen: ${pack.name} (${meta}). Haz clic para cambiar.`,
+        `画像モデル: ${pack.name}（${meta}）。クリックで変更。`
       );
       ui.imageEngine.setAttribute("aria-label", ui.imageEngine.title);
     }
@@ -2335,11 +2379,11 @@ function renderImageEngineUi() {
   if (ui.settingImage) {
     ui.settingImage.hidden = !ready;
     if (ready) {
-      document.querySelector("#setting-image-label").textContent = localizedText("MOTEUR D'IMAGE", "IMAGE ENGINE", "MOTOR DE IMAGEN", "画像エンジン");
+      document.querySelector("#setting-image-label").textContent = localizedText("MODÈLE D'IMAGE", "IMAGE MODEL", "MODELO DE IMAGEN", "画像モデル");
       document.querySelector("#image-picker-name").textContent = pack.name;
       document.querySelector("#image-picker-meta").textContent = meta;
       document.querySelector("#image-info").textContent = pack.note || "";
-      ui.imagePicker.title = localizedText("Changer de moteur d'image", "Change the image engine", "Cambiar el motor de imagen", "画像エンジンを変更");
+      ui.imagePicker.title = localizedText("Changer de modèle d'image", "Change the image model", "Cambiar el modelo de imagen", "画像モデルを変更");
     }
   }
 }
@@ -2432,7 +2476,7 @@ function updateModelActivityUi() {
       : localizedText(`Télécharger ${conversationModel.name}`, `Download ${conversationModel.name}`, `Descargar ${conversationModel.name}`);
     document.querySelector("#welcome-setup").textContent = ready
       ? localizedText(`${conversationModel.name} est déjà téléchargé sur cet appareil : cliquez pour l'activer.`, `${conversationModel.name} is already downloaded on this device: click to activate it.`, `${conversationModel.name} ya está descargado en este dispositivo: haz clic para activarlo.`)
-      : localizedText(`${conversationModel.name} n'est pas encore téléchargé : il l'est une seule fois (${conversationModel.size}), puis reste sur cet appareil.`, `${conversationModel.name} is not downloaded yet: it downloads once (${conversationModel.size}), then stays on this device.`, `${conversationModel.name} aún no está descargado: se descarga una sola vez (${conversationModel.size}) y luego queda en este dispositivo.`);
+      : localizedText(`${conversationModel.name} n'est pas encore téléchargé : il l'est une seule fois (${displaySize(conversationModel.size)}), puis reste sur cet appareil.`, `${conversationModel.name} is not downloaded yet: it downloads once (${displaySize(conversationModel.size)}), then stays on this device.`, `${conversationModel.name} aún no está descargado: se descarga una sola vez (${displaySize(conversationModel.size)}) y luego queda en este dispositivo.`);
     return;
   }
   ui.homeModelButton.textContent = copy[state.language].welcomeModel;
@@ -2545,8 +2589,24 @@ function isTextAttachment(file) {
   return file.type.startsWith("text/") || file.type === "application/json" || TEXT_EXTENSIONS.has(attachmentExtension(file));
 }
 
+/* Les fichiers du catalogue expriment leurs poids en GB/MB. En francais on
+   ecrit Go/Mo et la virgule decimale : un seul endroit decide, plutot que
+   cinquante chaines qui divergent. */
+function displaySize(value) {
+  const text = String(value ?? "").trim();
+  if (state.language !== "fr") return text;
+  return text
+    .replace(/(\d)\.(\d)/g, "$1,$2")
+    .replace(/(\d)\s*GB\b/g, "$1 Go")
+    .replace(/(\d)\s*MB\b/g, "$1 Mo")
+    .replace(/(\d)\s*KB\b/g, "$1 Ko");
+}
+
 function formatFileSize(bytes) {
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const fr = state.language === "fr";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} ${fr ? "Ko" : "KB"}`;
+  const value = (bytes / (1024 * 1024)).toFixed(1);
+  return `${fr ? value.replace(".", ",") : value} ${fr ? "Mo" : "MB"}`;
 }
 
 function fileDataUrl(file) {
@@ -3409,7 +3469,7 @@ function attachmentCard(attachment, pending = false) {
           document_.words ? localizedText(`${document_.words.toLocaleString("fr-FR")} mots`, `${document_.words.toLocaleString("en-US")} words`, `${document_.words.toLocaleString("es-ES")} palabras`) : "",
           passages ? localizedText(`${passages} passage${passages > 1 ? "s" : ""} indexé${passages > 1 ? "s" : ""}`, `${passages} indexed passage${passages > 1 ? "s" : ""}`, `${passages} pasaje${passages > 1 ? "s" : ""} indexado${passages > 1 ? "s" : ""}`) : "",
           document_.outline?.length > 1 ? localizedText(`${document_.outline.length} chapitres`, `${document_.outline.length} chapters`, `${document_.outline.length} capítulos`) : "",
-          document_.restored ? localizedText("rechargé depuis ce navigateur", "reloaded from this browser", "recargado desde este navegador") : ""
+          document_.restored ? localizedText("rechargé depuis cet appareil", "reloaded from this device", "recargado desde este dispositivo", "このデバイスから再読み込み") : ""
         ].filter(Boolean).join(" · "));
     return `<div class="attachment-card attachment-${attachment.kind} attachment-document${status}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span><small class="attachment-detail">${escapeHtml(information)}</small></span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
   }
@@ -3840,7 +3900,7 @@ function restoreDocumentIndexes(refresh = false) {
     });
   });
   if (restored) {
-    state.documentStatus = localizedText(`${restored} document(s) rechargé(s) depuis ce navigateur. Interrogez-les directement, sans re-joindre les fichiers.`, `${restored} document(s) reloaded from this browser. Question them directly, without attaching the files again.`, `${restored} documento(s) recargado(s) desde este navegador. Consúltalos directamente, sin volver a adjuntar los archivos.`);
+    state.documentStatus = localizedText(`${restored} document(s) rechargé(s) depuis cet appareil. Interrogez-les directement, sans re-joindre les fichiers.`, `${restored} document(s) reloaded from this device. Question them directly, without attaching the files again.`, `${restored} documento(s) recargado(s) desde este dispositivo. Consúltalos directamente, sin volver a adjuntar los archivos.`, `${restored}件の文書をこのデバイスから再読み込みしました。ファイルを添付し直さずに質問できます。`);
     if (refresh) renderActiveConversation();
   }
   return restored;
@@ -4276,8 +4336,9 @@ function modelSizeMB(model) {
 /* Le navigateur ne peut pas heberger les gros modeles : la banque web s'arrete
    sous 1,9 Go. La version desktop n'a pas cette limite. */
 const WEB_MAX_MODEL_MB = 1900;
-/* Page de presentation des versions de bureau, servie par le site. */
-const DESKTOP_PAGE_URL = "https://app.zigmoon.com/SIMIA/desktop/";
+/* Page de presentation des versions de bureau : la landing, section
+   telechargements. L'ancienne adresse /desktop/ ne sert plus que de redirection. */
+const DESKTOP_PAGE_URL = "https://app.zigmoon.com/SIMIA/#telecharger";
 
 function modelIsCompatible(model) {
   if (modelNeedsUnavailableFeature(model)) return false;
@@ -4878,85 +4939,124 @@ function infoDialogText() {
     ? {
         title: "Comment fonctionne SIMIA ?",
         modelsTitle: "1. Les modèles",
-        models: "SIMIA exécute des modèles d'IA directement dans votre navigateur grâce à WebGPU. Choisissez un modèle, téléchargez-le une fois, puis il répond localement : rien n'est envoyé sur un serveur.",
+        models: NATIVE
+          ? "SIMIA exécute les modèles directement sur le GPU de votre ordinateur, via llama.cpp. Choisissez un modèle : une fois sur le disque, il répond localement, sans serveur."
+          : "SIMIA exécute des modèles d'IA directement dans votre navigateur grâce à WebGPU. Choisissez un modèle, téléchargez-le une fois, puis il répond localement : rien n'est envoyé sur un serveur.",
         categoriesTitle: "2. Les types de modèles",
-        categories: "Généraliste, code, maths et écriture pour discuter et créer ; Documents & PDF pour lire et questionner vos fichiers ; Vision (SmolVLM) pour analyser les images que vous joignez.",
+        categories: NATIVE
+          ? "Généraliste, code, maths, écriture et documents pour interroger vos fichiers ; l'atelier de code exécute JavaScript et Python."
+          : "Généraliste, code, maths et écriture pour discuter et créer ; Documents & PDF pour lire et questionner vos fichiers ; Vision (SmolVLM) pour analyser les images que vous joignez.",
         documentsTitle: "3. Vos documents, même les livres",
         documents: "Joignez un PDF, un Word, un Excel, un PowerPoint, un RTF, un OpenDocument, un EPUB ou un texte : <strong>il n'y a aucune limite de taille</strong>, même pour un livre de plusieurs centaines de pages. SIMIA extrait le texte dans votre navigateur, le découpe en passages et indexe tout en arrière-plan : vous pouvez écrire pendant l'indexation.<br><br><strong>Pour un livre volumineux, la méthode la plus efficace :</strong><br>1. Posez des questions précises (« Que dit l'auteur sur la confiance en soi au chapitre 4 ? »). L'index retrouve les bons passages et cite les pages.<br>2. Pour une vue d'ensemble, lancez « Résumer les documents » : SIMIA résume le livre partie par partie — chapitre par chapitre si le PDF contient une table des matières — puis fusionne le tout.<br>3. Pour aller plus loin, demandez un chapitre à la fois : les réponses sont alors beaucoup plus détaillées.<br><br>Un PDF scanné (image) doit d'abord être converti en texte (OCR).",
         agentTitle: "4. L'agent web",
         agent: "Activez « Agent web » pour poser une question : SIMIA recherche des pages publiques, les lit, puis résume la réponse avec ses sources. La recherche passe par un petit service sécurisé, la synthèse reste locale.",
         privacyTitle: "5. Vos données",
-        privacy: "Les conversations, réglages et modèles restent dans ce navigateur. Vous pouvez les exporter ou tout purger à tout moment.",
+        privacy: NATIVE
+          ? "Les conversations, réglages et modèles restent sur cet ordinateur. Vous pouvez les exporter ou tout purger à tout moment."
+          : "Les conversations, réglages et modèles restent dans ce navigateur. Vous pouvez les exporter ou tout purger à tout moment.",
         close: "Fermer"
       }
     : state.language === "ja"
       ? {
         title: "SIMIAの仕組み",
         modelsTitle: "1. モデル",
-        models: "SIMIAはWebGPUを使って、AIモデルをお使いのブラウザで直接動かします。モデルを選んで一度ダウンロードすれば、あとは端末内で回答します。サーバーには何も送信されません。",
+        models: NATIVE
+          ? "SIMIA は llama.cpp を通じて、お使いの PC の GPU 上でモデルを直接動かします。モデルをディスクに置けば、サーバーなしでローカルに応答します。"
+          : "SIMIAはWebGPUを使って、AIモデルをお使いのブラウザで直接動かします。モデルを選んで一度ダウンロードすれば、あとは端末内で回答します。サーバーには何も送信されません。",
         categoriesTitle: "2. モデルの種類",
-        categories: "会話や作成には汎用・コード・数学・文章。お手持ちのファイルを読んで質問するには文書・PDF。添付した画像を解析するには画像（SmolVLM）。",
+        categories: NATIVE
+          ? "会話・コード・数学・文章・文書に対応。文書を読んで質問できます。コード作業台では JavaScript と Python を実行できます。"
+          : "会話や作成には汎用・コード・数学・文章。お手持ちのファイルを読んで質問するには文書・PDF。添付した画像を解析するには画像（SmolVLM）。",
         documentsTitle: "3. 文書、そして書籍も",
         documents: "PDF、Word、Excel、PowerPoint、RTF、OpenDocument、EPUB、テキストを添付できます。<strong>サイズ制限はありません</strong>。数百ページの書籍でも大丈夫です。SIMIAはブラウザ内でテキストを取り出し、箇所ごとに分けてバックグラウンドで索引化します。索引化の間も入力できます。<br><br><strong>大きな書籍に最も効果的な方法：</strong><br>1. 具体的に質問する（例：「第4章で著者は信頼について何と言っていますか」）。索引が該当箇所を探し、ページを引用します。<br>2. 全体像には「文書を要約」を使います。PDFに目次があれば章ごとに要約し、最後にまとめます。<br>3. さらに詳しくは章を一つずつ指定してください。回答がぐっと詳しくなります。<br><br>スキャンしたPDF（画像）は、先にテキスト化（OCR）が必要です。",
         agentTitle: "4. ウェブ検索",
         agent: "「ウェブ検索」をオンにして質問すると、SIMIAが公開ページを検索して読み、出典とともに回答をまとめます。検索は小さな安全なサービスを通りますが、要約は端末内で行われます。",
         privacyTitle: "5. あなたのデータ",
-        privacy: "会話、設定、モデルはこのブラウザに残ります。いつでも書き出すか、すべて削除できます。",
+        privacy: NATIVE
+          ? "会話、設定、モデルはこの PC に残ります。いつでも書き出すか、すべて削除できます。"
+          : "会話、設定、モデルはこのブラウザに残ります。いつでも書き出すか、すべて削除できます。",
         close: "閉じる"
       }
       : state.language === "es"
       ? {
         title: "¿Cómo funciona SIMIA?",
         modelsTitle: "1. Los modelos",
-        models: "SIMIA ejecuta modelos de IA directamente en tu navegador mediante WebGPU. Elige un modelo, descárgalo una vez y responderá localmente: no se envía nada a un servidor.",
+        models: NATIVE
+          ? "SIMIA ejecuta los modelos directamente en la GPU de tu ordenador mediante llama.cpp. Elige un modelo: una vez en el disco, responde localmente, sin servidor."
+          : "SIMIA ejecuta modelos de IA directamente en tu navegador mediante WebGPU. Elige un modelo, descárgalo una vez y responderá localmente: no se envía nada a un servidor.",
         categoriesTitle: "2. Tipos de modelos",
-        categories: "General, código, matemáticas y escritura para conversar y crear; Documentos y PDF para leer y consultar tus archivos; Visión (SmolVLM) para analizar las imágenes que adjuntas.",
+        categories: NATIVE
+          ? "General, código, matemáticas, escritura y documentos para consultar tus archivos; el taller de código ejecuta JavaScript y Python."
+          : "General, código, matemáticas y escritura para conversar y crear; Documentos y PDF para leer y consultar tus archivos; Visión (SmolVLM) para analizar las imágenes que adjuntas.",
         documentsTitle: "3. Tus documentos, incluso libros",
         documents: "Adjunta un PDF, Word, Excel, PowerPoint, RTF, OpenDocument, EPUB o texto: <strong>no hay ningún límite de tamaño</strong>, ni siquiera para un libro de varios cientos de páginas. SIMIA extrae el texto en tu navegador, lo divide en pasajes y lo indexa en segundo plano: puedes seguir escribiendo durante la indexación.<br><br><strong>Para un libro voluminoso, el método más eficaz:</strong><br>1. Haz preguntas precisas («¿Qué dice el autor sobre la confianza en el capítulo 4?»). El índice localiza los pasajes útiles y cita las páginas.<br>2. Para una visión general, usa «Resumir los documentos»: SIMIA resume el libro parte por parte —capítulo a capítulo si el PDF tiene índice— y luego fusiona el todo.<br>3. Para profundizar, pide un capítulo cada vez: las respuestas serán mucho más detalladas.<br><br>Un PDF escaneado (imagen) debe convertirse antes a texto (OCR).",
         agentTitle: "4. El agente web",
         agent: "Activa « Agente web » para hacer una pregunta: SIMIA busca páginas públicas, las lee y resume la respuesta con sus fuentes. La búsqueda usa un pequeño servicio seguro; la síntesis sigue siendo local.",
         privacyTitle: "5. Tus datos",
-        privacy: "Las conversaciones, ajustes y modelos se quedan en este navegador. Puedes exportarlos o borrarlo todo cuando quieras.",
+        privacy: NATIVE
+          ? "Las conversaciones, ajustes y modelos se quedan en este ordenador. Puedes exportarlos o borrarlo todo cuando quieras."
+          : "Las conversaciones, ajustes y modelos se quedan en este navegador. Puedes exportarlos o borrarlo todo cuando quieras.",
         close: "Cerrar"
       }
       : {
         title: "How SIMIA works",
         modelsTitle: "1. Models",
-        models: "SIMIA runs AI models directly in your browser via WebGPU. Pick a model, download it once, and it answers locally: nothing is sent to a server.",
+        models: NATIVE
+          ? "SIMIA runs models directly on your computer's GPU through llama.cpp. Pick a model: once it is on disk, it answers locally, with no server."
+          : "SIMIA runs AI models directly in your browser via WebGPU. Pick a model, download it once, and it answers locally: nothing is sent to a server.",
         categoriesTitle: "2. Model types",
-        categories: "General, code, math, and writing for chatting and creating; Documents & PDF to read and question your files; Vision (SmolVLM) for analyzing the images you attach.",
+        categories: NATIVE
+          ? "General, code, math, writing and documents to question your files; the code workspace runs JavaScript and Python."
+          : "General, code, math, and writing for chatting and creating; Documents & PDF to read and question your files; Vision (SmolVLM) for analyzing the images you attach.",
         documentsTitle: "3. Your documents, even books",
         documents: "Attach a PDF, Word, Excel, PowerPoint, RTF, OpenDocument, EPUB, or text file: <strong>there is no size limit</strong>, even for a book with hundreds of pages. SIMIA extracts the text in your browser, splits it into passages, and indexes everything in the background: you can keep writing while it indexes.<br><br><strong>For a long book, the most effective method:</strong><br>1. Ask precise questions (“What does the author say about trust in chapter 4?”). The index finds the right passages and cites the pages.<br>2. For an overview, use “Summarize the documents”: SIMIA summarizes the book part by part — chapter by chapter when the PDF has a table of contents — then merges everything.<br>3. To go deeper, ask for one chapter at a time: answers are then far more detailed.<br><br>A scanned (image) PDF must be converted to text (OCR) first.",
         agentTitle: "4. Web agent",
         agent: "Turn on “Web agent” to ask a question: SIMIA searches public pages, reads them, then summarizes the answer with sources. Search uses a small secure service; the summary stays local.",
         privacyTitle: "5. Your data",
-        privacy: "Conversations, settings, and models stay in this browser. You can export them or purge everything at any time.",
+        privacy: NATIVE
+          ? "Conversations, settings, and models stay on this computer. You can export them or purge everything at any time."
+          : "Conversations, settings, and models stay in this browser. You can export them or purge everything at any time.",
         close: "Close"
       };
 }
 
+/* Le nom du modele d'image actif : la section « images » citait Z-Image-Turbo
+   meme quand un autre pack tournait. */
+function activeImageModelName() {
+  const pack = state.imagePacks.find(item => item.id === state.imagePackId);
+  return pack?.name || localizedText("un modèle d'image local", "a local image model", "un modelo de imagen local", "ローカル画像モデル");
+}
+
 function renderInfoContent() {
   const text = infoDialogText();
-  /* La section 5 (images) n'existe que dans l'application de bureau : la
-   * section des donnees decale son numero en consequence. */
-  const privacyTitle = IMAGE ? text.privacyTitle.replace(/^(\d+)\./, (_, n) => `${Number(n) + 1}.`) : text.privacyTitle;
+  /* Le sommaire est construit, pas fige : en bureau l'agent web n'existe pas,
+     et la section des images n'apparait que dans l'application de bureau. La
+     numerotation suit donc l'ordre reel des sections affichees. */
+  const sections = [
+    { title: text.modelsTitle, body: text.models },
+    { title: text.categoriesTitle, body: text.categories },
+    { title: text.documentsTitle, body: text.documents }
+  ];
+  if (!NATIVE) sections.push({ title: text.agentTitle, body: text.agent });
+  if (IMAGE) {
+    sections.push({
+      title: localizedText("Les images", "Images", "Las imágenes", "画像"),
+      body: localizedText(
+        `Le bouton <strong>Image</strong> génère une illustration à partir d'une description, avec ${escapeHtml(activeImageModelName())}. Tout se passe sur votre carte graphique : aucune image ne quitte l'ordinateur. Le modèle d'image et le modèle de texte partagent le GPU, donc le texte cède la place le temps du calcul et revient à la question suivante.`,
+        `The <strong>Image</strong> button generates a picture from a description with ${escapeHtml(activeImageModelName())}. Everything runs on your graphics card: no image leaves the computer. The image and text models share the GPU, so text steps aside during a generation and returns on your next question.`,
+        `El botón <strong>Imagen</strong> genera una ilustración a partir de una descripción con ${escapeHtml(activeImageModelName())}. Todo ocurre en su tarjeta gráfica: ninguna imagen sale del ordenador. Los modelos de imagen y de texto comparten la GPU, así que el texto cede el paso durante el cálculo y vuelve en la siguiente pregunta.`,
+        `「画像」ボタンは ${escapeHtml(activeImageModelName())} で説明から絵を生成します。すべて GPU 上で完結し、画像が外部に送られることはありません。画像モデルとテキストモデルは GPU を共有するため、生成中はテキストが待機し、次の質問で復帰します。`
+      )
+    });
+  }
+  sections.push({ title: text.privacyTitle, body: text.privacy });
+  const body = sections
+    .map((section, index) => `<h3>${index + 1}. ${section.title.replace(/^\d+\.\s*/, "")}</h3><p>${section.body}</p>`)
+    .join("");
   document.querySelector("#info-title").textContent = text.title;
   document.querySelector("#info-eyebrow").textContent = localizedText("COMMENT ÇA MARCHE", "HOW IT WORKS", "CÓMO FUNCIONA");
   document.querySelector("#info-close").setAttribute("aria-label", text.close);
-  ui.infoContent.innerHTML =
-    `<h3>${text.modelsTitle}</h3><p>${text.models}</p>` +
-    `<h3>${text.categoriesTitle}</h3><p>${text.categories}</p>` +
-    `<h3>${text.documentsTitle}</h3><p>${text.documents}</p>` +
-    `<h3>${text.agentTitle}</h3><p>${text.agent}</p>` +
-    (IMAGE
-      ? `<h3>${localizedText("5. Les images", "5. Images", "5. Las imágenes", "5. 画像")}</h3><p>${localizedText(
-          "Le bouton <strong>Image</strong> génère une illustration à partir d'une description, avec Z-Image-Turbo. Tout se passe sur votre carte graphique : aucune image ne quitte l'ordinateur. Le modèle d'image et le modèle de texte partagent le GPU, donc le texte cède la place le temps du calcul et revient à la question suivante.",
-          "The <strong>Image</strong> button generates a picture from a description with Z-Image-Turbo. Everything runs on your graphics card: no image leaves the computer. The image and text models share the GPU, so text steps aside during a generation and returns on your next question.",
-          "El botón <strong>Imagen</strong> genera una ilustración a partir de una descripción con Z-Image-Turbo. Todo ocurre en su tarjeta gráfica: ninguna imagen sale del ordenador. Los modelos de imagen y de texto comparten la GPU, así que el texto cede el paso durante el cálculo y vuelve en la siguiente pregunta.",
-          "「画像」ボタンは Z-Image-Turbo で説明から絵を生成します。すべて GPU 上で完結し、画像が外部に送られることはありません。画像モデルとテキストモデルは GPU を共有するため、生成中はテキストが待機し、次の質問で復帰します。"
-        )}</p>`
-      : "") +
-    `<h3>${privacyTitle}</h3><p>${text.privacy}</p>`;
+  ui.infoContent.innerHTML = body;
 }
 
 const AGENT_RESULT_PREFIX = "__SIMIA_AGENT_RESULT__:";
@@ -5196,8 +5296,14 @@ function applyLanguage() {
     });
   }
   ui.language.setAttribute("aria-label", localizedText("Changer de langue", "Switch language", "Cambiar idioma", "言語を切り替える"));
+  const sidebarNav = document.querySelector(".sidebar");
+  if (sidebarNav) sidebarNav.setAttribute("aria-label", localizedText("Navigation principale", "Main navigation", "Navegación principal", "メインナビゲーション"));
   if (ui.appMenuToggle) {
     ui.appMenuToggle.setAttribute("aria-label", localizedText("Menu", "Menu", "Menú", "メニュー"));
+    const codeLabel = localizedText("Atelier de code", "Code workspace", "Taller de código", "コード作業台");
+    if (ui.appMenuCode) ui.appMenuCode.textContent = codeLabel;
+    if (ui.sidebarCode) ui.sidebarCode.textContent = codeLabel;
+    if (ui.homeCodeButton) ui.homeCodeButton.textContent = localizedText("Ouvrir l'atelier de code", "Open the code workspace", "Abrir el taller de código", "コード作業台を開く");
     ui.appMenuSettings.textContent = text.settings;
     ui.appMenuInfo.textContent = localizedText("Information", "Information", "Información");
     ui.appMenuExport.textContent = text.export;
@@ -5352,7 +5458,7 @@ function populateModelList() {
     const details = modelDetails(model);
     const option = document.createElement("option");
     option.value = model.id;
-    option.textContent = `${details[0]} | ${model.name} - ${model.size}`;
+    option.textContent = `${details[0]} | ${model.name} - ${displaySize(model.size)}`;
     option.disabled = !modelIsCompatible(model);
     return option;
   }));
@@ -5367,12 +5473,12 @@ function updateModelInfo() {
   const downloadLabel = localizedText("Téléchargement", "Download", "Descarga");
   const profile = state.customModelActive ? state.customModel : null;
   ui.modelInfo.textContent = profile
-    ? localizedText(`« ${profile.name} » : vos consignes permanentes sont ajoutées à ${model.name} (${model.size}). Retrouvez-les avec le bouton « Mon modèle ».`, `“${profile.name}”: your permanent instructions are added to ${model.name} (${model.size}). Edit them with the “My model” button.`, `«${profile.name}»: tus instrucciones permanentes se añaden a ${model.name} (${model.size}). Edítalas con el botón «Mi modelo».`)
-    : `${details[0]}: ${details[1]} ${downloadLabel}: ${model.size}.`;
+    ? localizedText(`« ${profile.name} » : vos consignes permanentes sont ajoutées à ${model.name} (${displaySize(model.size)}). Retrouvez-les avec le bouton « Mon modèle ».`, `“${profile.name}”: your permanent instructions are added to ${model.name} (${displaySize(model.size)}). Edit them with the “My model” button.`, `«${profile.name}»: tus instrucciones permanentes se añaden a ${model.name} (${displaySize(model.size)}). Edítalas con el botón «Mi modelo».`)
+    : `${details[0]} — ${details[1]} ${downloadLabel} : ${displaySize(model.size)}.`;
   ui.modelPicker.querySelector("#model-picker-name").textContent = profile ? profile.name : model.name;
   ui.modelPicker.querySelector("#model-picker-meta").textContent = profile
     ? localizedText(`MODÈLE PERSO · base ${model.name}`, `PERSONAL MODEL · base ${model.name}`, `MODELO PERSONAL · base ${model.name}`)
-    : `${details[0]} · ${model.size}`;
+    : `${details[0]} · ${displaySize(model.size)}`;
 }
 
 async function selectModel() {
@@ -5499,7 +5605,7 @@ function renderModelLibrary() {
   const imageCards = !showImage ? [] : orderedPacks.flatMap(pack => {
     const active = pack.id === state.imagePackId;
     const ready = Boolean(pack.local);
-    const size = `${pack.bytes ? `~${(pack.bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : pack.size} · ${pack.px}px/${pack.steps} ${localizedText("pas", "steps", "pasos", "ステップ")}`;
+    const size = displaySize(`${pack.bytes ? `~${(pack.bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : pack.size} · ${pack.px}px/${pack.steps} ${localizedText("pas", "steps", "pasos", "ステップ")}`);
     const card = document.createElement("article");
     /* Trois familles, trois aspects distincts : ce que SIMIA installe lui-meme
        (accent vert plein), ce qui est deja sur le disque, et ce qu'il reste a
@@ -5570,7 +5676,7 @@ function renderModelLibrary() {
     const note = state.cachedModelId === model.id ? ` <span class="model-card-note">${escapeHtml(text.stored)}</span>` : "";
     const card = document.createElement("article");
     card.className = `model-card${active ? " selected" : ""}${model.recommended ? " recommended" : ""}${remote ? " remote" : ""}`;
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(model.size)}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(active ? text.selected : remote ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード") : text.choose)}</button></div>${downloadBlock(model.id)}`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(model.size))}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(active ? text.selected : remote ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード") : text.choose)}</button></div>${downloadBlock(model.id)}`;
     return card;
   }), ...ownModelCard, ...desktopCard);
   /* Resume chiffre : « 1 fourni · 2 sur votre disque · 8 a telecharger ». Sans
@@ -5841,13 +5947,13 @@ function customModelBaseOptions() {
   const text = customModelText();
   return MODELS
     .filter(model => modelIsCompatible(model) && model.engine !== "transformers")
-    .map(model => new Option(`${model.name} · ${model.size}${state.cachedModelId === model.id ? ` · ${text.downloaded}` : ""}`, model.id));
+    .map(model => new Option(`${model.name} · ${displaySize(model.size)}${state.cachedModelId === model.id ? ` · ${text.downloaded}` : ""}`, model.id));
 }
 
 function renderCustomModelSaveLabel() {
   const text = customModelText();
   const model = MODELS.find(candidate => candidate.id === ui.customModelBase.value);
-  ui.customModelSave.textContent = model && state.cachedModelId !== model.id ? text.saveAndDownload(model.size) : text.save;
+  ui.customModelSave.textContent = model && state.cachedModelId !== model.id ? text.saveAndDownload(displaySize(model.size)) : text.save;
 }
 
 function openCustomModelDialog() {
@@ -6032,7 +6138,7 @@ function exportFullBackup() {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    application: { name: "SIMIA", storage: "navigateur : localStorage + IndexedDB" },
+    application: { name: "SIMIA", storage: NATIVE ? "SIMIA bureau : stockage local" : "navigateur : localStorage + IndexedDB" },
     preferences: preferencesPayload(),
     conversations: state.conversations.map(exportableConversation),
     documents
@@ -6050,7 +6156,7 @@ function exportSettings() {
     format: "SIMIA settings",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    application: { name: "SIMIA", storage: "navigateur : localStorage" },
+    application: { name: "SIMIA", storage: NATIVE ? "SIMIA bureau : stockage local" : "navigateur : localStorage" },
     preferences: preferencesPayload()
   };
   downloadJson(backup, `simia-reglages-${new Date().toISOString().slice(0, 10)}.json`);
@@ -6062,7 +6168,7 @@ function exportConversations() {
     format: "SIMIA conversations",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    application: { name: "SIMIA", storage: "navigateur : localStorage" },
+    application: { name: "SIMIA", storage: NATIVE ? "SIMIA bureau : stockage local" : "navigateur : localStorage" },
     conversations: state.conversations.map(exportableConversation)
   };
   downloadJson(backup, `simia-conversations-${new Date().toISOString().slice(0, 10)}.json`);
@@ -6274,6 +6380,9 @@ ui.form.addEventListener("dragover", event => { event.preventDefault(); ui.form.
 ui.form.addEventListener("dragleave", event => { if (!ui.form.contains(event.relatedTarget)) ui.form.classList.remove("is-dropping"); });
 ui.form.addEventListener("drop", event => { event.preventDefault(); ui.form.classList.remove("is-dropping"); addAttachments(event.dataTransfer.files); });
 document.querySelector("#home-model-button").addEventListener("click", () => openModelLibrary());
+ui.homeCodeButton?.addEventListener("click", openCodeWorkspaceEmpty);
+ui.sidebarCode?.addEventListener("click", openCodeWorkspaceEmpty);
+ui.appMenuCode?.addEventListener("click", openCodeWorkspaceEmpty);
 document.querySelector("#new-chat").addEventListener("click", newConversation);
 document.querySelector("#clear-chat").addEventListener("click", clearChat);
 ui.voice.addEventListener("click", toggleVoiceInput);
@@ -6631,7 +6740,7 @@ loadStoredDocuments().then(restored => {
   if (!restored) return;
   restoreDocumentIndexes(true);
   renderDocumentTools();
-  ui.downloadInfo.textContent = localizedText(`${restored} document(s) rechargé(s) depuis ce navigateur : vous pouvez les interroger sans re-joindre les fichiers.`, `${restored} document(s) reloaded from this browser: you can question them without attaching the files again.`, `${restored} documento(s) recargado(s) desde este navegador: puedes consultarlos sin volver a adjuntar los archivos.`);
+  ui.downloadInfo.textContent = localizedText(`${restored} document(s) rechargé(s) depuis cet appareil : vous pouvez les interroger sans re-joindre les fichiers.`, `${restored} document(s) reloaded from this device: you can question them without attaching the files again.`, `${restored} documento(s) recargado(s) desde este dispositivo: puedes consultarlos sin volver a adjuntar los archivos.`, `${restored}件の文書をこのデバイスから再読み込みしました。ファイルを添付し直さずに質問できます。`);
 });
 detectGpuLimit().then(() => {
   if (state.autoLoadModel && state.cachedModelId === state.selectedModel && modelIsCompatible(MODELS.find(model => model.id === state.selectedModel))) loadWebLLM();

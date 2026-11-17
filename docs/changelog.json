@@ -1,6 +1,18 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.12": {
+      "title": "L'atelier de code a sa porte d'entree, et les mots justes partout",
+      "highlights": [
+        "L'atelier de code s'ouvre desormais en un clic depuis trois endroits : un bouton permanent dans la barre laterale, une entree dans le menu, et un bouton sur l'ecran d'accueil quand aucune conversation n'est ouverte. Jusqu'ici, il fallait tomber sur un bloc de code dans une reponse pour le decouvrir.",
+        "Le bouton « Agent web » ne s'affiche plus dans la version bureau : une regle de style ecrasait l'attribut hidden. La version bureau montre le bouton Image, la version navigateur montre l'agent web.",
+        "Executer du Python demande maintenant l'accord sur les ressources externes : Pyodide vient d'un CDN (environ 12 Mo). Hors ligne ou apres un refus, SIMIA explique quoi faire au lieu de partir en silence sur le reseau, et JavaScript continue de fonctionner sans reseau.",
+        "Les 14 modeles d'image du catalogue retrouvent leurs accents, et le vocabulaire est unifie : « modele d'image » partout, plus de « jeu d'images » ni de « moteur ».",
+        "Les poids se lisent en francais : Go et Mo avec virgule decimale, dans la bibliotheque, les reglages, les pieces jointes et les sauvegardes.",
+        "La fenetre « Comment ca marche » est reecrite pour la version bureau : GPU local via llama.cpp, section images nommee d'apres le modele reellement installe, et plus aucune mention de WebGPU. Les documents recharges parlent de « cet appareil » et non de « ce navigateur ».",
+        "Le lien « Version desktop » de la bibliotheque pointe enfin vers la page de telechargement du site."
+      ]
+    },
     "0.1.11": {
       "title": "Trois modeles d'image de plus, et une bibliotheque qui se lit d'un coup d'oeil",
       "highlights": [

@@ -115,7 +115,7 @@
     </div>
   </noscript>
   <div class="app-shell">
-    <aside class="sidebar" aria-label="Main navigation">
+    <aside class="sidebar" aria-label="Navigation principale">
       <div class="brand"><span class="brand-mark"><img src="simia-logo.svg" alt=""></span><span>SIMIA</span></div>
       <button class="new-chat" id="new-chat" type="button" data-i18n="newChat">+ Nouvelle conversation</button>
       <button class="install-app" id="install-app" type="button" hidden>
@@ -128,8 +128,9 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="sidebar-actions">
+          <button class="settings-button" id="sidebar-code" type="button">Atelier de code</button>
           <button class="settings-button" id="info-toggle" type="button">Information</button>
-          <button class="settings-button" id="export-toggle" type="button">Exporter</button>
+          <button class="settings-button" id="export-toggle" type="button">Exporter / Importer</button>
           <button class="settings-button" id="purge-toggle" type="button">Purger</button>
           <button class="settings-button" id="settings-toggle" type="button" data-i18n="settings">Paramètres</button>
         </div>
@@ -156,6 +157,7 @@
               <svg class="app-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
             </button>
             <div class="app-menu" id="app-menu" role="menu" hidden>
+              <button type="button" role="menuitem" id="app-menu-code">Atelier de code</button>
               <button type="button" role="menuitem" id="app-menu-settings">Paramètres</button>
         <button type="button" role="menuitem" id="app-menu-install" hidden>Installer SIMIA</button>
               <button type="button" role="menuitem" id="app-menu-info">Information</button>
@@ -243,6 +245,7 @@
           </ol>
           <div class="welcome-start">
             <button class="home-model-button" id="home-model-button" type="button">Choisir un modèle pour commencer</button>
+            <button class="home-model-button secondary" id="home-code-button" type="button">Ouvrir l'atelier de code</button>
             <p id="welcome-setup">Le modèle se télécharge une fois, puis reste sur cet appareil.</p>
           </div>
         </div>
@@ -265,7 +268,7 @@
             <button class="secondary-button" id="my-model-settings-toggle" type="button">Mon modèle</button>
           </div>
           <div class="setting-image" id="setting-image" hidden>
-            <p class="setting-label" id="setting-image-label">MOTEUR D'IMAGE</p>
+            <p class="setting-label" id="setting-image-label">MODÈLE D'IMAGE</p>
             <button class="model-picker" id="image-picker" type="button" aria-haspopup="dialog">
               <span id="image-picker-name">SD-Turbo</span><span id="image-picker-meta">512 px · 4 pas</span>
             </button>
