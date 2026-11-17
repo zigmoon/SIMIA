@@ -561,7 +561,7 @@
   .releases-offline{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
   .releases-offline a{color:var(--ink); font-weight:800}
 
-  .models{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
+  .models{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:0; padding:0; list-style:none}
   .model{
     border:1px solid var(--line); border-radius:11px; background:var(--surface);
     padding:16px 17px; display:flex; flex-direction:column; gap:6px;
@@ -571,29 +571,50 @@
   .model span{font-size:12px; color:var(--muted)}
   .model.is-pick{border-color:#c7dd93; box-shadow:0 0 0 1px #d8eab5 inset}
 
+  /* Le catalogue bureau est cite modele par modele, dans la meme grille de
+     cartes que le navigateur : seulement plus serree, sinon la section ferait
+     six ecrans de haut. */
+  .models.dense{grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:10px}
+  .models.dense .model{padding:12px 13px; gap:3px; border-radius:10px}
+  .models.dense b{font-size:13.5px}
+  .models.dense span{font-size:11.5px; line-height:1.45}
+
+  /* Ce qui est deja dans le paquet se reconnait sans lire : fond vert, bordure
+     verte, pastille. C'est la seule difference, volontairement. */
+  .model.is-included{background:linear-gradient(180deg,#f1f9e0,#e6f4c9); border-color:#b6d67a; box-shadow:0 1px 3px rgba(76,107,31,.14)}
+  .model.is-included .cat{color:#4c6b1f}
+  .model-tag{
+    align-self:flex-start; margin-top:5px; padding:2px 8px; border-radius:999px;
+    font:600 9px/1.6 "DM Mono",monospace; letter-spacing:.08em; text-transform:uppercase; font-style:normal;
+    background:#eceff0; color:#576159;
+  }
+  .model-tag.ship{background:#3f6a12; color:#f4fbe6}
+  .model-tag.here{background:#e7efe0; color:#41563a}
+
+  .legend{display:flex; flex-wrap:wrap; align-items:center; gap:8px 22px; margin:0 0 20px; font-size:12px; color:var(--muted)}
+  .legend > span{display:inline-flex; align-items:center; gap:8px}
+  .legend .model-tag{margin:0}
+
   /* Deux niveaux distincts : ce qui tourne dans le navigateur, puis ce que la
      version bureau ajoute. Les melanger laissait croire que tout se telecharge
      dans un onglet, y compris les modeles de 9 Go. */
   .tier-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin:0 0 14px}
   .tier-head b{font:600 10px "DM Mono",monospace; letter-spacing:.11em; text-transform:uppercase; color:#4c6b1f}
   .tier-head span{font-size:12.5px; color:var(--dim); line-height:1.5}
-  .desktop-tier{
-    margin-top:14px; border:1px dashed #cfd8bd; border-radius:var(--radius);
-    background:#fafbf4; padding:22px 24px;
-    display:grid; grid-template-columns:1.05fr 1fr auto; gap:26px; align-items:center;
-  }
-  .desktop-tier .tier-head{margin-bottom:8px}
-  .desktop-lede{margin:0; font-size:13px; line-height:1.6; color:var(--muted)}
-  .desktop-list{margin:0; padding:0; list-style:none; display:grid; gap:7px}
-  .desktop-list li{display:flex; gap:9px; font-size:12.5px; color:var(--muted); line-height:1.45}
-  .desktop-list li::before{content:"+"; flex:none; color:#8aa64a; font-weight:800}
-  .desktop-list b{color:var(--ink); font-weight:800}
+  .grid-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin:26px 0 12px}
+  .grid-head b{font:600 10px "DM Mono",monospace; letter-spacing:.11em; text-transform:uppercase; color:#4c6b1f}
+  .grid-head span{font-size:12px; color:var(--dim); line-height:1.5}
+  .desktop-tier{margin-top:34px; border-top:1px dashed #cfd8bd; padding-top:28px}
+  .desktop-lede{margin:0 0 18px; max-width:780px; font-size:13.5px; line-height:1.62; color:var(--muted)}
+  .lora-note{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:14px 0 0; font-size:12.5px; color:var(--muted)}
+  .lora-note b{color:var(--ink)}
+  .lora-note .model-tag{margin:0}
+  .tier-foot{margin-top:24px}
   @media (max-width:900px){
     .models{grid-template-columns:repeat(2,1fr)}
-    .desktop-tier{grid-template-columns:1fr; gap:18px}
   }
   @media (max-width:560px){
-    .models{grid-template-columns:1fr}
+    .models,.models.dense{grid-template-columns:1fr}
   }
 
   .privacy{display:grid; grid-template-columns:1.1fr .9fr; gap:40px; align-items:center}
@@ -1081,7 +1102,7 @@
       <div class="section-head reveal">
         <p class="mono">Catalogue</p>
         <h2>Des modèles choisis, pas une liste infinie.</h2>
-        <p>Un modèle retenu par usage, pas un catalogue déversé. Le navigateur s'arrête à 1,9 Go, ce qu'un onglet peut héberger ; la version bureau va beaucoup plus loin.</p>
+        <p>Chaque modèle est là pour un usage précis, et tient sur une machine grand public. Le navigateur s'arrête à 1,9 Go, la limite d'un onglet ; la version bureau ouvre le catalogue entier.</p>
       </div>
 
       <p class="mono hosted-models reveal" id="hosted-models">
@@ -1099,18 +1120,80 @@
         <div class="model"><p class="cat">Vision</p><b>SmolVLM2 500M</b><span>~1 Go · décrit une capture</span></div>
       </div>
 
-      <div class="desktop-tier reveal">
-        <div>
-          <div class="tier-head"><b>Dans la version bureau</b></div>
-          <p class="desktop-lede">Rien de tout cela ne se télécharge dans un onglet : le moteur tourne sur le GPU de la machine, sans la limite du navigateur.</p>
+      <div class="desktop-tier">
+        <div class="tier-head reveal">
+          <b>Dans la version bureau</b>
+          <span>Le même catalogue, sans la limite d'un onglet, cité modèle par modèle.</span>
         </div>
-        <ul class="desktop-list">
-          <li><b>38 modèles de texte</b>, du 135M au DeepSeek Coder V2, jusqu'à 9,7 Go</li>
-          <li><b>14 modèles d'image</b>, de 651 Mo à 5,6 Go, en 512 et 1024 px</li>
-          <li><b>Stable Diffusion 1.5 déjà installé</b> : l'image marche au premier lancement</li>
-          <li><b>Gravure SIMIA</b>, le LoRA maison de 6 Mo, entraîné sur 32 planches anciennes</li>
+        <p class="desktop-lede reveal">Le moteur tourne sur le GPU de la machine. Ce qui est déjà dans le paquet est marqué en vert ; tout le reste se récupère au premier usage, puis ne bouge plus.</p>
+        <div class="legend reveal">
+          <span><i class="model-tag ship">Fourni</i> déjà installé, rien à télécharger</span>
+          <span><i class="model-tag here">Hébergé ici</i> servi par ce site, sans CDN</span>
+          <span><i class="model-tag">À télécharger</i> la première fois seulement</span>
+        </div>
+
+        <div class="grid-head reveal"><b>Modèles de texte · 38</b><span>trois sont servis par ce site, les autres viennent d'un CDN</span></div>
+        <ul class="models dense reveal" id="desktop-text">
+          <li class="model"><p class="cat">Généraliste</p><b>Llama 3.2 1B</b><span>770 Mo</span><i class="model-tag here">Hébergé ici</i></li>
+          <li class="model"><p class="cat">Généraliste</p><b>Qwen 2.5 1.5B</b><span>1,0 Go</span><i class="model-tag here">Hébergé ici</i></li>
+          <li class="model"><p class="cat">Généraliste</p><b>Qwen 3.5 2B</b><span>1,2 Go</span><i class="model-tag here">Hébergé ici</i></li>
+          <li class="model"><p class="cat">Léger</p><b>SmolLM2 135M</b><span>101 Mo</span></li>
+          <li class="model"><p class="cat">Léger</p><b>SmolLM2 360M</b><span>369 Mo</span></li>
+          <li class="model"><p class="cat">Généraliste</p><b>Qwen 3 0.6B</b><span>378 Mo</span></li>
+          <li class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 0.5B</b><span>469 Mo</span></li>
+          <li class="model"><p class="cat">Léger</p><b>Qwen 2.5 0.5B</b><span>469 Mo</span></li>
+          <li class="model"><p class="cat">Généraliste</p><b>Qwen 3.5 0.8B</b><span>508 Mo</span></li>
+          <li class="model"><p class="cat">Léger</p><b>TinyLlama 1.1B</b><span>638 Mo</span></li>
+          <li class="model"><p class="cat">Léger</p><b>LFM2 1.2B</b><span>697 Mo</span></li>
+          <li class="model"><p class="cat">Écriture</p><b>Gemma 3 1B</b><span>769 Mo</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Granite 4.0 1B</b><span>859 Mo</span></li>
+          <li class="model"><p class="cat">Documents</p><b>OLMo 2 1B</b><span>892 Mo</span></li>
+          <li class="model"><p class="cat">Maths</p><b>Qwen 2.5 Math 1.5B</b><span>940 Mo</span></li>
+          <li class="model"><p class="cat">Généraliste</p><b>SmolLM2 1.7B</b><span>1,0 Go</span></li>
+          <li class="model"><p class="cat">Généraliste</p><b>Qwen 3 1.7B</b><span>1,0 Go</span></li>
+          <li class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 1.5B</b><span>1,0 Go</span></li>
+          <li class="model"><p class="cat">Écriture</p><b>Gemma 2 2B</b><span>1,6 Go</span></li>
+          <li class="model"><p class="cat">Généraliste</p><b>SmolLM3 3B</b><span>1,8 Go</span></li>
+          <li class="model"><p class="cat">Généraliste</p><b>Llama 3.2 3B</b><span>1,9 Go</span></li>
+          <li class="model"><p class="cat">Généraliste</p><b>Ministral 3 3B</b><span>2,0 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Qwen 2.5 3B</b><span>2,0 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Granite 4.0 Micro</b><span>2,0 Go</span></li>
+          <li class="model"><p class="cat">Maths</p><b>Ministral 3 3B Reasoning</b><span>2,0 Go</span></li>
+          <li class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 3B</b><span>2,0 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Phi-3.5 mini</b><span>2,2 Go</span></li>
+          <li class="model"><p class="cat">Maths</p><b>Phi-4 mini Reasoning</b><span>2,3 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Qwen 3 4B</b><span>2,3 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Phi-4 mini</b><span>2,3 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Qwen 3.5 4B</b><span>2,6 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Gemma 4 E2B</b><span>2,9 Go</span></li>
+          <li class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 7B</b><span>4,4 Go</span></li>
+          <li class="model"><p class="cat">Maths</p><b>DeepSeek R1 7B</b><span>4,4 Go</span></li>
+          <li class="model"><p class="cat">Maths</p><b>DeepSeek R1 0528 8B</b><span>4,7 Go</span></li>
+          <li class="model"><p class="cat">Documents</p><b>Qwen 3.5 9B</b><span>5,3 Go</span></li>
+          <li class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 14B</b><span>8,4 Go</span></li>
+          <li class="model"><p class="cat">Code</p><b>DeepSeek Coder V2 Lite</b><span>9,7 Go</span></li>
         </ul>
-        <a class="btn btn-ghost" href="#telecharger">Voir les téléchargements →</a>
+
+        <div class="grid-head reveal"><b>Modèles d'image · 14</b><span>512 et 1024 px · Stable Diffusion 1.5 est fourni</span></div>
+        <ul class="models dense reveal" id="desktop-image">
+          <li class="model is-included"><p class="cat">Image · 512 px</p><b>Stable Diffusion 1.5</b><span>1,46 Go</span><i class="model-tag ship">Fourni</i></li>
+          <li class="model"><p class="cat">Image · 512 px</p><b>SDXS 512</b><span>651 Mo</span></li>
+          <li class="model"><p class="cat">Image · 512 px</p><b>Anything V5</b><span>1,46 Go</span></li>
+          <li class="model"><p class="cat">Image · 512 px</p><b>SD 1.5 · Gravure SIMIA</b><span>1,46 Go + 7 Mo</span></li>
+          <li class="model"><p class="cat">Image · 512 px</p><b>DreamShaper 8 LCM</b><span>1,46 Go</span></li>
+          <li class="model"><p class="cat">Image · 512 px</p><b>SD-Turbo</b><span>1,72 Go</span></li>
+          <li class="model"><p class="cat">Image · 1024 px</p><b>SDXL Lightning</b><span>2,41 Go</span></li>
+          <li class="model"><p class="cat">Image · 1024 px</p><b>WAI-illustrious</b><span>2,55 Go</span></li>
+          <li class="model"><p class="cat">Image · 1024 px</p><b>Pony Diffusion V6 XL</b><span>2,61 Go</span></li>
+          <li class="model"><p class="cat">Image · 1024 px</p><b>DreamShaper XL Turbo</b><span>2,61 Go</span></li>
+          <li class="model"><p class="cat">Image · 1024 px</p><b>SDXL Turbo</b><span>3,67 Go</span></li>
+          <li class="model"><p class="cat">Image · 1024 px</p><b>SDXL base 1.0</b><span>3,67 Go</span></li>
+          <li class="model"><p class="cat">Image · 1024 px</p><b>Pony Diffusion V6 XL · Q8</b><span>3,89 Go</span></li>
+          <li class="model"><p class="cat">Z-Image · 1024 px</p><b>Z-Image Turbo</b><span>5,57 Go</span></li>
+        </ul>
+
+        <p class="lora-note reveal"><i class="model-tag ship">Fourni</i><b>Gravure SIMIA</b>, le LoRA maison de 6 Mo entraîné sur 32 planches anciennes, accompagne Stable Diffusion 1.5.</p>
+        <div class="tier-foot reveal"><a class="btn btn-ghost" href="#telecharger">Voir les téléchargements →</a></div>
       </div>
     </div>
   </section>
