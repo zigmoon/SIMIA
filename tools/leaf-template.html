@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Feuille SIMIA — rendu PNG</title>
+<style>
+  /* Gabarit de la feuille decorative. Rendu par navigateur sur fond
+     transparent, puis enregistre en PNG : la landing n'embarque qu'une image,
+     sans dependance a un SVG inline ni a une police. */
+  html, body { margin:0; padding:0; background:transparent; }
+  #stage { width:520px; height:760px; display:block; }
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 520 760" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="blade" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0%"   stop-color="#c2d39a"/>
+      <stop offset="42%"  stop-color="#9bb76c"/>
+      <stop offset="78%"  stop-color="#7fa84e"/>
+      <stop offset="100%" stop-color="#5f8220"/>
+    </linearGradient>
+    <linearGradient id="vein" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#f2f8e6" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#c2d39a" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#8fae5c"/>
+      <stop offset="100%" stop-color="#4c6b1f"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Tige : demarre en haut, se courbe vers le bas du limbe. -->
+  <path d="M262 6 C 258 120, 250 210, 252 300 C 254 400, 250 470, 244 512"
+        fill="none" stroke="url(#stem)" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Limbe : feuille lanceolee, pointe en bas, petiole en haut. -->
+  <path d="M252 96
+           C 330 150, 396 254, 400 372
+           C 404 470, 350 560, 262 664
+           C 176 566, 120 470, 122 372
+           C 126 250, 192 148, 252 96 Z"
+        fill="url(#blade)"/>
+
+  <!-- Nervure centrale. -->
+  <path d="M260 110 C 262 260, 260 470, 259 640"
+        fill="none" stroke="url(#vein)" stroke-width="3.4" stroke-linecap="round" stroke-opacity="0.85"/>
+
+  <!-- Nervures secondaires, symetriques par rapport a la nervure centrale. -->
+  <g fill="none" stroke="url(#vein)" stroke-width="2.1" stroke-linecap="round" stroke-opacity="0.62">
+    <path d="M259 190 C 300 210, 336 244, 360 288"/>
+    <path d="M259 190 C 218 210, 182 244, 158 288"/>
+    <path d="M259 268 C 306 290, 350 330, 374 380"/>
+    <path d="M259 268 C 212 290, 168 330, 144 380"/>
+    <path d="M259 346 C 306 368, 346 408, 362 456"/>
+    <path d="M259 346 C 212 368, 172 408, 156 456"/>
+    <path d="M258 424 C 296 444, 326 478, 336 516"/>
+    <path d="M258 424 C 220 444, 190 478, 180 516"/>
+    <path d="M259 498 C 282 516, 300 542, 304 570"/>
+    <path d="M259 498 C 236 516, 218 542, 214 570"/>
+  </g>
+
+  <!-- Reflet haut : evite l'aplat uniforme sur fond clair. -->
+  <path d="M252 96 C 320 148, 380 240, 392 340 C 350 214, 306 156, 252 96 Z"
+        fill="#ffffff" fill-opacity="0.20"/>
+
+  <!-- Petit rameau detache, pour le mouvement pendant le defilement. -->
+  <g opacity="0.9">
+    <path d="M404 600 C 436 588, 462 596, 476 616" fill="none" stroke="#8fae5c" stroke-width="4" stroke-linecap="round"/>
+    <path d="M476 616 C 460 632, 434 632, 418 618 C 434 606, 458 604, 476 616 Z" fill="url(#blade)" opacity="0.85"/>
+  </g>
+</svg>
+</body>
+</html>

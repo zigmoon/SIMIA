@@ -521,6 +521,35 @@
   .release-row{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; font-size:12.5px; color:var(--muted)}
   .release-row a{font-weight:800; text-decoration:none; color:var(--ink)}
   .release-row a:hover{text-decoration:underline}
+  /* Pastilles de systemes : une version ancienne peut ne pas couvrir toutes les
+     cibles. Ce qui est compile est en vert, ce qui manque reste en gris clair,
+     plutot que d'etre masque. */
+  .release-tags{display:inline-flex; flex-wrap:wrap; gap:4px; margin-left:auto}
+  .release-tag{padding:2px 7px; border:1px solid #d8e2c0; border-radius:999px; background:#f2f8e6; color:#4c6b1f; font:700 9px "DM Mono",monospace; letter-spacing:.04em; white-space:nowrap}
+  .release-tag.is-missing{border-color:#e7e6df; background:transparent; color:#a4aba4; font-weight:500; text-decoration:line-through}
+  .release-when{min-width:74px; text-align:right; color:var(--dim); font:500 10.5px "DM Mono",monospace}
+  @media (max-width:560px){
+    .release-row{gap:4px 8px}
+    .release-tags{margin-left:0; order:3; width:100%}
+    .release-when{margin-left:auto}
+  }
+
+  /* Feuille decorative : elle accompagne le defilement sur grand ecran, glisse
+     le long de la marge droite et rejoint le pied de page. Fixe et sans
+     evenement, donc aucun impact sur la mise en page ni sur le scroll.
+     Le z-index est positif : en negatif, Chromium ne peignait pas la couche
+     au-dessus du fond de page et la feuille restait invisible. La largeur est
+     bornee pour qu'elle tienne entierement dans la marge, sans jamais passer
+     sur le texte des cartes. */
+  .leaf-layer{position:fixed; inset:0; z-index:2; display:none; pointer-events:none; overflow:hidden}
+  .leaf-scroll{
+    position:absolute; right:clamp(10px,1.1vw,36px); top:76vh;
+    width:clamp(88px,7vw,168px); height:auto;
+    opacity:0; will-change:transform,opacity;
+    filter:drop-shadow(0 16px 30px rgba(29,37,34,.10));
+  }
+  .leaf-layer.is-on{display:block}
+  @media (prefers-reduced-motion:reduce){ .leaf-layer{display:none} }
   .releases-offline{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
   .releases-offline a{color:var(--ink); font-weight:800}
 
@@ -949,7 +978,7 @@
       <div class="section-head reveal">
         <p class="mono">Téléchargements</p>
         <h2>Choisissez votre système.</h2>
-        <p>Chaque paquet contient le lanceur, le moteur d'inférence et l'interface. Sauf sur Mac Intel, où le moteur d'images de l'amont n'est publié que pour Apple Silicon, un modèle d'image est déjà installé (SD 1.5, 1,46 Go) : le bouton Image fonctionne dès le premier lancement, sans second téléchargement. Aucun droit administrateur n'est nécessaire : l'application s'installe dans un dossier et se lance d'un double-clic. Les liens pointent toujours vers la dernière version publiée sur GitHub.</p>
+        <p>Lanceur, moteur d'inférence et interface dans un seul dossier, sans droit administrateur. Un modèle d'image est déjà installé, sauf sur Mac Intel. Les liens pointent vers la dernière version publiée.</p>
       </div>
 
       <div class="downloads">
@@ -961,7 +990,7 @@
             </div>
             <span class="tag-soon">10 / 11</span>
           </div>
-          <p class="req">Windows 10 ou 11 en 64 bits. Carte graphique Vulkan recommandée (NVIDIA, AMD, Intel) ; repli automatique sur le processeur.</p>
+          <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
             <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
@@ -976,7 +1005,7 @@
             </div>
             <span class="tag-soon">13.3+</span>
           </div>
-          <p class="req">macOS 13.3 (Ventura) ou plus récent : le moteur de conversation est compilé pour cette version. La génération d'images demande macOS 26, et il n'existe de moteur d'images que pour Apple Silicon.</p>
+          <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
             <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
             <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
@@ -992,7 +1021,7 @@
             </div>
             <span class="tag-soon">x86_64</span>
           </div>
-          <p class="req">Ubuntu 22.04 ou plus récent, Vulkan recommandé et repli processeur. Le lanceur demande glibc 2.34 ; la génération d'images demande glibc 2.43, donc Ubuntu 26.04 ou une distribution aussi récente.</p>
+          <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
             <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
@@ -1020,7 +1049,7 @@
       <div class="section-head reveal">
         <p class="mono">Catalogue</p>
         <h2>Des modèles choisis, pas une liste infinie.</h2>
-        <p>Chaque modèle est sélectionné pour tenir sur une machine grand public, puis téléchargé une seule fois. Trois d'entre eux sont hébergés directement ici et se téléchargent donc sans passer par un service tiers ; les autres viennent d'un CDN.</p>
+        <p>Chaque modèle tient sur une machine grand public et ne se télécharge qu'une seule fois. Trois d'entre eux sont hébergés ici même, les autres viennent d'un CDN.</p>
       </div>
 
       <p class="mono hosted-models reveal" id="hosted-models">
@@ -1176,6 +1205,13 @@
   </section>
 
 </main>
+
+<!-- Feuille decorative : purement visuelle, masquee aux lecteurs d'ecran et
+     au-dela du point de rupture desktop. Le PNG est rendu depuis
+     tools/leaf-template.html pour rester dans la palette du site. -->
+<div class="leaf-layer" id="leaf-layer" aria-hidden="true">
+  <img class="leaf-scroll" id="leaf-scroll" src="leaf-simia.png" alt="" width="352" height="640" decoding="async">
+</div>
 
 <footer>
   <div class="wrap">
@@ -1632,9 +1668,28 @@
           <span>${escapeHtml(assetLabel(asset.name))}</span><small>${formatSize(asset.size)}</small>
         </a>`).join("");
 
+      /* Chaque version passee rappelle les systemes reellement compiles : sans
+         ces pastilles, on ne savait pas si une release ancienne couvrait encore
+         Linux ou restait bloquee sur Windows. Une cible absente est signalee
+         en creux, ce qui explique aussi une archive de quelques mega-octets. */
+      const shortLabel = name => {
+        if (name.includes("windows")) return "Windows";
+        if (name.includes("macos-arm64")) return "macOS ARM";
+        if (name.includes("macos-x64")) return "macOS Intel";
+        if (name.includes("linux")) return "Linux";
+        return "";
+      };
+      const releasePills = release => {
+        const built = new Set((release.assets || []).map(asset => shortLabel(asset.name)).filter(Boolean));
+        return ["Windows", "macOS ARM", "macOS Intel", "Linux"]
+          .map(label => `<span class="release-tag${built.has(label) ? "" : " is-missing"}">${escapeHtml(label)}</span>`)
+          .join("");
+      };
+
       const previous = releases.slice(1).map(release => `<li class="release-row">
           <a href="${release.html_url}" target="_blank" rel="noopener">${escapeHtml(release.tag_name || release.name)}</a>
-          <span>${relativeDate(release.published_at)}</span>
+          <span class="release-tags">${releasePills(release)}</span>
+          <span class="release-when">${relativeDate(release.published_at)}</span>
         </li>`).join("");
 
       releasesBody.innerHTML = `
@@ -1710,6 +1765,66 @@
   } else {
     revealAll();
   }
+
+  /* ---------- feuille decorative qui suit le defilement ---------- */
+  /* Elle part de la hauteur de l'apercu de l'interface et accompagne le
+     visiteur jusqu'au pied de page, le long de la marge droite. La position
+     est interpolee a partir du defilement reel, donc elle ne derive pas quand
+     une section change de hauteur. Rien n'est calcule sur les ecrans etroits
+     ni si le visiteur a demande moins d'animation. */
+  (() => {
+    const layer = document.getElementById("leaf-layer");
+    const leaf = document.getElementById("leaf-scroll");
+    const mock = document.querySelector(".hero-visual .mock") || document.querySelector(".mock");
+    const pageFooter = document.querySelector("footer");
+    if (!layer || !leaf || !mock || !pageFooter) return;
+
+    const desktop = window.matchMedia("(min-width: 1366px)");
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const clamp01 = value => (value < 0 ? 0 : value > 1 ? 1 : value);
+
+    const paint = () => {
+      if (!desktop.matches || calm.matches) {
+        layer.classList.remove("is-on");
+        leaf.style.opacity = "0";
+        return;
+      }
+      layer.classList.add("is-on");
+      const viewport = window.innerHeight || 1;
+      const scroll = window.scrollY || window.pageYOffset || 0;
+      const mockBottom = mock.getBoundingClientRect().bottom + scroll;
+      const footerTop = pageFooter.getBoundingClientRect().top + scroll;
+      // Debut quand l'apercu sort par le bas, fin quand le pied arrive.
+      const start = mockBottom - viewport * 0.55;
+      const end = footerTop - viewport * 0.30;
+      const span = Math.max(1, end - start);
+      const progress = clamp01((scroll - start) / span);
+
+      // Le trajet : sous l'interface (76 vh) puis jusqu'au pied (26 vh).
+      const top = 76 - progress * 50;
+      const drift = Math.sin(progress * Math.PI) * 22;
+      const angle = -10 + progress * 20;
+      // Apparition franche des les premiers pixels de defilement.
+      const opacity = clamp01(progress / 0.06);
+
+      leaf.style.top = `${top.toFixed(2)}vh`;
+      leaf.style.transform = `translate3d(${drift.toFixed(1)}px, 0, 0) rotate(${angle.toFixed(1)}deg)`;
+      leaf.style.opacity = opacity.toFixed(3);
+    };
+
+    /* Peinture directe : requestAnimationFrame ne se declenche jamais dans un
+       onglet en arriere-plan, et la feuille resterait figee au retour. Les
+       evenements de defilement sont deja alignes sur la frame par le
+       navigateur, et ce calcul se limite a deux rectangles. */
+    window.addEventListener("scroll", paint, { passive: true });
+    window.addEventListener("resize", paint, { passive: true });
+    window.addEventListener("load", paint);
+    if (desktop.addEventListener) {
+      desktop.addEventListener("change", paint);
+      calm.addEventListener("change", paint);
+    }
+    paint();
+  })();
 </script>
 </body>
 </html>
