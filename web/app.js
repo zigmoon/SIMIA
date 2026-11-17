@@ -5480,18 +5480,36 @@ function renderModelLibrary() {
     card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(custom.libraryCategory)}</p><span class="model-badge">${escapeHtml(localizedText("ACTIF", "ACTIVE", "ACTIVO"))}</span></div><div><h3>${escapeHtml(state.customModel.name)}</h3><p>${escapeHtml(custom.libraryDescription(base?.name || state.customModel.baseModelId, state.customModel.instructions.length))}</p></div><div class="model-card-footer"><span>${escapeHtml(base?.size || "")}</span><button type="button" data-custom-model="edit">${escapeHtml(localizedText("Modifier", "Edit", "Modificar"))}</button></div>`;
     customCards.push(card);
   }
-  const imageCards = !showImage ? [] : state.imagePacks.map(pack => {
+  /* Ordre de lecture : ce qui est deja pret d'abord, ce qui reste a recuperer
+     ensuite. Un separateur annonce chaque groupe, pour qu'on ne confonde pas
+     un modele livre avec un modele a telecharger. */
+  const packRank = pack => (pack.bundled ? 0 : pack.local ? 1 : 2);
+  const orderedPacks = showImage
+    ? [...state.imagePacks].sort((a, b) => packRank(a) - packRank(b) || Number(b.recommended) - Number(a.recommended))
+    : [];
+  const groupTitle = rank => rank === 0
+    ? localizedText("Fournis avec SIMIA", "Shipped with SIMIA", "Incluidos con SIMIA", "SIMIA 同梱")
+    : rank === 1
+      ? localizedText("Déjà sur votre disque", "Already on your disk", "Ya en tu disco", "この PC に保存済み")
+      : localizedText("À télécharger depuis un CDN", "To download from a CDN", "Para descargar desde un CDN", "CDN からダウンロード");
+  let shownRank = -1;
+  const imageCards = !showImage ? [] : orderedPacks.flatMap(pack => {
     const active = pack.id === state.imagePackId;
     const ready = Boolean(pack.local);
     const size = `${pack.bytes ? `~${(pack.bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : pack.size} · ${pack.px}px/${pack.steps} ${localizedText("pas", "steps", "pasos", "ステップ")}`;
     const card = document.createElement("article");
-    card.className = `model-card image-card${active ? " selected" : ""}${ready ? "" : " remote"}${pack.recommended ? " recommended" : ""}`;
+    /* Trois familles, trois aspects distincts : ce que SIMIA installe lui-meme
+       (accent vert plein), ce qui est deja sur le disque, et ce qu'il reste a
+       recuperer. Sans cette difference, une carte « fournie » et une carte
+       « a telecharger » se ressemblaient au premier regard. */
+    const family = pack.bundled ? "family-bundled" : ready ? "family-local" : "family-remote";
+    card.className = `model-card image-card ${family}${active ? " selected" : ""}${pack.recommended ? " recommended" : ""}${ready ? "" : " remote"}`;
     const badge = !ready
       ? pack.downloadable
         ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>`
         : `<span class="model-badge model-badge-download">${escapeHtml(localizedText("MANUEL", "MANUAL", "MANUAL", "手動"))}</span>`
       : pack.bundled
-        ? `<span class="model-badge">${escapeHtml(localizedText("INCLUS D'ORIGINE", "INCLUDED", "INCLUIDO", "同梱"))}</span>`
+        ? `<span class="model-badge model-badge-bundled">${escapeHtml(localizedText("FOURNI AVEC SIMIA", "SHIPPED WITH SIMIA", "INCLUIDO", "同梱"))}</span>`
       : pack.recommended
         ? `<span class="model-badge">${escapeHtml(localizedText("RECOMMANDÉ", "RECOMMENDED", "RECOMENDADO", "おすすめ"))}</span>`
         : `<span class="model-origin model-origin-local">${escapeHtml(localizedText("SUR LE DISQUE", "ON DISK", "EN EL DISCO", "ローカル"))}</span>`;
@@ -5504,9 +5522,28 @@ function renderModelLibrary() {
       ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("STYLE SIMIA", "SIMIA STYLE", "ESTILO SIMIA", "SIMIA スタイル"))}</span>`
       : "";
     card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(pack.note || "")}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${downloadBlock(pack.id)}`;
-    return card;
+    const rank = packRank(pack);
+    const separator = rank === shownRank ? [] : (() => {
+      shownRank = rank;
+      const heading = document.createElement("p");
+      heading.className = `model-group-head group-${rank}`;
+      heading.textContent = groupTitle(rank);
+      return [heading];
+    })();
+    return [...separator, card];
   });
   const oversized = NATIVE ? [] : MODELS.filter(model => !modelNeedsUnavailableFeature(model) && modelSizeMB(model) > WEB_MAX_MODEL_MB);
+  /* La possibilite d'ajouter ses propres poids existait deja — le lanceur
+     scanne models/ — mais rien ne l'annoncait dans l'interface. Un fichier
+     depose la main apparait dans cette liste sous son nom de fichier. */
+  const ownModelCard = !NATIVE
+    ? []
+    : [(() => {
+        const card = document.createElement("article");
+        card.className = "model-card add-model-card";
+        card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("VOTRE CATALOGUE", "YOUR CATALOG", "TU CATÁLOGO", "あなたのカタログ"))}</p><span class="model-origin model-origin-local">${escapeHtml(localizedText("LIBRE", "OPEN", "LIBRE", "自由"))}</span></div><div><h3>${escapeHtml(localizedText("Ajouter un modèle", "Add a model", "Añadir un modelo", "モデルを追加"))}</h3><p>${escapeHtml(localizedText("Déposez n'importe quel fichier .gguf dans le dossier models/ de SIMIA, puis relancez : il apparaît ici sous son nom de fichier et se charge comme les autres. Aucun catalogue à modifier.", "Drop any .gguf file into SIMIA's models/ folder, then restart: it appears here under its filename and loads like the others. No catalogue to edit.", "Coloca cualquier archivo .gguf en la carpeta models/ de SIMIA y reinicia: aparece aquí con su nombre de archivo y se carga como los demás. Sin editar ningún catálogo.", "任意の .gguf を SIMIA の models/ に置いて再起動すると、ここにファイル名で表示され、他のモデルと同じように読み込まれます。"))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("models/ sur ce disque", "models/ on this disk", "models/ en este disco", "この PC の models/"))}</span><button type="button" data-open-models-folder>${escapeHtml(localizedText("Ouvrir le dossier", "Open folder", "Abrir carpeta", "フォルダーを開く"))}</button></div>`;
+        return card;
+      })()];
   const desktopCard = !oversized.length || state.modelFilter !== "all"
     ? []
     : [(() => {
@@ -5532,7 +5569,41 @@ function renderModelLibrary() {
     card.className = `model-card${active ? " selected" : ""}${model.recommended ? " recommended" : ""}${remote ? " remote" : ""}`;
     card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(model.size)}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(active ? text.selected : remote ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード") : text.choose)}</button></div>${downloadBlock(model.id)}`;
     return card;
-  }), ...desktopCard);
+  }), ...ownModelCard, ...desktopCard);
+  /* Resume chiffre : « 1 fourni · 2 sur votre disque · 8 a telecharger ». Sans
+     ce decompte, il fallait compter les badges un par un pour savoir ou l'on
+     en etait. */
+  const summary = document.querySelector("#model-summary");
+  if (summary) {
+    if (!showImage) {
+      const localCount = MODELS.filter(model => model.nativeLocal).length;
+      const remoteCount = NATIVE ? MODELS.length - localCount : 0;
+      summary.textContent = NATIVE
+        ? localizedText(
+            `${localCount} modèle(s) sur ce disque · ${remoteCount} à télécharger · ${MODELS.length} au catalogue`,
+            `${localCount} model(s) on this disk · ${remoteCount} to download · ${MODELS.length} in the catalogue`,
+            `${localCount} modelo(s) en este disco · ${remoteCount} para descargar · ${MODELS.length} en el catálogo`,
+            `この PC に ${localCount} · ダウンロード待ち ${remoteCount} · カタログ ${MODELS.length}`
+          )
+        : localizedText(
+            `${MODELS.length} modèles proposés · la version desktop en compte 38 et accepte vos propres fichiers`,
+            `${MODELS.length} models available · the desktop version has 38 and accepts your own files`,
+            `${MODELS.length} modelos disponibles · la versión de escritorio tiene 38 y acepta tus archivos`,
+            `${MODELS.length} 個のモデル · デスクトップ版は 38 個と独自ファイルに対応`
+          );
+    } else {
+      const bundled = state.imagePacks.filter(pack => pack.bundled).length;
+      const onDisk = state.imagePacks.filter(pack => pack.local && !pack.bundled).length;
+      const toFetch = state.imagePacks.filter(pack => !pack.local).length;
+      summary.textContent = localizedText(
+        `${bundled} fourni · ${onDisk} déjà téléchargé(s) · ${toFetch} à récupérer sur ${state.imagePacks.length}`,
+        `${bundled} shipped · ${onDisk} already downloaded · ${toFetch} to fetch out of ${state.imagePacks.length}`,
+        `${bundled} incluido · ${onDisk} ya descargado(s) · ${toFetch} por recuperar de ${state.imagePacks.length}`,
+        `同梱 ${bundled} · 取得済み ${onDisk} · 未取得 ${toFetch} / 全 ${state.imagePacks.length}`
+      );
+    }
+    summary.hidden = !summary.textContent;
+  }
   if (!customCards.length && !visibleModels.length && !imageCards.length && !desktopCard.length) {
     const empty = document.createElement("p");
     empty.className = "model-cards-empty";
@@ -6377,6 +6448,20 @@ ui.modelLibrary.addEventListener("click", event => {
   const packDownload = event.target.closest("button[data-image-pack-download]");
   if (packDownload) {
     downloadImagePack(packDownload.dataset.imagePackDownload);
+    return;
+  }
+  const openFolder = event.target.closest("button[data-open-models-folder]");
+  if (openFolder) {
+    openFolder.disabled = true;
+    fetch(new URL("/_simia/open-models", location.href).href, { method: "POST" })
+      .then(response => response.json())
+      .then(payload => {
+        toast(payload?.error
+          ? localizedText("Impossible d'ouvrir le dossier. Chemin : models/ à côté de l'application.", "Could not open the folder. Path: models/ next to the application.", "No se pudo abrir la carpeta. Ruta: models/ junto a la aplicación.", "フォルダーを開けませんでした。アプリと同じ場所の models/ です。")
+          : localizedText(`Dossier ouvert : ${payload.path}`, `Folder opened: ${payload.path}`, `Carpeta abierta: ${payload.path}`, `フォルダーを開きました: ${payload.path}`), payload?.error ? "error" : "info");
+      })
+      .catch(() => toast(localizedText("Impossible d'ouvrir le dossier.", "Could not open the folder.", "No se pudo abrir la carpeta.", "フォルダーを開けませんでした。"), "error"))
+      .finally(() => { openFolder.disabled = false; });
     return;
   }
   const packChoice = event.target.closest("button[data-image-pack]");

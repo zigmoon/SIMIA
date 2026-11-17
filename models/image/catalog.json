@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "packs": [
     {
       "id": "sd-turbo",
@@ -135,6 +135,47 @@
       "px": 512,
       "model": "anything-v5/anything-v5.q4_0.gguf",
       "url": "https://huggingface.co/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf"
+    },
+    {
+      "id": "pony-xl",
+      "name": "Pony Diffusion V6 XL",
+      "mode": "checkpoint",
+      "size": "~2,61 GB",
+      "license": "CreativeML OpenRAIL-M",
+      "note": "Le SDXL d'illustration le plus utilise de la communaute : personnages, styles graphiques, scenes detaillees. 1024 px, 25 pas, CFG 7. Il attend des prefixes de qualite devant le prompt, ajoutes automatiquement.",
+      "steps": 25,
+      "cfg": 7.0,
+      "px": 1024,
+      "promptPrefix": "score_9, score_8_up, score_7_up",
+      "model": "pony-xl/pony-diffusion-v6-xl-Q4_K.gguf",
+      "url": "https://huggingface.co/off-grid-ai/pony-diffusion-v6-xl-GGUF/resolve/main/pony-diffusion-v6-xl-Q4_K.gguf"
+    },
+    {
+      "id": "pony-xl-q8",
+      "name": "Pony Diffusion V6 XL · Q8",
+      "mode": "checkpoint",
+      "size": "~3,89 GB",
+      "license": "CreativeML OpenRAIL-M",
+      "note": "La meme chose en quantification Q8 : memoire plus fidele, visages et details plus nets, au prix de 1,3 Go de plus sur le disque et en VRAM. A choisir si vous avez 8 Go de memoire graphique.",
+      "steps": 25,
+      "cfg": 7.0,
+      "px": 1024,
+      "promptPrefix": "score_9, score_8_up, score_7_up",
+      "model": "pony-xl-q8/pony-diffusion-v6-xl-Q8_0.gguf",
+      "url": "https://huggingface.co/off-grid-ai/pony-diffusion-v6-xl-GGUF/resolve/main/pony-diffusion-v6-xl-Q8_0.gguf"
+    },
+    {
+      "id": "wai-illustrious",
+      "name": "WAI-illustrious",
+      "mode": "checkpoint",
+      "size": "~2,55 GB",
+      "license": "Fair AI Public License",
+      "note": "Specialise illustration et style anime, dans la lignee d'Illustrious : 1024 px, 28 pas, CFG 5. Plus stable qu'Anything V5 en 512 px, et deux fois moins gourmand que SDXL base.",
+      "steps": 28,
+      "cfg": 5.0,
+      "px": 1024,
+      "model": "wai-illustrious/wai-illustrious-v170-Q8_0.gguf",
+      "url": "https://huggingface.co/nuupy/WAI-illustrious-SDXL-GGUF/resolve/main/WAI-illustrious-SDXL-v170-Q8_0.gguf"
     },
     {
       "id": "z-image-turbo",

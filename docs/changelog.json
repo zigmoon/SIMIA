@@ -1,6 +1,15 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.11": {
+      "title": "Trois modeles d'image de plus, et une bibliotheque qui se lit d'un coup d'oeil",
+      "highlights": [
+        "Trois nouveaux packs d'image, tous en 1024 px et telecharges depuis un CDN : Pony Diffusion V6 XL (2,61 Go), sa variante Q8 (3,89 Go) et WAI-illustrious (2,55 Go). Mesure sur une RTX 2060 : 41,4 s par image avec Pony en 25 pas.",
+        "La bibliotheque separe enfin ce qui est fourni, ce qui est deja sur votre disque et ce qui reste a recuperer : trois groupes annonces, trois aspects de carte differents, et une ligne de decompte en haut (« 1 fourni · 8 deja telecharge · 5 a recuperer »).",
+        "Une carte « Ajouter un modele » explique qu'on peut deposer n'importe quel .gguf dans models/ et ouvre le dossier d'un clic. Le lanceur decouvrait deja ces fichiers, mais rien ne le disait.",
+        "Le modele fourni avec l'archive porte le badge « fourni avec SIMIA » au lieu d'etre noye parmi les autres."
+      ]
+    },
     "0.1.10": {
       "title": "Fenetre des modeles reparee, defauts clarifies",
       "highlights": [

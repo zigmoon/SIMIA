@@ -248,6 +248,9 @@ Les packs d'images mesurés sur une RTX 2060 6 Go, à chaud :
 | **Gravure SIMIA** | 1,46 Go + LoRA 6 Mo | 512 px | ~2 s | CreativeML OpenRAIL-M |
 | SDXL Turbo | 3,67 Go | 1024 px | 6,1 s (15 s à froid) | Stability Community |
 | SDXL base | 3,67 Go | 1024 px | 57,3 s | CreativeML OpenRAIL++-M |
+| Pony Diffusion V6 XL Q4_K | 2,61 Go | 1024 px | 41,4 s (78 s à froid) | CreativeML OpenRAIL-M |
+| Pony Diffusion V6 XL Q8_0 | 3,89 Go | 1024 px | à mesurer | CreativeML OpenRAIL-M |
+| WAI-illustrious v170 Q8_0 | 2,55 Go | 1024 px | à mesurer | Fair AI Public License |
 | Z-Image Turbo | 5,57 Go | 1024 px | 37,5 s | Apache-2.0 |
 
 **Gravure SIMIA** est un LoRA entraîné sur cette machine à partir de 32 planches

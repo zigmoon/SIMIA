@@ -2279,6 +2279,32 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
         return;
     }
 
+    /* Ouvre le dossier models/ dans le gestionnaire de fichiers du systeme.
+       L'utilisateur peut y deposer n'importe quel .gguf : le lanceur le
+       decouvre au prochain demarrage, sans passer par le catalogue. */
+    if path == "/_simia/open-models" {
+        let dir = match state.lock() {
+            Ok(guard) => guard.models_dir.clone(),
+            Err(_) => PathBuf::new(),
+        };
+        if dir.as_os_str().is_empty() {
+            respond_json(request, 500, "{\"error\":\"dossier inconnu\"}".to_string());
+            return;
+        }
+        let _ = fs::create_dir_all(&dir);
+        #[cfg(target_os = "windows")]
+        let opener = Command::new("explorer").arg(&dir).spawn();
+        #[cfg(target_os = "macos")]
+        let opener = Command::new("open").arg(&dir).spawn();
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let opener = Command::new("xdg-open").arg(&dir).spawn();
+        match opener {
+            Ok(_) => respond_json(request, 200, format!("{{\"path\":{}}}", js_escape(&dir.display().to_string()))),
+            Err(error) => respond_json(request, 500, format!("{{\"error\":{}}}", js_escape(&error.to_string()))),
+        }
+        return;
+    }
+
     if path == "/_simia/image/prepare" {
         let status = start_image(&state);
         respond_json(request, 200, image_status_json(&state));
