@@ -536,22 +536,28 @@
 
   /* Feuilles decoratives : deux canevas fixes dans la marge droite. Le dessin,
      la deformation et le flou sont recalcules image par image ; la mise en page
-     n'est jamais touchee. Le z-index est positif : en negatif, Chromium ne
-     peignait pas la couche au-dessus du fond de page. La largeur du canevas est
-     celle de la gouttiere, si bien que rien ne peut deborder sur le texte. */
+     n'est jamais touchee.
+     Deux points importants.
+     — Le z-index est 0 et le contenu est au-dessus : la feuille passe donc
+       DERRIERE les cartes, qui ont un fond opaque. Elle glisse dans les
+       interstices et disparait sous les blocs, comme l'objet d'une page
+       produit. C'etait impossible avec une couche au-dessus du contenu.
+     — La boite du canevas est large (jusqu'a 520 px) et ancre a droite, alors
+       que la feuille est dessinee plus petite a l'interieur. Elle peut donc
+       grandir et rapetisser sans jamais rogner son propre dessin. Le texte des
+       sections s'arrete a 62 caractere, bien avant : la feuille ne passe
+       jamais derriere une ligne de texte. */
   .leaf-layer{
-    position:fixed; inset:0; z-index:2; display:none; pointer-events:none;
-    overflow:hidden; --leaf-w:min(300px,calc((100vw - 1128px)/2));
+    position:fixed; inset:0; z-index:0; display:none; pointer-events:none;
+    overflow:hidden; --leaf-box:clamp(440px,42vw,760px);
   }
   .leaf-layer.is-on{display:block}
-  .leaf-prop{
-    position:absolute; top:0; right:6px; opacity:0;
-    transform-origin:50% 50%; will-change:transform,opacity,filter;
-  }
+  .leaf-prop{position:absolute; top:0; right:0; opacity:0; will-change:transform,opacity,filter}
   .leaf-prop canvas{display:block; width:100%; height:100%}
-  #leaf-main{width:var(--leaf-w); height:calc(var(--leaf-w)*1.44)}
-  #leaf-back{width:calc(var(--leaf-w)*.6); height:calc(var(--leaf-w)*.86)}
-  .leaf-static{width:var(--leaf-w); height:auto}
+  #leaf-main{width:var(--leaf-box); height:calc(var(--leaf-box)*1.44)}
+  #leaf-back{width:calc(var(--leaf-box)*.78); height:calc(var(--leaf-box)*1.44*.80)}
+  .leaf-static{width:var(--leaf-box); height:auto}
+  main, footer{position:relative; z-index:1}
   .releases-offline{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
   .releases-offline a{color:var(--ink); font-weight:800}
 
@@ -1814,7 +1820,7 @@
       const resize = () => {
         const w = canvas.offsetWidth, h = canvas.offsetHeight;
         if (!w || !h) return;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
         const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
         if (canvas.width !== pw || canvas.height !== ph) {
           canvas.width = pw;
@@ -1828,11 +1834,19 @@
         if (!W) resize();
         if (!W) return;
 
-        const cx = W * 0.5;
-        const baseY = H * 0.90;
-        const span = H * 0.855;
+        /* La feuille est dessinee a une fraction de la boite : c'est ce qui lui
+           permet de grandir et de rapetisser sans que le canevas change de
+           taille, donc sans jamais rogner le dessin. La position horizontale
+           vient de l'appelant, qui la cale sur le bord de la colonne : ainsi la
+           moitie gauche passe sous les cartes et la moitie droite reste dans la
+           marge, quelle que soit la largeur de la fenetre. */
+        const size = s.size === undefined ? 1 : clamp01(s.size);
+        const cx = W * (s.cx === undefined ? 0.60 : clamp01(s.cx));
+        const baseY = H * 0.93;
+        const span = H * 0.80 * size;
         const tipY = baseY - span;
-        const maxHalf = W * 0.255;
+        const maxHalf = W * 0.235 * size;
+        const stemEnd = Math.min(H * 0.997, baseY + span * 0.14);
 
         const twistAt = t => s.twist * (0.25 + 0.85 * t) + s.flutter * Math.sin(s.phase + t * 3.1);
         const offAt = t => (s.curl * t * t + s.lean * t) * span;
@@ -1855,12 +1869,21 @@
 
         ctx.clearRect(0, 0, W, H);
 
+        /* Zone utile : les aplats de lumiere sont limites a la feuille, pas au
+           canevas entier. Sur une boite de 520 px, remplir tout le canevas deux
+           fois par image coutait plus cher que le dessin lui-meme. */
+        const reach = Math.abs(offAt(1)) + 2;
+        const bx = cx - maxHalf - reach;
+        const by = tipY - 2;
+        const bw = (maxHalf + reach) * 2;
+        const bh = stemEnd - by;
+
         /* Floraison : la meme silhouette, floutee et teintee d'accent, posee
            sous la feuille. Elle donne un halo lumineux la ou le vert est le plus
            clair, et se coupe des que la machine peine a suivre. */
         if (!s.simple) {
           ctx.save();
-          ctx.filter = `blur(${(W * 0.10).toFixed(1)}px)`;
+          ctx.filter = `blur(${(maxHalf * 0.42).toFixed(1)}px)`;
           ctx.globalAlpha = 0.22;
           outline();
           ctx.fillStyle = "rgb(178,212,104)";
@@ -1870,8 +1893,8 @@
 
         if (s.shadow) {
           ctx.save();
-          ctx.filter = `blur(${(W * 0.045).toFixed(1)}px)`;
-          ctx.translate(W * 0.05, H * 0.02);
+          ctx.filter = `blur(${(maxHalf * 0.19).toFixed(1)}px)`;
+          ctx.translate(maxHalf * 0.2, maxHalf * 0.08);
           outline();
           ctx.fillStyle = "rgba(29,37,34,0.17)";
           ctx.fill();
@@ -1881,11 +1904,11 @@
         ctx.beginPath();
         ctx.moveTo(cx + offAt(0), baseY);
         ctx.quadraticCurveTo(
-          cx + offAt(0) + W * 0.05, baseY + H * 0.035,
-          cx + offAt(0) + W * 0.012, H * 0.985
+          cx + offAt(0) + maxHalf * 0.2, baseY + (stemEnd - baseY) * 0.6,
+          cx + offAt(0) + maxHalf * 0.05, stemEnd
         );
         ctx.strokeStyle = "rgb(74,96,44)";
-        ctx.lineWidth = Math.max(1.2, W * 0.016);
+        ctx.lineWidth = Math.max(1.2, maxHalf * 0.065);
         ctx.lineCap = "round";
         ctx.stroke();
 
@@ -1925,7 +1948,7 @@
         shade.addColorStop(0.45, "rgba(24,38,14,0.02)");
         shade.addColorStop(1, "rgba(255,255,255,0.12)");
         ctx.fillStyle = shade;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(bx, by, bw, bh);
 
         /* Volume lateral : le limbe s'arrondit, il n'est pas une bande plate.
            La limite clair/sombre glisse avec la torsion, ce qui fait pivoter la
@@ -1938,7 +1961,7 @@
         round.addColorStop(shift + 0.18, "rgba(24,38,14,0.17)");
         round.addColorStop(1, "rgba(255,255,255,0.12)");
         ctx.fillStyle = round;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(bx, by, bw, bh);
 
         ctx.beginPath();
         for (let i = 0; i <= 28; i++) {
@@ -1946,7 +1969,7 @@
           if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
         }
         ctx.strokeStyle = "rgba(250,255,222,0.60)";
-        ctx.lineWidth = Math.max(0.8, W * 0.008);
+        ctx.lineWidth = Math.max(0.8, maxHalf * 0.032);
         ctx.stroke();
 
         for (let k = 0; k < 7; k++) {
@@ -1961,7 +1984,7 @@
               if (j) ctx.lineTo(x, y); else ctx.moveTo(x, y);
             }
             ctx.strokeStyle = `rgba(250,255,225,${0.10 + 0.17 * (1 - from)})`;
-            ctx.lineWidth = Math.max(0.5, W * 0.005);
+            ctx.lineWidth = Math.max(0.5, maxHalf * 0.021);
             ctx.stroke();
           }
         }
@@ -1980,7 +2003,7 @@
           if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
         }
         ctx.strokeStyle = "rgba(216,244,81,0.55)";
-        ctx.lineWidth = Math.max(0.9, W * 0.007);
+        ctx.lineWidth = Math.max(0.9, maxHalf * 0.028);
         ctx.stroke();
       };
 
@@ -2000,14 +2023,22 @@
     /* Deux feuilles : la grande au premier plan, la petite plus loin. Leurs
        ressorts, leur flou et leur amplitude de rotation different, ce qui suffit
        a creer la profondeur sans second plan encombre. */
+    /* Deux feuilles : la grande au premier plan, la petite plus loin. Leurs
+       ressorts, leur flou et leur amplitude de rotation different, ce qui suffit
+       a creer la profondeur sans second plan encombre.
+       Les valeurs de fromVh/toVh tiennent compte du fait que le dessin occupe
+       le bas du canevas : elles placent le pied de la feuille, pas le haut de
+       la boite, sinon elle demarrerait sous l'ecran. */
     const props = [
       {
         el: mainPaint ? holder : still,
         paint: mainPaint,
         y: 0, vy: 0, rot: 0, vrot: 0,
         stiff: 0.055, damp: 0.84,
-        fromVh: 0.82, toVh: 0.30, rotA: -11, rotB: 11,
-        alpha: 1, blurMin: 0, blurMax: 6.5, dofGain: 6,
+        fromVh: 0.25, toVh: 0.22, rotA: -11, rotB: 11,
+        sizeBase: 0.50, sizePeak: 1.00,
+        swayA: -8, swayB: 26,
+        alpha: 1, blurMin: 0, blurMax: 6.5, dofGain: 5,
         phase: 0.4, flutter: 0.55, twistBase: 0.12, twistAmp: 0.45
       },
       {
@@ -2015,13 +2046,31 @@
         paint: backPaint,
         y: 0, vy: 0, rot: 0, vrot: 0,
         stiff: 0.030, damp: 0.90,
-        fromVh: 0.62, toVh: 0.22, rotA: -20, rotB: 16,
-        alpha: 0.55, blurMin: 1.6, blurMax: 7, dofGain: 4,
+        fromVh: 0.30, toVh: 0.26, rotA: -20, rotB: 16,
+        sizeBase: 0.58, sizePeak: 0.96,
+        swayA: 22, swayB: -30,
+        alpha: 0.5, blurMin: 1.6, blurMax: 7, dofGain: 3.4,
         phase: 2.6, flutter: 0.41, twistBase: -0.16, twistAmp: 0.38
       }
     ].filter(p => p.el);
 
     let raf = 0, last = 0, running = false, lowPower = false, slow = 0;
+    const column = document.querySelector("header .wrap") || document.querySelector(".wrap");
+
+    /* Place la feuille a cheval sur le bord droit de la colonne : une partie
+       passe derriere les cartes, le reste tient dans la marge. Le centre est
+       borne pour que le dessin ne sorte jamais de sa boite, sinon le bord de
+       l'ecran le couperait net. */
+    const centreFor = (p, progress) => {
+      const boxW = p.el.offsetWidth || 1;
+      const half = 0.235 * boxW;
+      const lo = Math.min(0.72, (half + boxW * 0.03) / boxW);
+      const hi = Math.max(lo, 1 - (half + boxW * 0.03) / boxW);
+      if (!column) return Math.min(hi, Math.max(lo, 0.6));
+      const wrapRight = column.getBoundingClientRect().right;
+      const want = (wrapRight - (window.innerWidth - boxW) - 18) / boxW;
+      return Math.min(hi, Math.max(lo, want));
+    };
 
     const paintFrame = (time, k, snap) => {
       const vh = window.innerHeight || 900;
@@ -2058,15 +2107,28 @@
 
         const appear = clamp01(progress / 0.05);
         const vanish = clamp01((1 - progress) / 0.06);
-        const opacity = snap ? p.alpha : appear * vanish * p.alpha;
+        /* Le pied de page arrive avec ses liens a droite : la feuille s'efface
+           sur les derniers 35 % d'ecran pour ne jamais passer sous un texte. */
+        const footIn = clamp01((scroll + vh - footerTop) / (vh * 0.35));
+        const opacity = (snap ? p.alpha : appear * vanish * p.alpha) * (1 - footIn);
 
-        p.el.style.transform = `translate3d(0,${p.y.toFixed(1)}px,0) rotate(${p.rot.toFixed(2)}deg)`;
+        /* Taille : la feuille s'approche jusqu'au milieu de sa course puis
+           s'eloigne. Un souffle lent l'anime aussi a l'arret, sinon elle
+           paraitrait figee des que la page ne defile plus. */
+        const bell = Math.pow(Math.sin(Math.PI * progress), 0.9);
+        const breathe = snap ? 1 : 1 + Math.sin(time * 0.9 + p.phase) * 0.04;
+        const size = (p.sizeBase + (p.sizePeak - p.sizeBase) * bell) * breathe;
+        const sway = p.swayA + Math.sin(progress * Math.PI) * p.swayB;
+
+        p.el.style.transform = `translate3d(${sway.toFixed(1)}px,${p.y.toFixed(1)}px,0) rotate(${p.rot.toFixed(2)}deg)`;
         p.el.style.opacity = opacity.toFixed(3);
         p.el.style.filter = blur > 0.25 ? `blur(${blur.toFixed(2)}px)` : "none";
 
         if (!p.paint || opacity < 0.01) continue;
         const wind = Math.min(0.3, speed * 26);
         p.paint.draw({
+          size: size,
+          cx: centreFor(p, progress),
           twist: p.twistBase + Math.sin(time * p.flutter + p.phase) * (p.twistAmp + wind),
           flutter: 0.09,
           phase: time * p.flutter * 0.7 + p.phase,
