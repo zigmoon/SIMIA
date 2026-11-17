@@ -1,0 +1,36 @@
+SIMIA
+Copyright 2026 Simon Dupont-Gellert
+
+Ce produit inclut des logiciels développés par des tiers. Les mentions
+ci-dessous sont fournies conformément à la section 4(d) de la licence
+Apache License 2.0.
+
+simia-desktop (lanceur Rust)
+  Copyright 2026 Simon Dupont-Gellert
+  Licence : Apache License 2.0 (fichier LICENSE)
+
+llama.cpp — https://github.com/ggml-org/llama.cpp
+  Copyright les contributeurs de llama.cpp
+  Licence : MIT
+
+stable-diffusion.cpp — https://github.com/leejet/stable-diffusion.cpp
+  Copyright les contributeurs de stable-diffusion.cpp
+  Licence : MIT
+
+WebLLM — https://github.com/mlc-ai/web-llm
+  Copyright les contributeurs de WebLLM
+  Licence : Apache License 2.0
+
+Poids des modèles de texte et d'images
+  Chaque catalogue (models/catalog.json, models/image/catalog.json) porte la
+  licence de son modèle : Apache-2.0 pour la majorité, Llama 3.2, Gemma, MIT
+  et LFM Open License pour les autres. La licence du code de SIMIA ne
+  s'applique pas à ces fichiers.
+
+LoRA « Gravure SIMIA »
+  Copyright 2026 Simon Dupont-Gellert
+  Licence : Apache License 2.0. Entraîné à partir de planches botaniques du
+  domaine public (Curtis's Botanical Magazine, Edwards's Botanical Register).
+
+Polices
+  Inter Tight et JetBrains Mono, SIL Open Font License 1.1

@@ -641,6 +641,7 @@ redistribuer et le revendre, y compris dans un produit fermé, à condition de
 conserver la mention de copyright et le texte de la licence, et de signaler les
 fichiers que vous avez modifiés. La clause 3 concède aussi une licence de
 brevets, et la clause 7 fournit le logiciel « en l'état », sans garantie.
+L'attribution des composants tiers est dans [NOTICE](NOTICE).
 
 Les composants tiers conservent leurs licences respectives :
 
