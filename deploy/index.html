@@ -343,6 +343,54 @@
   .rail-item.on::before{background:#7fb01e}
 
   .mock-chat{padding:14px 15px 16px; display:flex; flex-direction:column; gap:10px; min-width:0}
+
+  /* Deux plans dans la meme fenetre : la conversation, puis l'atelier. Les
+     scenes sont empilees dans la meme cellule de grille, donc la hauteur du
+     bloc ne bouge jamais quand l'une cede la place a l'autre. */
+  .mock-stage{display:grid; min-width:0}
+  .mock-scene{grid-area:1/1; display:grid; grid-template-rows:minmax(0,1fr) auto; min-width:0; transition:opacity .45s ease, visibility .45s ease}
+  .mock-scene[data-scene="code"]{grid-template-rows:minmax(0,1fr); opacity:0; visibility:hidden}
+  .mock.is-code .mock-scene[data-scene="chat"]{opacity:0; visibility:hidden}
+  .mock.is-code .mock-scene[data-scene="code"]{opacity:1; visibility:visible}
+
+  .mock-code{display:grid; grid-template-rows:auto minmax(0,1fr) auto auto; min-height:0; background:#171e1b; color:#dbe6dd}
+  .mock-code-head{display:flex; align-items:center; gap:5px; padding:6px 8px; border-bottom:1px solid #2b352f; background:#1d2521}
+  .mock-file{padding:3px 7px; border:1px solid transparent; border-radius:5px; color:#93a39a; font:500 8.5px "DM Mono",monospace}
+  .mock-file.active{border-color:#3f5147; background:#28332c; color:#e8f1ea}
+  .mock-code-tools{margin-left:auto; color:#5f7067; font:500 9px "DM Mono",monospace; letter-spacing:.14em}
+  .mock-code-split{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); min-height:0; border-bottom:1px solid #2b352f}
+  .mock-editor{display:grid; grid-template-columns:auto minmax(0,1fr); min-width:0; background:#151b18; border-right:1px solid #2b352f}
+  .mock-gutter{padding:9px 5px 9px 8px; color:#5c6e65; text-align:right; font:8px/1.6 "DM Mono",monospace; white-space:pre}
+  .mock-lines{padding:9px 7px; overflow:hidden; font:8px/1.6 "DM Mono",monospace; color:#e6efe8}
+  .mock-lines .ln{display:block; white-space:pre}
+  .mock-lines .kw{color:#9ecbff; font-weight:400}
+  .mock-lines .str{color:#d9e98c; font-style:normal}
+  .mock-lines .num{color:#f0b98a; font-style:normal}
+  .mock-lines .cm{color:#7d9086; font-style:italic}
+  .mock-code-chat{display:flex; flex-direction:column; gap:6px; min-width:0; padding:8px 8px 9px; background:#fbfaf6}
+  .mock-code-chat .bubble{font-size:8.5px; line-height:1.45; padding:6px 8px; border-radius:9px; max-width:100%}
+  .mock-code-chat .bubble .tag{font-size:7px; margin-bottom:3px}
+  .mock-code-chat .bubble.bot .tag{color:#6d8a3c}
+  .mock-filechip{margin-top:auto; padding:4px 7px; border:1px solid #d8e0d2; border-radius:6px; background:#f2f7ec; color:#5b6b52; font:500 7.5px "DM Mono",monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .mock-output{border-bottom:1px solid #2b352f; background:#121815}
+  .mock-output-head{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 9px; border-bottom:1px solid #232c27; background:#1a221e}
+  .mock-output-head span:first-child{color:#8fa39a; font:500 7.5px "DM Mono",monospace; letter-spacing:.1em; text-transform:uppercase}
+  .mock-run-state{color:#7f9488; font:500 7.5px "DM Mono",monospace}
+  .mock-run-state.is-running{color:#d5c07e}
+  .mock-run-state.is-done{color:#a9d18a}
+  .mock-output-body{padding:6px 9px; min-height:20px; color:#dbe6dd; font:8.5px/1.5 "DM Mono",monospace}
+  .mock-output-body span{opacity:.25; transition:opacity .3s ease}
+  .mock.is-ran .mock-output-body span{opacity:1}
+  .mock-code-foot{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 9px; background:#1d2521}
+  .mock-run{padding:3px 8px; border:1px solid #3a4740; border-radius:5px; background:#28332c; color:#c3d2c7; font:500 8px "DM Mono",monospace; transition:transform .18s ease, border-color .18s ease, color .18s ease}
+  .mock.is-running .mock-run{border-color:#7fa464; color:#e9f3e9; transform:scale(.96)}
+  .mock-code-meta{color:#7d8f85; font:500 7.5px "DM Mono",monospace}
+  /* Les lignes arrivent l'une apres l'autre, comme un modele qui ecrit. */
+  .mock.anim-ready .mock-scene[data-scene="code"] .ln{opacity:0; transform:translateY(2px)}
+  .mock.anim-ready .mock-scene[data-scene="code"].is-coded .ln{
+    opacity:1; transform:none;
+    transition:opacity .26s ease var(--d), transform .26s ease var(--d);
+  }
   .bubble{border-radius:12px; padding:9px 12px; font-size:11.6px; line-height:1.5; max-width:94%}
   .bubble.user{background:#e4efe8; align-self:flex-end}
   .bubble.bot{background:#f6f6f1; border:1px solid #ebeae3; align-self:flex-start}
@@ -467,6 +515,53 @@
   .badge-pill{
     align-self:flex-start; padding:4px 10px; border-radius:999px; font:700 10px "DM Mono",monospace;
     letter-spacing:.08em; text-transform:uppercase; background:var(--accent); color:var(--accent-ink);
+  }
+
+  /* ---------- Atelier de code ---------- */
+  /* L'atelier est une surface du produit, pas une promesse : on montre
+     l'editeur, la sortie et les quatre consignes pretes a partir. */
+  .atelier{display:grid; grid-template-columns:1fr 1.08fr; gap:46px; align-items:center}
+  .atelier-lede{margin:0 0 24px; max-width:48ch; color:#4f5b54; font-size:16px; line-height:1.62}
+  .atelier-list{display:grid; gap:16px; margin:0 0 26px; padding:0; list-style:none; max-width:54ch}
+  .atelier-list li{display:grid; grid-template-columns:30px 1fr; gap:13px; align-items:start}
+  .atelier-list i{
+    width:30px; height:30px; border-radius:9px; display:grid; place-items:center;
+    background:#eef4e2; color:#5f8220; font-style:normal; font-weight:800;
+    font-family:"DM Mono",monospace; font-size:11.5px;
+  }
+  .atelier-list b{display:block; margin-bottom:2px; font-size:14.5px}
+  .atelier-list span{display:block; color:var(--muted); font-size:13.5px; line-height:1.56}
+  .atelier-actions{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+  .atelier-note{font:500 11px "DM Mono",monospace; letter-spacing:.05em; text-transform:uppercase; color:var(--dim)}
+
+  .shot{
+    position:relative; border:1px solid #26312a; border-radius:16px; background:#171e1b;
+    box-shadow:0 26px 60px rgba(29,37,34,.18); overflow:hidden;
+  }
+  .shot .mock-code-head{padding:9px 12px; gap:6px}
+  .shot .mock-file{font-size:10.5px; padding:4px 9px}
+  .shot .mock-code-tools{font-size:11px}
+  .shot .mock-code-split{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}
+  .shot .mock-gutter{font-size:11px; line-height:1.72; padding:15px 8px 15px 12px}
+  .shot .mock-lines{font-size:11px; line-height:1.72; padding:15px 12px}
+  .shot .mock-output{display:grid; grid-template-rows:auto 1fr; border-bottom:0; border-left:1px solid #2b352f}
+  .shot .mock-output-head{padding:6px 12px}
+  .shot .mock-output-head span:first-child{font-size:9px}
+  .shot .mock-run-state{font-size:9px}
+  .shot .mock-output-body{padding:10px 12px; font-size:11px; line-height:1.7}
+  .shot .mock-output-body span{opacity:1}
+  .shot .mock-output-muted{display:block; margin-top:6px; color:#7d8f85; font-size:9.5px}
+  .shot .mock-code-foot{flex-wrap:wrap; gap:6px; padding:9px 12px}
+  .shot .mock-run{font-size:10px; padding:5px 10px}
+  .shot .mock-run.ghost{background:transparent; color:#9fb3a6}
+  .shot .mock-code-meta{margin-left:auto; font-size:9px}
+  @media (max-width:900px){
+    .atelier{grid-template-columns:1fr; gap:34px}
+    .shot{max-width:620px}
+  }
+  @media (max-width:560px){
+    .shot .mock-lines,.shot .mock-gutter{font-size:10px}
+    .shot .mock-output-body{font-size:10px}
   }
 
   .downloads{display:grid; grid-template-columns:repeat(3,1fr); gap:18px}
@@ -757,6 +852,14 @@
     .mock-body{grid-template-columns:1fr}
     .mock-side{display:none}
     .bubble{font-size:12px}
+    /* L'atelier du hero garde son editeur, sans la colonne de conversation :
+       a cette largeur, deux colonnes de 8 px seraient illisibles. */
+    #hero-mock .mock-code-split{grid-template-columns:1fr}
+    #hero-mock .mock-code-chat{display:none}
+    #hero-mock .mock-lines,#hero-mock .mock-gutter{font-size:9px}
+    #hero-mock .mock-output-body{font-size:9.5px}
+    .shot .mock-code-split{grid-template-columns:1fr}
+    .shot .mock-code-foot .mock-run.ghost{display:none}
     .hero-float.f2{display:none}
     .hero-float.f1{top:-11px; right:4px}
     .hero-float.f3{right:10px; bottom:-11px}
@@ -834,7 +937,7 @@
 
             <div class="mega-col">
               <p class="mega-title">Options</p>
-              <a class="mega-item compact" href="#modeles"><span class="mega-name">Atelier de code</span><span class="mega-desc">Éditeur + exécution JS et Python</span></a>
+              <a class="mega-item compact" href="#atelier"><span class="mega-name">Atelier de code</span><span class="mega-desc">Éditeur + exécution JS et Python</span></a>
               <a class="mega-item compact" href="#modeles"><span class="mega-name">Agent web</span><span class="mega-desc">Recherche assistée, version web</span></a>
               <a class="mega-item compact" href="#modeles"><span class="mega-name">Documents</span><span class="mega-desc">PDF, Word, OpenDocument, CSV</span></a>
               <a class="mega-item compact" href="#modeles"><span class="mega-name">Dictée vocale</span><span class="mega-desc">Saisie au micro, dans le navigateur</span></a>
@@ -869,7 +972,8 @@
         <h1>Votre IA,<br><em>chez vous</em>.</h1>
         <p class="lede">
           SIMIA fait tourner de vrais modèles de langage sur votre machine. Aucune conversation
-          ne part sur un serveur, aucun compte à créer. Une version web pour essayer tout de suite,
+          ne part sur un serveur, aucun compte à créer : conversation, documents, images et
+          atelier de code se calculent sur l'appareil. Une version web pour essayer tout de suite,
           une application de bureau pour aller beaucoup plus loin.
         </p>
         <div class="hero-actions">
@@ -891,7 +995,7 @@
         <div class="mock" id="hero-mock" aria-hidden="true">
           <div class="mock-bar">
             <i></i><i></i><i></i>
-            <span class="mock-title">SIMIA — conversation locale</span>
+            <span class="mock-title" id="mock-title">SIMIA — conversation locale</span>
             <span class="mock-status"><b></b> hors ligne</span>
           </div>
           <div class="mock-body">
@@ -899,65 +1003,136 @@
               <p class="rail-title">Aujourd'hui</p>
               <span class="rail-item" data-rail="0">Photosynthèse</span>
               <span class="rail-item" data-rail="1">Planche botanique</span>
-              <span class="rail-item">Idées de titre</span>
+              <span class="rail-item" data-rail="2">Boucle python</span>
               <span class="rail-item">Résumé de PDF</span>
             </div>
-            <div class="mock-chat">
-              <div class="bubble user bub" data-bub="u1">
-                <p class="typ">Explique-moi la photosynthèse simplement.</p>
-              </div>
-              <div class="bubble bot bub" data-bub="b1">
-                <span class="tag">QWEN 3.5 · LOCAL</span>
-                <p class="typ">Les plantes captent la lumière avec la chlorophylle, puis transforment l'eau et le CO₂ en sucre et en oxygène.</p>
-              </div>
-              <div class="bubble user bub" data-bub="u2">
-                <p class="typ">Et dessine-moi une planche botanique.</p>
-              </div>
-              <div class="bubble img bub" data-bub="img">
-                <div class="gen-frame" data-gen>
-                  <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid slice" focusable="false">
-                    <rect width="160" height="110" fill="#f6f4ea"/>
-                    <g fill="none" stroke="#2f3a2c" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M79 97c-2-19 2-36 7-51"/>
-                      <path d="M79 84c-11-2-18-9-19-19 10 1 17 8 19 19Z"/>
-                      <path d="M79 84c-5-6-10-11-15-13"/>
-                      <path d="M84 67c9-1 16-8 18-16-9 1-15 6-18 16Z"/>
-                      <path d="M84 67c5-5 9-9 14-11"/>
-                      <path d="M85 51c-8-2-13-9-13-16 8 2 12 7 13 16Z"/>
-                      <path d="M86 45c-5-6-5-14 0-19 5 5 5 13 0 19Z"/>
-                      <path d="M86 27c-6-3-8-9-6-14 5 3 7 9 6 14Z"/>
-                      <path d="M86 27c6-3 8-9 6-14-5 3-7 9-6 14Z"/>
-                      <circle cx="86" cy="20" r="2.4" fill="#2f3a2c" stroke="none"/>
-                    </g>
-                    <g stroke="#2f3a2c" stroke-width=".55" opacity=".4" stroke-linecap="round">
-                      <path d="M63 69l11 6M61 73l10 5M65 62l10 7M98 45l8 5M97 49l7 4M71 42l9 6M88 88l-8 5M92 90l-6 4"/>
-                    </g>
-                    <g stroke="#2f3a2c" stroke-width=".6" opacity=".3" stroke-linecap="round">
-                      <path d="M20 100h120M28 100v-4M42 100v-6M56 100v-3M112 100v-5M128 100v-4M140 100v-6"/>
-                    </g>
-                    <text x="9" y="17" font-family="'DM Mono',monospace" font-size="6" letter-spacing="1.2" fill="#8b938d">PL. XII</text>
-                  </svg>
-                  <span class="gen-shimmer"></span>
-                  <span class="gen-progress"><b data-progress></b></span>
+            <div class="mock-stage">
+              <div class="mock-scene" data-scene="chat">
+                <div class="mock-chat">
+                  <div class="bubble user bub" data-bub="u1">
+                    <p class="typ">Explique-moi la photosynthèse simplement.</p>
+                  </div>
+                  <div class="bubble bot bub" data-bub="b1">
+                    <span class="tag">QWEN 3.5 · LOCAL</span>
+                    <p class="typ">Les plantes captent la lumière avec la chlorophylle, puis transforment l'eau et le CO₂ en sucre et en oxygène.</p>
+                  </div>
+                  <div class="bubble user bub" data-bub="u2">
+                    <p class="typ">Et dessine-moi une planche botanique.</p>
+                  </div>
+                  <div class="bubble img bub" data-bub="img">
+                    <div class="gen-frame" data-gen>
+                      <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid slice" focusable="false">
+                        <rect width="160" height="110" fill="#f6f4ea"/>
+                        <g fill="none" stroke="#2f3a2c" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M79 97c-2-19 2-36 7-51"/>
+                          <path d="M79 84c-11-2-18-9-19-19 10 1 17 8 19 19Z"/>
+                          <path d="M79 84c-5-6-10-11-15-13"/>
+                          <path d="M84 67c9-1 16-8 18-16-9 1-15 6-18 16Z"/>
+                          <path d="M84 67c5-5 9-9 14-11"/>
+                          <path d="M85 51c-8-2-13-9-13-16 8 2 12 7 13 16Z"/>
+                          <path d="M86 45c-5-6-5-14 0-19 5 5 5 13 0 19Z"/>
+                          <path d="M86 27c-6-3-8-9-6-14 5 3 7 9 6 14Z"/>
+                          <path d="M86 27c6-3 8-9 6-14-5 3-7 9-6 14Z"/>
+                          <circle cx="86" cy="20" r="2.4" fill="#2f3a2c" stroke="none"/>
+                        </g>
+                        <g stroke="#2f3a2c" stroke-width=".55" opacity=".4" stroke-linecap="round">
+                          <path d="M63 69l11 6M61 73l10 5M65 62l10 7M98 45l8 5M97 49l7 4M71 42l9 6M88 88l-8 5M92 90l-6 4"/>
+                        </g>
+                        <g stroke="#2f3a2c" stroke-width=".6" opacity=".3" stroke-linecap="round">
+                          <path d="M20 100h120M28 100v-4M42 100v-6M56 100v-3M112 100v-5M128 100v-4M140 100v-6"/>
+                        </g>
+                        <text x="9" y="17" font-family="'DM Mono',monospace" font-size="6" letter-spacing="1.2" fill="#8b938d">PL. XII</text>
+                      </svg>
+                      <span class="gen-shimmer"></span>
+                      <span class="gen-progress"><b data-progress></b></span>
+                    </div>
+                    <span class="img-caption"><span>Gravure SIMIA</span><span>512 px · 24 pas</span></span>
+                  </div>
                 </div>
-                <span class="img-caption"><span>Gravure SIMIA</span><span>512 px · 24 pas</span></span>
+                <div class="mock-composer">
+                  <span class="composer-field">
+                    <span class="composer-text">Écrivez votre message…</span>
+                    <span class="composer-caret"></span>
+                    <span class="composer-thinking"><i></i><i></i><i></i></span>
+                  </span>
+                  <span class="composer-btn">
+                    <svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="m12 6 6 6-6 6"/></svg>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Le second plan de la meme fenetre : l'atelier. Il montre que
+                   SIMIA n'est pas qu'un chat — le code s'edite, s'explique et
+                   s'execute sur place. -->
+              <div class="mock-scene" data-scene="code">
+                <div class="mock-code">
+                  <div class="mock-code-head">
+                    <span class="mock-file active">app.py</span>
+                    <span class="mock-file">notes.md</span>
+                    <span class="mock-code-tools">+ ✕</span>
+                  </div>
+                  <div class="mock-code-split">
+                    <div class="mock-editor">
+                      <span class="mock-gutter">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15</span>
+                      <div class="mock-lines">
+                        <span class="ln" style="--d:0ms"><b class="kw">def</b> total(prix, remise=<em class="num">0</em>):</span>
+                        <span class="ln" style="--d:45ms">    <i class="str">"""Somme des prix, remise déduite."""</i></span>
+                        <span class="ln" style="--d:90ms">    <b class="kw">if</b> remise &lt; <em class="num">0</em>:</span>
+                        <span class="ln" style="--d:135ms">        <b class="kw">raise</b> ValueError(<i class="str">"remise négative"</i>)</span>
+                        <span class="ln" style="--d:180ms"></span>
+                        <span class="ln" style="--d:225ms">    somme = <em class="num">0</em></span>
+                        <span class="ln" style="--d:270ms">    <b class="kw">for</b> p <b class="kw">in</b> prix:</span>
+                        <span class="ln" style="--d:315ms">        somme += p</span>
+                        <span class="ln" style="--d:360ms">    <b class="kw">return</b> max(<em class="num">0</em>, somme - remise)</span>
+                        <span class="ln" style="--d:405ms"></span>
+                        <span class="ln" style="--d:450ms"></span>
+                        <span class="ln" style="--d:495ms">prix = [<em class="num">12</em>, <em class="num">8</em>, <em class="num">30</em>]</span>
+                        <span class="ln" style="--d:540ms"><b class="kw">print</b>(total(prix))</span>
+                        <span class="ln" style="--d:585ms"><b class="kw">print</b>(total(prix, remise=<em class="num">5</em>))</span>
+                        <span class="ln" style="--d:630ms"><i class="cm"># corrigé : le dernier prix comptait plus</i></span>
+                      </div>
+                    </div>
+                    <div class="mock-code-chat">
+                      <div class="bubble user bub" data-bub="cu">
+                        <p class="typ">Corrige ce script et lance-le.</p>
+                      </div>
+                      <div class="bubble bot bub" data-bub="cb">
+                        <span class="tag">QWEN 2.5 CODER · LOCAL</span>
+                        <p class="typ">La boucle oubliait un prix : c'est corrigé, et j'exécute.</p>
+                      </div>
+                      <span class="mock-filechip">app.py · python</span>
+                    </div>
+                  </div>
+                  <div class="mock-output">
+                    <div class="mock-output-head"><span>Sortie</span><span class="mock-run-state" data-run-state>en attente</span></div>
+                    <div class="mock-output-body"><span data-output>50<br>45</span></div>
+                  </div>
+                  <div class="mock-code-foot">
+                    <span class="mock-run" data-run-btn>▶ Exécuter</span>
+                    <span class="mock-code-meta">python · 15 lignes</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="mock-composer">
-            <span class="composer-field">
-              <span class="composer-text">Écrivez votre message…</span>
-              <span class="composer-caret"></span>
-              <span class="composer-thinking"><i></i><i></i><i></i></span>
-            </span>
-            <span class="composer-btn">
-              <svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="m12 6 6 6-6 6"/></svg>
-            </span>
           </div>
         </div>
         <div class="hero-float f1"><i></i> 100 % local</div>
         <div class="hero-float f2"><i></i> 0 donnée envoyée</div>
-        <div class="hero-float f3"><i></i> llama.cpp</div>
+        <div class="hero-float f3"><i></i> atelier de code</div>
       </div>
     </div>
   </section>
@@ -989,6 +1164,7 @@
             <li>Conversations enregistrées localement</li>
                         <li>Installable comme une application, icône et fenêtre propre</li>
             <li>Recherche web, pièces jointes, dictée</li>
+            <li>Atelier de code : éditeur, exécution <b>JavaScript et Python</b></li>
             <li>Fonctionne sur Chrome et Edge avec WebGPU</li>
           </ul>
           <a class="btn btn-ghost" href="./app/">Ouvrir la version web →</a>
@@ -1007,6 +1183,86 @@
           </ul>
           <a class="btn btn-primary" href="#telecharger">Voir les téléchargements →</a>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="atelier">
+    <div class="wrap">
+      <div class="atelier">
+        <div class="reveal">
+          <p class="mono">Atelier de code</p>
+          <h2>Le code s'ouvre, s'explique et s'exécute ici.</h2>
+          <p class="atelier-lede">Une réponse contient du code ? Un clic l'ouvre dans l'atelier : coloration, numéros de ligne, fichiers gardés d'une session à l'autre. Deux boutons suffisent à faire tourner JavaScript et Python, sans quitter SIMIA.</p>
+          <ul class="atelier-list">
+            <li>
+              <i>01</i>
+              <div><b>Ouvrir dans l'atelier</b><span>Chaque bloc de code d'une réponse devient un fichier éditable, avec son langage déjà reconnu et son onglet.</span></div>
+            </li>
+            <li>
+              <i>02</i>
+              <div><b>Exécuter JavaScript et Python</b><span>Le code tourne dans un worker séparé, sans accès à l'interface ni aux conversations. Python arrive par Pyodide, une seule fois.</span></div>
+            </li>
+            <li>
+              <i>03</i>
+              <div><b>Expliquer, corriger, optimiser, tester</b><span>Quatre consignes prêtes à partir : le fichier ouvert est envoyé au modèle local avec la bonne demande, la réponse revient dans la conversation.</span></div>
+            </li>
+            <li>
+              <i>04</i>
+              <div><b>Rien ne sort de la machine</b><span>Ni le code, ni la sortie, ni le fichier : l'exécution et le modèle restent sur l'appareil.</span></div>
+            </li>
+          </ul>
+          <div class="atelier-actions">
+            <a class="btn btn-ghost" href="#telecharger">Voir les téléchargements →</a>
+            <span class="atelier-note">Web et bureau</span>
+          </div>
+        </div>
+
+        <div class="shot reveal" aria-hidden="true">
+          <div class="mock-code">
+            <div class="mock-code-head">
+              <span class="mock-file active">paniers.js</span>
+              <span class="mock-file">notes.md</span>
+              <span class="mock-code-tools">+ ✕</span>
+            </div>
+            <div class="mock-code-split">
+              <div class="mock-editor">
+                <span class="mock-gutter">1
+2
+3
+4
+5
+6
+7
+8
+9</span>
+                <div class="mock-lines">
+                  <span class="ln"><b class="kw">const</b> paniers = [</span>
+                  <span class="ln">  { client: <i class="str">"Aline"</i>, total: <em class="num">42</em> },</span>
+                  <span class="ln">  { client: <i class="str">"Boris"</i>, total: <em class="num">17</em> },</span>
+                  <span class="ln">];</span>
+                  <span class="ln"></span>
+                  <span class="ln"><b class="kw">const</b> somme = paniers</span>
+                  <span class="ln">  .reduce((t, p) <b class="kw">=&gt;</b> t + p.total, <em class="num">0</em>);</span>
+                  <span class="ln"></span>
+                  <span class="ln"><b class="kw">console</b>.log(<i class="str">`${paniers.length} paniers, ${somme} €`</i>);</span>
+                </div>
+              </div>
+              <div class="mock-output">
+                <div class="mock-output-head"><span>Sortie</span><span class="mock-run-state is-done">Terminé</span></div>
+                <div class="mock-output-body"><span>2 paniers, 59 €</span><span class="mock-output-muted">9 lignes · javascript</span></div>
+              </div>
+            </div>
+            <div class="mock-code-foot">
+              <span class="mock-run">▶ Exécuter</span>
+              <span class="mock-run ghost">Expliquer</span>
+              <span class="mock-run ghost">Corriger</span>
+              <span class="mock-run ghost">Optimiser</span>
+              <span class="mock-run ghost">Tests</span>
+              <span class="mock-code-meta">worker isolé</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -1262,6 +1518,11 @@
         <h2>Ce qu'il faut savoir avant d'installer.</h2>
       </div>
       <div class="faq reveal">
+        <details>
+          <summary>Que fait exactement l'atelier de code ?</summary>
+          <p>Un bloc de code dans une réponse s'ouvre dans l'atelier d'un clic. L'éditeur le garde comme un fichier, avec son langage, ses onglets et ses numéros de ligne. Le bouton <b>Exécuter</b> fait tourner JavaScript directement et Python via Pyodide, et la sortie s'affiche sous l'éditeur. Les boutons <b>Expliquer</b>, <b>Corriger</b>, <b>Optimiser</b> et <b>Tests</b> envoient le fichier ouvert au modèle local avec la consigne correspondante : la réponse revient dans la conversation, à côté.</p>
+          <p>Il fonctionne dans la version web comme dans l'application de bureau, sans compte et sans serveur. Le code s'exécute dans un Web Worker : il n'a accès ni à l'interface, ni au stockage où vivent vos conversations. Il peut en revanche lire l'IndexedDB (les fichiers de l'atelier et les images), appeler le réseau et consommer du processeur : n'exécutez pas un script dont vous ne connaissez pas l'origine.</p>
+        </details>
         <details>
           <summary>Quelle différence entre la version web et la version desktop ?</summary>
           <p>La version web exécute le modèle dans votre navigateur via WebGPU : pratique pour essayer, mais limitée aux modèles sous 1,9 Go. La version desktop lance le moteur directement sur le GPU de la machine, sans plafond de navigateur : elle accède aux modèles de code les plus gros et à la génération d'images jusqu'à 1024 px.</p>
@@ -1548,11 +1809,19 @@
       b1: heroMock.querySelector('[data-bub="b1"]'),
       u2: heroMock.querySelector('[data-bub="u2"]'),
       img: heroMock.querySelector('[data-bub="img"]'),
+      cu: heroMock.querySelector('[data-bub="cu"]'),
+      cb: heroMock.querySelector('[data-bub="cb"]'),
     };
     const genFrame = heroMock.querySelector("[data-gen]");
     const progress = heroMock.querySelector("[data-progress]");
     const rails = [...heroMock.querySelectorAll("[data-rail]")];
     const typs = [...heroMock.querySelectorAll(".typ")];
+    const codeScene = heroMock.querySelector('[data-scene="code"]');
+    const mockTitle = document.getElementById("mock-title");
+    const runState = heroMock.querySelector("[data-run-state]");
+    const runBtn = heroMock.querySelector("[data-run-btn]");
+    const titleChat = "SIMIA — conversation locale";
+    const titleCode = "SIMIA — atelier de code";
 
     typs.forEach(typ => {
       const words = typ.textContent.trim().split(/\s+/).filter(Boolean);
@@ -1580,7 +1849,13 @@
       Object.values(bubs).forEach(bub => bub?.classList.remove("in"));
       genFrame?.classList.remove("done");
       if (progress) progress.style.width = "0%";
-      heroMock.classList.remove("thinking", "send");
+      heroMock.classList.remove("thinking", "send", "is-code", "is-running", "is-ran");
+      codeScene?.classList.remove("is-coded");
+      if (runState) {
+        runState.textContent = "en attente";
+        runState.classList.remove("is-running", "is-done");
+      }
+      if (mockTitle) mockTitle.textContent = titleChat;
       typs.forEach(typ => {
         typ.classList.remove("on", "typing");
         typ.querySelectorAll(".w").forEach(word => { word.style.transitionDelay = "0ms"; });
@@ -1627,14 +1902,58 @@
       if (await wait(1350, id)) return;
 
       genFrame?.classList.add("done");
-      if (await wait(3600, id)) return;
+      if (await wait(2600, id)) return;
 
-      // Fondu de fin, puis la boucle repart sur une scene vierge.
+      /* Second plan : l'atelier. La fenetre ne change pas, seul ce qu'elle
+         montre change — le modele a corrige le script, puis on l'execute. */
+      heroMock.classList.add("is-code");
+      if (mockTitle) mockTitle.textContent = titleCode;
+      rails.forEach((rail, index) => rail.classList.toggle("on", index === 2));
+      if (await wait(620, id)) return;
+
+      bubs.cu?.classList.add("in");
+      typeInto(bubs.cu, 40);
+      if (await wait(520, id)) return;
+
+      bubs.cb?.classList.add("in");
+      typeInto(bubs.cb, 32);
+      if (await wait(720, id)) return;
+
+      codeScene?.classList.add("is-coded");
+      if (await wait(780, id)) return;
+
+      heroMock.classList.add("is-running");
+      if (runState) {
+        runState.textContent = "en cours";
+        runState.classList.add("is-running");
+      }
+      if (await wait(760, id)) return;
+
+      heroMock.classList.remove("is-running");
+      heroMock.classList.add("is-ran");
+      if (runState) {
+        runState.textContent = "Terminé";
+        runState.classList.remove("is-running");
+        runState.classList.add("is-done");
+      }
+      if (await wait(3000, id)) return;
+
+      // Retour a la conversation, puis fondu de fin.
+      heroMock.classList.remove("is-code", "is-running", "is-ran");
+      if (mockTitle) mockTitle.textContent = titleChat;
+      if (runState) {
+        runState.textContent = "en attente";
+        runState.classList.remove("is-running", "is-done");
+      }
+      codeScene?.classList.remove("is-coded");
+      rails.forEach((rail, index) => rail.classList.toggle("on", index === 1));
+      if (await wait(520, id)) return;
+
       Object.values(bubs).forEach(bub => bub?.classList.remove("in"));
       genFrame?.classList.remove("done");
       if (progress) progress.style.width = "0%";
       rails.forEach((rail, index) => rail.classList.toggle("on", index === 0));
-      if (await wait(650, id)) return;
+      if (await wait(600, id)) return;
     };
 
     const startHero = async () => {
