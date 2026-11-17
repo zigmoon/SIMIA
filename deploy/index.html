@@ -245,6 +245,7 @@
     white-space:nowrap;
   }
   .mega-tag.both{background:#eaf2dc; color:#4c6b1f}
+  .mega-tag.web{background:#e4eff7; color:#2f5d7d}
   .mega-tag.desk{background:#eceff1; color:#4a5a63}
   .mega-tag.soon{background:#f6edd8; color:#8a6d2f}
   .mega-item.compact{grid-template-columns:1fr}
@@ -542,20 +543,19 @@
        DERRIERE les cartes, qui ont un fond opaque. Elle glisse dans les
        interstices et disparait sous les blocs, comme l'objet d'une page
        produit. C'etait impossible avec une couche au-dessus du contenu.
-     — La boite du canevas est large (jusqu'a 520 px) et ancre a droite, alors
-       que la feuille est dessinee plus petite a l'interieur. Elle peut donc
-       grandir et rapetisser sans jamais rogner son propre dessin. Le texte des
-       sections s'arrete a 62 caractere, bien avant : la feuille ne passe
-       jamais derriere une ligne de texte. */
+     — La boite est presque carree. La feuille commence couchee, donc tournee
+       de pres de 80 degres : c'est cette largeur qui lui permet d'etre
+       horizontale sans sortir de sa boite. Elle est ensuite calee sur le bord
+       de la colonne, une moitie sous les cartes et une moitie dans la marge. */
   .leaf-layer{
     position:fixed; inset:0; z-index:0; display:none; pointer-events:none;
-    overflow:hidden; --leaf-box:clamp(440px,42vw,760px);
+    overflow:hidden; --leaf-box:clamp(360px,30vw,560px);
   }
   .leaf-layer.is-on{display:block}
   .leaf-prop{position:absolute; top:0; right:0; opacity:0; will-change:transform,opacity,filter}
   .leaf-prop canvas{display:block; width:100%; height:100%}
-  #leaf-main{width:var(--leaf-box); height:calc(var(--leaf-box)*1.44)}
-  #leaf-back{width:calc(var(--leaf-box)*.78); height:calc(var(--leaf-box)*1.44*.80)}
+  #leaf-main{width:var(--leaf-box); height:calc(var(--leaf-box)*1.12)}
+  #leaf-back{width:calc(var(--leaf-box)*.78); height:calc(var(--leaf-box)*1.12*.80)}
   .leaf-static{width:var(--leaf-box); height:auto}
   main, footer{position:relative; z-index:1}
   .releases-offline{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
@@ -569,8 +569,32 @@
   .model .cat{font:600 9.5px "DM Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:#738165; margin:0}
   .model b{font-size:14.5px; letter-spacing:-.01em}
   .model span{font-size:12px; color:var(--muted)}
-  .model.locked{background:#f4f5ef; border-style:dashed}
-  .model.locked b{color:#5d675f}
+  .model.is-pick{border-color:#c7dd93; box-shadow:0 0 0 1px #d8eab5 inset}
+
+  /* Deux niveaux distincts : ce qui tourne dans le navigateur, puis ce que la
+     version bureau ajoute. Les melanger laissait croire que tout se telecharge
+     dans un onglet, y compris les modeles de 9 Go. */
+  .tier-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin:0 0 14px}
+  .tier-head b{font:600 10px "DM Mono",monospace; letter-spacing:.11em; text-transform:uppercase; color:#4c6b1f}
+  .tier-head span{font-size:12.5px; color:var(--dim); line-height:1.5}
+  .desktop-tier{
+    margin-top:14px; border:1px dashed #cfd8bd; border-radius:var(--radius);
+    background:#fafbf4; padding:22px 24px;
+    display:grid; grid-template-columns:1.05fr 1fr auto; gap:26px; align-items:center;
+  }
+  .desktop-tier .tier-head{margin-bottom:8px}
+  .desktop-lede{margin:0; font-size:13px; line-height:1.6; color:var(--muted)}
+  .desktop-list{margin:0; padding:0; list-style:none; display:grid; gap:7px}
+  .desktop-list li{display:flex; gap:9px; font-size:12.5px; color:var(--muted); line-height:1.45}
+  .desktop-list li::before{content:"+"; flex:none; color:#8aa64a; font-weight:800}
+  .desktop-list b{color:var(--ink); font-weight:800}
+  @media (max-width:900px){
+    .models{grid-template-columns:repeat(2,1fr)}
+    .desktop-tier{grid-template-columns:1fr; gap:18px}
+  }
+  @media (max-width:560px){
+    .models{grid-template-columns:1fr}
+  }
 
   .privacy{display:grid; grid-template-columns:1.1fr .9fr; gap:40px; align-items:center}
   .privacy-list{display:grid; gap:16px; margin:0; padding:0; list-style:none}
@@ -768,13 +792,13 @@
               </a>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">Qwen 2.5 Coder 3B</span>
-                <span class="mega-desc">Code · ~2,0 Go</span>
-                <span class="mega-tag desk">Bureau</span>
+                <span class="mega-desc">Code · ~1,7 Go</span>
+                <span class="mega-tag both">Web + bureau</span>
               </a>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">SmolVLM2 500M</span>
                 <span class="mega-desc">Images et vidéos · ~1,0 Go</span>
-                <span class="mega-tag both">Web + bureau</span>
+                <span class="mega-tag web">Web seulement</span>
               </a>
             </div>
 
@@ -935,7 +959,7 @@
   <div class="stats">
     <div class="wrap stats-grid">
       <div class="stat"><b>38</b><span>modèles de texte</span></div>
-      <div class="stat"><b>11</b><span>modèles d'image</span></div>
+      <div class="stat"><b>14</b><span>modèles d'image</span></div>
       <div class="stat"><b>0</b><span>donnée envoyée</span></div>
       <div class="stat"><b>3</b><span>systèmes supportés</span></div>
     </div>
@@ -1057,24 +1081,36 @@
       <div class="section-head reveal">
         <p class="mono">Catalogue</p>
         <h2>Des modèles choisis, pas une liste infinie.</h2>
-        <p>Chaque modèle tient sur une machine grand public et ne se télécharge qu'une seule fois. Trois d'entre eux sont hébergés ici même, les autres viennent d'un CDN.</p>
+        <p>Un modèle retenu par usage, pas un catalogue déversé. Le navigateur s'arrête à 1,9 Go, ce qu'un onglet peut héberger ; la version bureau va beaucoup plus loin.</p>
       </div>
 
       <p class="mono hosted-models reveal" id="hosted-models">
         Hébergés sur ce serveur : Llama 3.2 1B · Qwen 2.5 1.5B · Qwen 3.5 2B
       </p>
 
+      <div class="tier-head reveal">
+        <b>Dans le navigateur</b>
+        <span>Quatre modèles, un par usage, tous sous la limite d'un onglet.</span>
+      </div>
       <div class="models reveal">
-        <div class="model"><p class="cat">Généraliste</p><b>Qwen 3.5 2B</b><span>~1,2 Go · recommandé</span></div>
-        <div class="model"><p class="cat">Documents</p><b>Gemma 2 2B</b><span>~1,2 Go · citations fiables</span></div>
-        <div class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 3B</b><span>~2,0 Go</span></div>
-        <div class="model"><p class="cat">Vision</p><b>SmolVLM2 500M</b><span>~1,0 Go</span></div>
-        <div class="model"><p class="cat">Image</p><b>SD-Turbo</b><span>512 px en 1,2 s</span></div>
-        <div class="model"><p class="cat">Image</p><b>Gravure SIMIA</b><span>style maison, LoRA 6 Mo</span></div>
-        <div class="model"><p class="cat">Image</p><b>SDXL Turbo</b><span>1024 px en 6 s</span></div>
-        <div class="model"><p class="cat">Image</p><b>DreamShaper XL</b><span>1024 px en 6 pas</span></div>
-        <div class="model"><p class="cat">Image</p><b>SDXL Lightning</b><span>1024 px en 4 pas</span></div>
-        <div class="model locked"><p class="cat">Desktop</p><b>Qwen 2.5 Coder 14B</b><span>~8,4 Go · réservé au bureau</span></div>
+        <div class="model is-pick"><p class="cat">Généraliste</p><b>Qwen 3.5 2B</b><span>~1,4 Go · le choix par défaut</span></div>
+        <div class="model"><p class="cat">Documents</p><b>Gemma 2 2B</b><span>~1,2 Go · résume et cite</span></div>
+        <div class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 3B</b><span>~1,7 Go · lit un dépôt entier</span></div>
+        <div class="model"><p class="cat">Vision</p><b>SmolVLM2 500M</b><span>~1 Go · décrit une capture</span></div>
+      </div>
+
+      <div class="desktop-tier reveal">
+        <div>
+          <div class="tier-head"><b>Dans la version bureau</b></div>
+          <p class="desktop-lede">Rien de tout cela ne se télécharge dans un onglet : le moteur tourne sur le GPU de la machine, sans la limite du navigateur.</p>
+        </div>
+        <ul class="desktop-list">
+          <li><b>38 modèles de texte</b>, du 135M au DeepSeek Coder V2, jusqu'à 9,7 Go</li>
+          <li><b>14 modèles d'image</b>, de 651 Mo à 5,6 Go, en 512 et 1024 px</li>
+          <li><b>Stable Diffusion 1.5 déjà installé</b> : l'image marche au premier lancement</li>
+          <li><b>Gravure SIMIA</b>, le LoRA maison de 6 Mo, entraîné sur 32 planches anciennes</li>
+        </ul>
+        <a class="btn btn-ghost" href="#telecharger">Voir les téléchargements →</a>
       </div>
     </div>
   </section>
@@ -1839,14 +1875,24 @@
            taille, donc sans jamais rogner le dessin. La position horizontale
            vient de l'appelant, qui la cale sur le bord de la colonne : ainsi la
            moitie gauche passe sous les cartes et la moitie droite reste dans la
-           marge, quelle que soit la largeur de la fenetre. */
-        const size = s.size === undefined ? 1 : clamp01(s.size);
+           marge, quelle que soit la largeur de la fenetre.
+           La taille tient compte de l'inclinaison : couchee a 80 degres, la
+           feuille occupe presque toute la largeur de sa boite. Sans ce
+           correctif, son bout depasserait et serait coupe net par le bord. */
+        const tilt = s.tilt || 0;
+        const rad = Math.abs(tilt) * Math.PI / 180;
+        const halfWide = W * 0.235;
+        const halfTall = H * 0.42;
+        const extent = halfWide * Math.abs(Math.cos(rad)) + halfTall * Math.abs(Math.sin(rad));
+        const fit = Math.min(1, (W * 0.45) / Math.max(1, extent));
+
+        const size = (s.size === undefined ? 1 : clamp01(s.size)) * fit;
         const cx = W * (s.cx === undefined ? 0.60 : clamp01(s.cx));
         const baseY = H * 0.93;
         const span = H * 0.80 * size;
         const tipY = baseY - span;
         const maxHalf = W * 0.235 * size;
-        const stemEnd = Math.min(H * 0.997, baseY + span * 0.14);
+        const stemEnd = Math.min(H * 0.965, baseY + span * 0.14);
 
         const twistAt = t => s.twist * (0.25 + 0.85 * t) + s.flutter * Math.sin(s.phase + t * 3.1);
         const offAt = t => (s.curl * t * t + s.lean * t) * span;
@@ -2026,6 +2072,9 @@
     /* Deux feuilles : la grande au premier plan, la petite plus loin. Leurs
        ressorts, leur flou et leur amplitude de rotation different, ce qui suffit
        a creer la profondeur sans second plan encombre.
+       La rotation part de couchee — la feuille est presque horizontale, comme
+       posee sur le sol — et se redresse au fil du parcours. La valeur de depart
+       est tres au-dela de 45 degres : c'est cette bascule qui se voit.
        Les valeurs de fromVh/toVh tiennent compte du fait que le dessin occupe
        le bas du canevas : elles placent le pied de la feuille, pas le haut de
        la boite, sinon elle demarrerait sous l'ecran. */
@@ -2035,8 +2084,8 @@
         paint: mainPaint,
         y: 0, vy: 0, rot: 0, vrot: 0,
         stiff: 0.055, damp: 0.84,
-        fromVh: 0.25, toVh: 0.22, rotA: -11, rotB: 11,
-        sizeBase: 0.50, sizePeak: 1.00,
+        fromVh: 0.25, toVh: 0.22, rotA: -82, rotB: 26,
+        sizeBase: 0.58, sizePeak: 1.00,
         swayA: -8, swayB: 26,
         alpha: 1, blurMin: 0, blurMax: 6.5, dofGain: 5,
         phase: 0.4, flutter: 0.55, twistBase: 0.12, twistAmp: 0.45
@@ -2046,8 +2095,8 @@
         paint: backPaint,
         y: 0, vy: 0, rot: 0, vrot: 0,
         stiff: 0.030, damp: 0.90,
-        fromVh: 0.30, toVh: 0.26, rotA: -20, rotB: 16,
-        sizeBase: 0.58, sizePeak: 0.96,
+        fromVh: 0.30, toVh: 0.26, rotA: -66, rotB: -8,
+        sizeBase: 0.62, sizePeak: 0.96,
         swayA: 22, swayB: -30,
         alpha: 0.5, blurMin: 1.6, blurMax: 7, dofGain: 3.4,
         phase: 2.6, flutter: 0.41, twistBase: -0.16, twistAmp: 0.38
@@ -2057,18 +2106,21 @@
     let raf = 0, last = 0, running = false, lowPower = false, slow = 0;
     const column = document.querySelector("header .wrap") || document.querySelector(".wrap");
 
-    /* Place la feuille a cheval sur le bord droit de la colonne : une partie
-       passe derriere les cartes, le reste tient dans la marge. Le centre est
-       borne pour que le dessin ne sorte jamais de sa boite, sinon le bord de
-       l'ecran le couperait net. */
-    const centreFor = (p, progress) => {
+    /* Place la feuille a cheval sur le bord droit de la colonne : 45 % de sa
+       largeur passe derriere les cartes, le reste tient dans la marge. Sans ce
+       calage elle disparaissait presque entierement sous les blocs, la marge
+       d'une page de 1440 px n'etant large que d'une centaine de pixels. Le
+       centre est borne pour que le dessin ne sorte jamais de sa boite, sinon le
+       bord de l'ecran le couperait net. */
+    const centreFor = p => {
       const boxW = p.el.offsetWidth || 1;
       const half = 0.235 * boxW;
-      const lo = Math.min(0.72, (half + boxW * 0.03) / boxW);
+      const lo = Math.min(0.70, (half + boxW * 0.03) / boxW);
       const hi = Math.max(lo, 1 - (half + boxW * 0.03) / boxW);
       if (!column) return Math.min(hi, Math.max(lo, 0.6));
       const wrapRight = column.getBoundingClientRect().right;
-      const want = (wrapRight - (window.innerWidth - boxW) - 18) / boxW;
+      // 0.0235 de boite = 5 % de la largeur du limbe au-dela du bord.
+      const want = (wrapRight + boxW * 0.0235 - (window.innerWidth - boxW)) / boxW;
       return Math.min(hi, Math.max(lo, want));
     };
 
@@ -2128,7 +2180,8 @@
         const wind = Math.min(0.3, speed * 26);
         p.paint.draw({
           size: size,
-          cx: centreFor(p, progress),
+          tilt: p.rot,
+          cx: centreFor(p),
           twist: p.twistBase + Math.sin(time * p.flutter + p.phase) * (p.twistAmp + wind),
           flutter: 0.09,
           phase: time * p.flutter * 0.7 + p.phase,
@@ -2150,8 +2203,12 @@
         return;
       }
       const dt = last ? Math.min(64, now - last) : 16.7;
+      /* La premiere image est posee, pas simulee : sans cela le ressort part de
+         la feuille debout et la couche lentement, alors qu'elle doit deja etre
+         couchee quand elle entre dans le champ. */
+      const priming = !last;
       last = now;
-      paintFrame(now / 1000, dt / 16.7, false);
+      paintFrame(now / 1000, dt / 16.7, priming);
       /* Sur une machine qui peine, la floraison est abandonnee avant tout le
          reste : c'est la passe la plus chere et la moins necessaire. Le rendu
          reste identique a un detail pres, et l'animation garde son rythme. */
