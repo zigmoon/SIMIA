@@ -41,7 +41,7 @@ const TARGETS = [
     file: "simia-macos-x64.tar.gz",
     os: "macOS Intel",
     detail: "x86_64",
-    note: "Conversation, documents et atelier de code complets, vérifiés en x86_64. Génération d'images masquée : le moteur d'images de l'amont n'est publié que pour Apple Silicon, d'où l'archive à 31 Mo au lieu de 1,4 Go.",
+    note: "Conversation, documents et atelier de code complets, vérifiés en x86_64. Génération d'images masquée : le moteur d'images de l'amont n'est publié que pour Apple Silicon, d'où une archive de quelques dizaines de mégaoctets au lieu de 1,4 Go.",
   },
   {
     file: "simia-linux-x64.tar.gz",

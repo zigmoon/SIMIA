@@ -1,16 +1,23 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
-    "0.1.9": {
-      "title": "Archive Mac Intel expliquee, fenetre des modeles reparee",
+    "0.1.10": {
+      "title": "Fenetre des modeles reparee, defauts clarifies",
       "highlights": [
         "La fenetre de choix d'un modele n'ecrase plus ses filtres : un bandeau insere dans une grille a quatre lignes fixes faisait tomber la ligne des filtres sur 0 px, et les onglets disparaissaient.",
-        "Le message « Catalogue 2 → 3 disponible » n'apparait plus a tort : le lanceur comparait le numero de catalog.json a celui de versions.json, deux compteurs distincts. Ils sont desormais alignes.",
-        "Par defaut, SIMIA charge un Qwen generaliste, plus un modele de code : le tri par categorie designait « Qwen 2.5 Coder 0.5B » au tout premier lancement.",
+        "Le message « Catalogue 2 → 3 disponible » n'apparait plus a tort : le lanceur comparait le numero de catalog.json a celui de versions.json, deux compteurs distincts. Ils sont desormais alignes, et le bandeau disparait quand les deux concordent.",
+        "Par defaut, SIMIA charge un Qwen generaliste et non un modele de code : le tri par categorie designait « Qwen 2.5 Coder 0.5B » au tout premier lancement. Le disque vide declenche desormais le telechargement de Qwen 3.5 0.8B (~508 Mo).",
         "Le modele d'image fourni dans l'archive, SD 1.5, porte la mention « inclus d'origine » : on distingue enfin ce qui est livre de ce qui reste a telecharger.",
+        "La generation d'images est verifiee de bout en bout depuis la fenetre, avec SD 1.5 livre : 512x512, 20 pas."
+      ]
+    },
+    "0.1.9": {
+      "title": "Archive Mac Intel : 32 Mo, et pourquoi",
+      "highlights": [
         "L'archive macOS Intel pese 32 Mo au lieu de 1,4 Go : elle contient le lanceur, le moteur de conversation, l'interface et les catalogues, mais aucun modele d'image, faute de moteur d'images sur Intel.",
         "Le LoRA « Gravure SIMIA » n'est plus joint aux archives sans moteur d'images : 6,4 Mo de poids mort et un fichier .safetensors qui laissait croire que la generation d'images etait disponible.",
-        "Le LISEZ-MOI, la page de telechargement et le README disent desormais la vraie raison : le moteur d'images de l'amont n'est publie que pour Apple Silicon, alors que son binaire macOS est universel mais exige macOS 26 sur ses deux tranches."
+        "Le LISEZ-MOI, la page de telechargement et le README disent desormais la vraie raison : le moteur d'images de l'amont n'est publie que pour Apple Silicon, alors que son binaire macOS est universel mais exige macOS 26 sur ses deux tranches.",
+        "Aucun changement de comportement pour Windows, Mac Apple Silicon et Linux : mêmes moteurs, mêmes modeles joints."
       ]
     },
     "0.1.8": {
