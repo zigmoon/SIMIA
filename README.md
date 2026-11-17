@@ -159,7 +159,7 @@ symboles `GLIBC_*` pour ELF). Les moteurs viennent de l'amont et ne peuvent pas
 |---|---|---|
 | Windows 10/11 | ✔ | ✔ |
 | macOS Apple Silicon | 13.3 (Ventura) et plus | **macOS 26** et plus |
-| macOS Intel | 13.3 (Ventura) et plus | — aucun binaire amont |
+| macOS Intel | 13.3 (Ventura) et plus | — moteur Apple Silicon uniquement |
 | Linux x86_64 | glibc 2.34 → Ubuntu 22.04 et plus | **glibc 2.43 → Ubuntu 26.04** et plus |
 
 La conversation et l'atelier de code fonctionnent donc dès macOS 13.3 et Ubuntu
@@ -385,12 +385,17 @@ officielles :
 |---|---|---|---|
 | `windows-x64` | win-vulkan-x64 | win-vulkan-x64 | `simia-windows-x64.zip` |
 | `macos-arm64` | macos-arm64 | Darwin arm64 | `simia-macos-arm64.tar.gz` |
-| `macos-x64` | macos-x64 | **aucun binaire** | `simia-macos-x64.tar.gz` |
+| `macos-x64` | macos-x64 | **Apple Silicon uniquement** | `simia-macos-x64.tar.gz` |
 | `linux-x64` | ubuntu-vulkan-x64 | Ubuntu x86_64 vulkan | `simia-linux-x64.tar.gz` |
 
-Sur macOS Intel, la génération d'images reste absente : `sd-server` n'existe pas
-pour cette plateforme, donc le bouton **Image** n'apparaît pas et les archives
-Mac Intel ne joignent pas de modèle d'image.
+L'archive amont de `stable-diffusion.cpp` pour macOS est un binaire universel :
+elle contient une tranche `x86_64`, mais les deux tranches exigent **macOS 26**.
+La quasi-totalité des Mac Intel encore en service tournent sous macOS 13 à 15 :
+le moteur serait donc présent sans jamais pouvoir démarrer. SIMIA ne le joint
+pas, le bouton **Image** n'apparaît pas sur Intel, et l'archive pèse 32 Mo au
+lieu de 1,4 Go — l'écart correspond au modèle d'image de 1,46 Go, qui n'aurait
+aucun moteur pour le charger. Conversation, documents et atelier de code y sont
+complets, et c'est vérifié binaire par binaire : tout est en `x86_64`.
 
 Chaque paquet contient `simia-desktop`, `web/`, `vendor/`, `models/*.json`,
 `models/image/loras/`, un modèle d'image prêt à l'emploi

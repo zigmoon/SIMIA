@@ -33,9 +33,10 @@ Selon votre systeme
            Le binaire n'est pas signe. Au premier lancement, macOS le bloque :
              xattr -dr com.apple.quarantine .
            puis relancez.
-           La generation d'images demande en plus macOS 26, et un Mac Apple
-           Silicon. Sur Mac Intel il n'existe aucun binaire amont : la
-           conversation et l'atelier de code fonctionnent, sans le bouton Image.
+           La generation d'images demande en plus macOS 26, et il n'existe de
+           moteur d'images que pour Apple Silicon. Sur Mac Intel le bouton
+           Image est donc masque : la conversation, les documents et l'atelier
+           de code fonctionnent normalement.
 
   Linux    chmod +x simia-desktop avant le premier lancement. Vulkan est
            utilise s'il est disponible, sinon le processeur prend le relais.
@@ -53,8 +54,10 @@ Ce que contient cette archive
   models/              le catalogue, le style Gravure SIMIA (LoRA 6 Mo) et un
                        modele d'image deja pret (SD 1.5, 1,46 Go) pour que le
                        bouton Image fonctionne des le premier lancement, sur
-                       Windows, Mac Apple Silicon et Linux. Il est absent des
-                       archives Mac Intel, faute de moteur d'image.
+                       Windows, Mac Apple Silicon et Linux. Sur Mac Intel,
+                       l'archive pese donc 32 Mo et non 1,4 Go : ni moteur, ni
+                       modele d'image, puisque le moteur d'images de l'amont
+                       n'est publie que pour Apple Silicon.
 
 Modeles
   Le catalogue pointe vers un CDN : les poids se telechargent au premier choix

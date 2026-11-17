@@ -1,6 +1,15 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.9": {
+      "title": "Archive Mac Intel : 32 Mo, et pourquoi",
+      "highlights": [
+        "L'archive macOS Intel pese 32 Mo au lieu de 1,4 Go : elle contient le lanceur, le moteur de conversation, l'interface et les catalogues, mais aucun modele d'image, faute de moteur d'images sur Intel.",
+        "Le LoRA « Gravure SIMIA » n'est plus joint aux archives sans moteur d'images : 6,4 Mo de poids mort et un fichier .safetensors qui laissait croire que la generation d'images etait disponible.",
+        "Le LISEZ-MOI, la page de telechargement et le README disent desormais la vraie raison : le moteur d'images de l'amont n'est publie que pour Apple Silicon, alors que son binaire macOS est universel mais exige macOS 26 sur ses deux tranches.",
+        "Aucun changement de comportement pour Windows, Mac Apple Silicon et Linux : mêmes moteurs, mêmes modeles joints."
+      ]
+    },
     "0.1.8": {
       "title": "Le mode image reste dans la palette du site",
       "highlights": [

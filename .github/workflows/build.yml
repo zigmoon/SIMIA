@@ -59,8 +59,12 @@ jobs:
             # (macos-15-large exigerait un plan payant).
             os: macos-15-intel
             llama: llama-b12413-bin-macos-x64.tar.gz
-            # Aucun binaire stable-diffusion.cpp pour macOS Intel :
-            # la generation d'images est simplement masquee dans l'application.
+            # L'archive amont de stable-diffusion.cpp pour macOS est universelle
+            # (tranches arm64 et x86_64), mais les deux exigent macOS 26 et le
+            # projet ne publie pas d'archive Intel distincte. La quasi-totalite
+            # des Mac Intel tournent sous macOS 13 a 15 : le moteur serait
+            # present sans pouvoir demarrer. On ne joint donc ni moteur ni
+            # modele d'image, et l'archive pese 32 Mo au lieu de 1,4 Go.
             sd: ""
             archive: tar.gz
           - target: linux-x64
@@ -192,20 +196,19 @@ jobs:
           cp "launcher/target/release/$binary" "$stage/"
 
           cp -r web "$stage/web"
-          mkdir -p "$stage/models/image/loras"
           cp models/catalog.json models/versions.json "$stage/models/"
           cp models/image/catalog.json "$stage/models/image/"
-          # Le LoRA maison est livre avec l'application : le style Gravure SIMIA
-          # fonctionne sans telechargement supplementaire.
-          if ls models/image/loras/*.safetensors >/dev/null 2>&1; then
-            cp models/image/loras/*.safetensors "$stage/models/image/loras/"
-          fi
 
-          # Modele d'image livre avec l'application, pour que le bouton Image de
-          # la barre de saisie soit utilisable au premier lancement. Les poids ne
-          # sont pas versionnes (.gitignore) : ils sont telecharges ici.
-          # macOS Intel n'a aucun binaire sd-server : rien a joindre.
+          # Le LoRA maison et le modele d'image pret a l'emploi ne sont joints
+          # que sur les plateformes qui ont un moteur d'images. Mac Intel n'en a
+          # pas : 6,4 Mo de LoRA et 1,46 Go de SD 1.5 y seraient inutilisables,
+          # sans compter qu'un fichier .safetensors dans une archive sans moteur
+          # laisse croire que la generation d'images est disponible.
           if [ -n "${{ matrix.sd }}" ]; then
+            mkdir -p "$stage/models/image/loras"
+            if ls models/image/loras/*.safetensors >/dev/null 2>&1; then
+              cp models/image/loras/*.safetensors "$stage/models/image/loras/"
+            fi
             dir="$stage/models/image/sd15"
             mkdir -p "$dir"
             curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
