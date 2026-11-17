@@ -534,22 +534,24 @@
     .release-when{margin-left:auto}
   }
 
-  /* Feuille decorative : elle accompagne le defilement sur grand ecran, glisse
-     le long de la marge droite et rejoint le pied de page. Fixe et sans
-     evenement, donc aucun impact sur la mise en page ni sur le scroll.
-     Le z-index est positif : en negatif, Chromium ne peignait pas la couche
-     au-dessus du fond de page et la feuille restait invisible. La largeur est
-     bornee pour qu'elle tienne entierement dans la marge, sans jamais passer
-     sur le texte des cartes. */
-  .leaf-layer{position:fixed; inset:0; z-index:2; display:none; pointer-events:none; overflow:hidden}
-  .leaf-scroll{
-    position:absolute; right:clamp(10px,1.1vw,36px); top:76vh;
-    width:clamp(88px,7vw,168px); height:auto;
-    opacity:0; will-change:transform,opacity;
-    filter:drop-shadow(0 16px 30px rgba(29,37,34,.10));
+  /* Feuilles decoratives : deux canevas fixes dans la marge droite. Le dessin,
+     la deformation et le flou sont recalcules image par image ; la mise en page
+     n'est jamais touchee. Le z-index est positif : en negatif, Chromium ne
+     peignait pas la couche au-dessus du fond de page. La largeur du canevas est
+     celle de la gouttiere, si bien que rien ne peut deborder sur le texte. */
+  .leaf-layer{
+    position:fixed; inset:0; z-index:2; display:none; pointer-events:none;
+    overflow:hidden; --leaf-w:min(300px,calc((100vw - 1128px)/2));
   }
   .leaf-layer.is-on{display:block}
-  @media (prefers-reduced-motion:reduce){ .leaf-layer{display:none} }
+  .leaf-prop{
+    position:absolute; top:0; right:6px; opacity:0;
+    transform-origin:50% 50%; will-change:transform,opacity,filter;
+  }
+  .leaf-prop canvas{display:block; width:100%; height:100%}
+  #leaf-main{width:var(--leaf-w); height:calc(var(--leaf-w)*1.44)}
+  #leaf-back{width:calc(var(--leaf-w)*.6); height:calc(var(--leaf-w)*.86)}
+  .leaf-static{width:var(--leaf-w); height:auto}
   .releases-offline{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
   .releases-offline a{color:var(--ink); font-weight:800}
 
@@ -1206,11 +1208,14 @@
 
 </main>
 
-<!-- Feuille decorative : purement visuelle, masquee aux lecteurs d'ecran et
-     au-dela du point de rupture desktop. Le PNG est rendu depuis
-     tools/leaf-template.html pour rester dans la palette du site. -->
+<!-- Feuilles decoratives : purement visuelles, masquees aux lecteurs d'ecran
+     et au-dela du point de rupture desktop. Le canevas les dessine et les
+     deforme image par image ; le PNG rendu depuis tools/leaf-template.html
+     sert de repli quand le contexte 2D est indisponible. -->
 <div class="leaf-layer" id="leaf-layer" aria-hidden="true">
-  <img class="leaf-scroll" id="leaf-scroll" src="leaf-simia.png" alt="" width="352" height="640" decoding="async">
+  <div class="leaf-prop" id="leaf-back"><canvas></canvas></div>
+  <div class="leaf-prop" id="leaf-main"><canvas></canvas></div>
+  <img class="leaf-prop leaf-static" id="leaf-static" src="leaf-simia.png" alt="" width="352" height="640" decoding="async">
 </div>
 
 <footer>
@@ -1766,64 +1771,380 @@
     revealAll();
   }
 
-  /* ---------- feuille decorative qui suit le defilement ---------- */
-  /* Elle part de la hauteur de l'apercu de l'interface et accompagne le
-     visiteur jusqu'au pied de page, le long de la marge droite. La position
-     est interpolee a partir du defilement reel, donc elle ne derive pas quand
-     une section change de hauteur. Rien n'est calcule sur les ecrans etroits
-     ni si le visiteur a demande moins d'animation. */
+  /* ---------- feuilles decoratives, dessinees au canevas ---------- */
+  /* Chaque feuille est tracee bande par bande : la bande est tordue autour de
+     l'axe de la feuille, donc la largeur se resserre, l'ombrage suit la surface
+     et les nervures se deplacent avec elle. S'y ajoutent une ombre portee, un
+     lisere lumineux du cote eclaire, un flou de profondeur de champ selon la
+     place dans la page et un flou de mouvement selon la vitesse de defilement.
+     Aucune animation si le visiteur a demande moins de mouvement : la feuille
+     est alors posee, nette et figee. */
   (() => {
     const layer = document.getElementById("leaf-layer");
-    const leaf = document.getElementById("leaf-scroll");
+    const holder = document.getElementById("leaf-main");
+    const backer = document.getElementById("leaf-back");
+    const still = document.getElementById("leaf-static");
     const mock = document.querySelector(".hero-visual .mock") || document.querySelector(".mock");
     const pageFooter = document.querySelector("footer");
-    if (!layer || !leaf || !mock || !pageFooter) return;
+    if (!layer || !holder || !backer || !mock || !pageFooter) return;
 
     const desktop = window.matchMedia("(min-width: 1366px)");
     const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const clamp01 = value => (value < 0 ? 0 : value > 1 ? 1 : value);
+    const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+    const lerp = (a, b, k) => a + (b - a) * k;
 
-    const paint = () => {
-      if (!desktop.matches || calm.matches) {
-        layer.classList.remove("is-on");
-        leaf.style.opacity = "0";
-        return;
-      }
-      layer.classList.add("is-on");
-      const viewport = window.innerHeight || 1;
-      const scroll = window.scrollY || window.pageYOffset || 0;
-      const mockBottom = mock.getBoundingClientRect().bottom + scroll;
-      const footerTop = pageFooter.getBoundingClientRect().top + scroll;
-      // Debut quand l'apercu sort par le bas, fin quand le pied arrive.
-      const start = mockBottom - viewport * 0.55;
-      const end = footerTop - viewport * 0.30;
-      const span = Math.max(1, end - start);
-      const progress = clamp01((scroll - start) / span);
+    /* Palette reprise telle quelle du site : vert profond, vert clair, accent. */
+    const DEEP = [34, 54, 22];
+    const HIGH = [206, 233, 143];
+    const LIME = [216, 244, 81];
 
-      // Le trajet : sous l'interface (76 vh) puis jusqu'au pied (26 vh).
-      const top = 76 - progress * 50;
-      const drift = Math.sin(progress * Math.PI) * 22;
-      const angle = -10 + progress * 20;
-      // Apparition franche des les premiers pixels de defilement.
-      const opacity = clamp01(progress / 0.06);
-
-      leaf.style.top = `${top.toFixed(2)}vh`;
-      leaf.style.transform = `translate3d(${drift.toFixed(1)}px, 0, 0) rotate(${angle.toFixed(1)}deg)`;
-      leaf.style.opacity = opacity.toFixed(3);
+    const BANDS = 54;
+    /* Silhouette ovale, pointe en haut, legerement dentee sur le bord : une
+       courbe parfaite se lit comme une ellipse, pas comme une feuille. */
+    const profile = t => {
+      const u = clamp01(t);
+      return Math.pow(Math.sin(Math.PI * Math.pow(u, 1.22)), 0.82) * (1 + 0.035 * Math.sin(u * 26));
     };
 
-    /* Peinture directe : requestAnimationFrame ne se declenche jamais dans un
-       onglet en arriere-plan, et la feuille resterait figee au retour. Les
-       evenements de defilement sont deja alignes sur la frame par le
-       navigateur, et ce calcul se limite a deux rectangles. */
-    window.addEventListener("scroll", paint, { passive: true });
-    window.addEventListener("resize", paint, { passive: true });
-    window.addEventListener("load", paint);
-    if (desktop.addEventListener) {
-      desktop.addEventListener("change", paint);
-      calm.addEventListener("change", paint);
+    const painter = canvas => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      let W = 0, H = 0;
+
+      const resize = () => {
+        const w = canvas.offsetWidth, h = canvas.offsetHeight;
+        if (!w || !h) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+        if (canvas.width !== pw || canvas.height !== ph) {
+          canvas.width = pw;
+          canvas.height = ph;
+        }
+        W = w; H = h;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      };
+
+      const draw = s => {
+        if (!W) resize();
+        if (!W) return;
+
+        const cx = W * 0.5;
+        const baseY = H * 0.90;
+        const span = H * 0.855;
+        const tipY = baseY - span;
+        const maxHalf = W * 0.255;
+
+        const twistAt = t => s.twist * (0.25 + 0.85 * t) + s.flutter * Math.sin(s.phase + t * 3.1);
+        const offAt = t => (s.curl * t * t + s.lean * t) * span;
+        const halfAt = t => profile(t) * maxHalf;
+        const faceAt = t => Math.cos(twistAt(t));
+        const edge = (t, side) => cx + offAt(t) + side * halfAt(t) * faceAt(t);
+
+        const outline = () => {
+          ctx.beginPath();
+          for (let i = 0; i <= BANDS; i++) {
+            const t = i / BANDS, y = baseY - t * span;
+            if (i) ctx.lineTo(edge(t, -1), y); else ctx.moveTo(edge(t, -1), y);
+          }
+          for (let i = BANDS; i >= 0; i--) {
+            const t = i / BANDS;
+            ctx.lineTo(edge(t, 1), baseY - t * span);
+          }
+          ctx.closePath();
+        };
+
+        ctx.clearRect(0, 0, W, H);
+
+        /* Floraison : la meme silhouette, floutee et teintee d'accent, posee
+           sous la feuille. Elle donne un halo lumineux la ou le vert est le plus
+           clair, et se coupe des que la machine peine a suivre. */
+        if (!s.simple) {
+          ctx.save();
+          ctx.filter = `blur(${(W * 0.10).toFixed(1)}px)`;
+          ctx.globalAlpha = 0.22;
+          outline();
+          ctx.fillStyle = "rgb(178,212,104)";
+          ctx.fill();
+          ctx.restore();
+        }
+
+        if (s.shadow) {
+          ctx.save();
+          ctx.filter = `blur(${(W * 0.045).toFixed(1)}px)`;
+          ctx.translate(W * 0.05, H * 0.02);
+          outline();
+          ctx.fillStyle = "rgba(29,37,34,0.17)";
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(cx + offAt(0), baseY);
+        ctx.quadraticCurveTo(
+          cx + offAt(0) + W * 0.05, baseY + H * 0.035,
+          cx + offAt(0) + W * 0.012, H * 0.985
+        );
+        ctx.strokeStyle = "rgb(74,96,44)";
+        ctx.lineWidth = Math.max(1.2, W * 0.016);
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        /* Les bandes se chevauchent d'un demi-pixel : sans cela, l'anticrenelage
+           laisse une couture claire entre deux bandes voisines. */
+        for (let i = 0; i < BANDS; i++) {
+          const t0 = i / BANDS, t1 = (i + 1) / BANDS;
+          const y0 = baseY - t0 * span + 0.45;
+          const y1 = baseY - t1 * span - 0.45;
+          const face = clamp01(faceAt((t0 + t1) * 0.5));
+          const light = clamp01(0.12 + 0.88 * face * face);
+          const spec = Math.pow(clamp01(1 - Math.abs(face - 0.9) * 6), 3) * 0.5;
+          let r = lerp(DEEP[0], HIGH[0], light);
+          let gr = lerp(DEEP[1], HIGH[1], light);
+          let b = lerp(DEEP[2], HIGH[2], light);
+          if (spec > 0.02) {
+            r = lerp(r, LIME[0], spec);
+            gr = lerp(gr, LIME[1], spec);
+            b = lerp(b, LIME[2], spec);
+          }
+          ctx.beginPath();
+          ctx.moveTo(edge(t0, -1), y0);
+          ctx.lineTo(edge(t1, -1), y1);
+          ctx.lineTo(edge(t1, 1), y1);
+          ctx.lineTo(edge(t0, 1), y0);
+          ctx.closePath();
+          ctx.fillStyle = `rgb(${r | 0},${gr | 0},${b | 0})`;
+          ctx.fill();
+        }
+
+        ctx.save();
+        outline();
+        ctx.clip();
+
+        const shade = ctx.createLinearGradient(0, baseY, 0, tipY);
+        shade.addColorStop(0, "rgba(24,38,14,0.30)");
+        shade.addColorStop(0.45, "rgba(24,38,14,0.02)");
+        shade.addColorStop(1, "rgba(255,255,255,0.12)");
+        ctx.fillStyle = shade;
+        ctx.fillRect(0, 0, W, H);
+
+        /* Volume lateral : le limbe s'arrondit, il n'est pas une bande plate.
+           La limite clair/sombre glisse avec la torsion, ce qui fait pivoter la
+           lumiere sur la surface au lieu de la laisser fixe. */
+        const shift = Math.min(0.78, Math.max(0.26, 0.5 + s.twist * 0.35));
+        const round = ctx.createLinearGradient(cx - maxHalf, 0, cx + maxHalf, 0);
+        round.addColorStop(0, "rgba(255,255,255,0.10)");
+        round.addColorStop(shift - 0.22, "rgba(255,255,255,0.16)");
+        round.addColorStop(shift, "rgba(255,255,255,0)");
+        round.addColorStop(shift + 0.18, "rgba(24,38,14,0.17)");
+        round.addColorStop(1, "rgba(255,255,255,0.12)");
+        ctx.fillStyle = round;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.beginPath();
+        for (let i = 0; i <= 28; i++) {
+          const t = i / 28, x = cx + offAt(t), y = baseY - t * span;
+          if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(250,255,222,0.60)";
+        ctx.lineWidth = Math.max(0.8, W * 0.008);
+        ctx.stroke();
+
+        for (let k = 0; k < 7; k++) {
+          const from = 0.12 + (k / 7) * 0.74;
+          for (const side of [-1, 1]) {
+            ctx.beginPath();
+            for (let j = 0; j <= 8; j++) {
+              const u = j / 8;
+              const t = from + u * 0.11 * (1 - from);
+              const y = baseY - t * span;
+              const x = cx + offAt(t) + side * halfAt(t) * faceAt(t) * u;
+              if (j) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+            }
+            ctx.strokeStyle = `rgba(250,255,225,${0.10 + 0.17 * (1 - from)})`;
+            ctx.lineWidth = Math.max(0.5, W * 0.005);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+
+        outline();
+        ctx.strokeStyle = "rgba(52,72,30,0.30)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        /* Lisere d'accent sur le bord expose a la lumiere. */
+        const lit = s.twist >= 0 ? 1 : -1;
+        ctx.beginPath();
+        for (let i = 0; i <= BANDS; i++) {
+          const t = i / BANDS, y = baseY - t * span, x = edge(t, lit);
+          if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(216,244,81,0.55)";
+        ctx.lineWidth = Math.max(0.9, W * 0.007);
+        ctx.stroke();
+      };
+
+      return { draw, resize };
+    };
+
+    const mainPaint = painter(holder.querySelector("canvas"));
+    const backPaint = painter(backer.querySelector("canvas"));
+    if (!mainPaint) {
+      holder.hidden = true;
+      backer.hidden = true;
+      if (still) still.hidden = false;
+    } else if (still) {
+      still.hidden = true;
     }
-    paint();
+
+    /* Deux feuilles : la grande au premier plan, la petite plus loin. Leurs
+       ressorts, leur flou et leur amplitude de rotation different, ce qui suffit
+       a creer la profondeur sans second plan encombre. */
+    const props = [
+      {
+        el: mainPaint ? holder : still,
+        paint: mainPaint,
+        y: 0, vy: 0, rot: 0, vrot: 0,
+        stiff: 0.055, damp: 0.84,
+        fromVh: 0.82, toVh: 0.30, rotA: -11, rotB: 11,
+        alpha: 1, blurMin: 0, blurMax: 6.5, dofGain: 6,
+        phase: 0.4, flutter: 0.55, twistBase: 0.12, twistAmp: 0.45
+      },
+      {
+        el: backer,
+        paint: backPaint,
+        y: 0, vy: 0, rot: 0, vrot: 0,
+        stiff: 0.030, damp: 0.90,
+        fromVh: 0.62, toVh: 0.22, rotA: -20, rotB: 16,
+        alpha: 0.55, blurMin: 1.6, blurMax: 7, dofGain: 4,
+        phase: 2.6, flutter: 0.41, twistBase: -0.16, twistAmp: 0.38
+      }
+    ].filter(p => p.el);
+
+    let raf = 0, last = 0, running = false, lowPower = false, slow = 0;
+
+    const paintFrame = (time, k, snap) => {
+      const vh = window.innerHeight || 900;
+      const scroll = window.scrollY || 0;
+      const mockBottom = mock.getBoundingClientRect().bottom + scroll;
+      const footerTop = pageFooter.getBoundingClientRect().top + scroll;
+      const from = mockBottom - vh * 0.62;
+      const to = footerTop - vh * 0.26;
+      const progress = clamp01((scroll - from) / Math.max(1, to - from));
+
+      layer.classList.add("is-on");
+
+      for (const p of props) {
+        const targetY = vh * (p.fromVh - progress * p.toVh);
+        const targetRot = p.rotA + progress * (p.rotB - p.rotA);
+
+        if (snap) {
+          p.y = targetY; p.rot = targetRot; p.vy = 0; p.vrot = 0;
+        } else {
+          p.vy += (targetY - p.y) * p.stiff * k;
+          p.vy *= Math.pow(p.damp, k);
+          p.y += p.vy * k;
+          p.vrot += (targetRot - p.rot) * p.stiff * k;
+          p.vrot *= Math.pow(p.damp, k);
+          p.rot += p.vrot * k;
+        }
+
+        /* Flou de mouvement : la feuille se traine quand on defile vite. Puis
+           flou de champ : nette au milieu de la page, douce en haut et en bas. */
+        const speed = Math.abs(p.vy) / vh;
+        const centre = (p.y + p.el.offsetHeight * 0.5) / vh;
+        const dof = Math.abs(centre - 0.45) * p.dofGain;
+        const blur = snap ? 0 : Math.min(p.blurMax, p.blurMin + dof + speed * 110);
+
+        const appear = clamp01(progress / 0.05);
+        const vanish = clamp01((1 - progress) / 0.06);
+        const opacity = snap ? p.alpha : appear * vanish * p.alpha;
+
+        p.el.style.transform = `translate3d(0,${p.y.toFixed(1)}px,0) rotate(${p.rot.toFixed(2)}deg)`;
+        p.el.style.opacity = opacity.toFixed(3);
+        p.el.style.filter = blur > 0.25 ? `blur(${blur.toFixed(2)}px)` : "none";
+
+        if (!p.paint || opacity < 0.01) continue;
+        const wind = Math.min(0.3, speed * 26);
+        p.paint.draw({
+          twist: p.twistBase + Math.sin(time * p.flutter + p.phase) * (p.twistAmp + wind),
+          flutter: 0.09,
+          phase: time * p.flutter * 0.7 + p.phase,
+          curl: Math.sin(time * p.flutter * 0.63 + p.phase * 1.7) * 0.075,
+          lean: Math.cos(time * p.flutter * 0.41 + p.phase) * 0.032,
+          shadow: p.paint === mainPaint,
+          simple: lowPower
+        });
+      }
+    };
+
+    const frame = now => {
+      if (!running) return;
+      /* La boucle verifie elle-meme ses conditions d'arret : un ecouteur de
+         media query ne se declenche pas toujours (rotation d'ecran, fenetre
+         redimensionnee par le systeme, onglet en arriere-plan). */
+      if (!desktop.matches || calm.matches || document.hidden) {
+        apply();
+        return;
+      }
+      const dt = last ? Math.min(64, now - last) : 16.7;
+      last = now;
+      paintFrame(now / 1000, dt / 16.7, false);
+      /* Sur une machine qui peine, la floraison est abandonnee avant tout le
+         reste : c'est la passe la plus chere et la moins necessaire. Le rendu
+         reste identique a un detail pres, et l'animation garde son rythme. */
+      slow = dt > 26 ? slow + 1 : Math.max(0, slow - 1);
+      if (slow > 8) lowPower = true;
+      raf = requestAnimationFrame(frame);
+    };
+
+    const stop = () => {
+      running = false;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    const apply = () => {
+      const visible = desktop.matches && !document.hidden;
+      if (visible && !calm.matches) {
+        if (!running) {
+          running = true;
+          last = 0;
+          raf = requestAnimationFrame(frame);
+        }
+        return;
+      }
+      stop();
+      if (!desktop.matches) {
+        layer.classList.remove("is-on");
+        return;
+      }
+      for (const p of props) p.paint && p.paint.resize();
+      paintFrame(0.35, 1, true);
+    };
+
+    /* Filet de securite : si la boucle s'est arretee (mode reduit, onglet en
+       veille, seuil de largeur franchi), le premier defilement la remet dans le
+       bon etat sans attendre un evenement systeme. */
+    window.addEventListener("scroll", () => {
+      if (!running) apply();
+    }, { passive: true });
+    window.addEventListener("resize", () => {
+      for (const p of props) p.paint && p.paint.resize();
+      if (calm.matches) { paintFrame(0.35, 1, true); return; }
+      if (!running) apply();
+    }, { passive: true });
+    document.addEventListener("visibilitychange", apply);
+    if (desktop.addEventListener) {
+      desktop.addEventListener("change", apply);
+      calm.addEventListener("change", apply);
+    }
+
+    apply();
+    window.addEventListener("load", () => {
+      for (const p of props) p.paint && p.paint.resize();
+      apply();
+    });
   })();
 </script>
 </body>
