@@ -1,0 +1,32 @@
+{
+  "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
+  "versions": {
+    "0.1.8": {
+      "title": "Le mode image reste dans la palette du site",
+      "highlights": [
+        "Le bouton Image actif n'est plus un bloc citron dans la barre de saisie : il prend le vert de la charte, comme le bouton Agent web.",
+        "La zone de texte ne recoit plus de degrade jaune en mode image : le liseré vert de la boîte suffit.",
+        "Le point d'etat n'est plus ambre pendant un chargement, ni saumon sur une erreur : vert de la charte et rouge franc.",
+        "Sans modele d'image installe, le libelle du bouton Image restait gris sur fond clair (3,9:1) : il garde desormais son contraste normal.",
+        "La barre de progression d'image passe en degrade vert."
+      ]
+    },
+    "0.1.7": {
+      "title": "Couleurs de la charte, catalogue elargi et alerte de nouvelle version",
+      "highlights": [
+        "Les teintes orange et violettes du mode image sont remplacees par le vert de la charte.",
+        "Chaque carte de modele affiche sa propre barre de progression, y compris pendant le chargement dans le GPU.",
+        "6 modeles de texte et 4 packs d'image ajoutes au catalogue.",
+        "L'application previent quand une version plus recente est publiee."
+      ]
+    },
+    "0.1.6": {
+      "title": "La generation d'images aboutit vraiment",
+      "highlights": [
+        "La generation passe par l'API synchrone du moteur : elle n'echoue plus au premier pas de debruitage.",
+        "Le moteur d'images est libere avant chaque rendu, et son journal est joint au message d'erreur.",
+        "L'avatar des bulles de conversation est dessine en CSS : plus d'image cassee."
+      ]
+    }
+  }
+}

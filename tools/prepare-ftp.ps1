@@ -202,6 +202,7 @@ if (-not (Test-Path $downloadsOut)) { New-Item -ItemType Directory -Path $downlo
 Write-Step "Controle"
 $expected = @(
     "index.html", ".htaccess", "robots.txt", "sitemap.xml", "service-worker.js", "cookies.js",
+    "og-simia.png",
     "agent-api.php", "web-search-api.php", "read-url-api.php",
     "app\index.html", "app\app.js", "app\styles.css", "app\service-worker.js", "app\cookies.js",
     "app\manifest.webmanifest", "app\offline.html",
@@ -210,6 +211,32 @@ $expected = @(
 )
 $missing = $expected | Where-Object { -not (Test-Path (Join-Path $Out $_)) }
 if ($missing) { throw "Fichiers manquants dans le dossier final : $($missing -join ', ')" }
+
+# Chaque modele annonce par versions.json est servi avec sa taille et son
+# empreinte dans l'application : si le fichier manque, est tronque ou ne
+# correspond pas, le telechargement echoue chez le visiteur. Une archive
+# oubliee lors d'un envoi FTP ne se voyait nulle part avant ce controle.
+Write-Step "Empreintes des modeles"
+$modelRoot = Join-Path $Out "models"
+foreach ($entry in $versions.models.PSObject.Properties) {
+    $id = $entry.Name
+    $declared = $entry.Value
+    $relative = if ($id -match '/') { $id -replace '/', '\' } else { "$id.gguf" }
+    $path = Join-Path $modelRoot $relative
+    if (-not (Test-Path $path)) { throw "modele declare mais absent du dossier final : models\$relative" }
+
+    $actualBytes = (Get-Item $path).Length
+    if ($declared.bytes -and $actualBytes -ne [int64]$declared.bytes) {
+        throw ("modele {0} : {1} octets sur le disque, {2} annonces dans versions.json" -f $relative, $actualBytes, $declared.bytes)
+    }
+    if ($declared.sha256) {
+        $actualSha = (Get-FileHash $path -Algorithm SHA256).Hash.ToLower()
+        if ($actualSha -ne ([string]$declared.sha256).ToLower()) {
+            throw ("modele {0} : empreinte SHA-256 differente de versions.json" -f $relative)
+        }
+    }
+    Write-Host ("  {0,-52} {1,12:N0} o  sha256 verifie" -f $relative, $actualBytes) -ForegroundColor DarkGray
+}
 
 # Le manifeste de l'application doit rester installable.
 $appManifest = Get-Content (Join-Path $Out "app\manifest.webmanifest") -Raw -Encoding UTF8 | ConvertFrom-Json

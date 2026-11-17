@@ -104,6 +104,30 @@ const checksums = found
   .map((f) => `${f.digest}  ${f.file}`)
   .join("\n");
 
+// Nouveautes de la version : sans cette section, un visiteur qui a deja
+// installe SIMIA ne sait pas ce qu'il gagne a mettre a jour. Le fichier est
+// facultatif : une version sans entree reste publiable, elle affiche
+// seulement le lien vers les commits.
+function changelogFor(version) {
+  try {
+    const raw = readFileSync(join(ROOT, "docs", "changelog.json"), "utf8");
+    const entry = JSON.parse(raw).versions?.[version];
+    if (!entry || !Array.isArray(entry.highlights) || !entry.highlights.length) return "";
+    return [
+      `## Nouveautés de la ${version}`,
+      "",
+      `**${entry.title}**`,
+      "",
+      ...entry.highlights.map((line) => `- ${line}`),
+      "",
+    ].join("\n");
+  } catch {
+    return "";
+  }
+}
+
+const changes = changelogFor(VERSION);
+
 const body = `**Assistant IA local, privé et hors ligne.** Conversation, analyse de
 documents, génération d'images et atelier de code, exécutés sur votre machine.
 Pas de compte, pas de clé API, pas de serveur : vos phrases ne quittent pas
@@ -116,7 +140,7 @@ Chaque archive contient le lanceur, les moteurs d'inférence
 pèsent environ 1,5 Go. Les poids des modèles de conversation, eux, se
 téléchargent depuis l'application, au moment où vous en choisissez un.
 
-## Télécharger
+${changes}## Télécharger
 
 ${table}
 

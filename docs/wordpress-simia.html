@@ -1,0 +1,491 @@
+<!--
+  Article WordPress — SIMIA
+  À coller dans un bloc « HTML personnalisé ».
+
+  Le style ci-dessous est autonome : il ne dépend d'aucun thème, d'aucune
+  police externe autre que Google Fonts, et d'aucune bibliothèque JavaScript.
+  La bascule FR/EN et le rendu tiennent dans le fichier.
+
+  Les chiffres de cet article ont été relevés sur la version 0.1.8 :
+  38 modèles de texte, 11 packs d'image, 1,44 Go pour l'archive Windows.
+  Ne pas les modifier sans revérifier models/catalog.json et la release.
+-->
+
+<div class="zg-spcc" data-lang="fr">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  .zg-spcc {
+    --zg-bg: #000000;
+    --zg-fg: #ffffff;
+    --zg-dim: #b8b8b8;
+    --zg-rule: #ffffff;
+    --zg-soft: rgba(255,255,255,0.08);
+    --zg-soft-2: rgba(255,255,255,0.16);
+    --zg-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    --zg-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    color: var(--zg-fg);
+    background: transparent;
+    font-family: var(--zg-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    line-height: 1.6;
+    font-size: 16px;
+    max-width: 880px;
+    margin: 0 auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .zg-spcc * { box-sizing: border-box; }
+  .zg-spcc a { color: var(--zg-fg); }
+  .zg-spcc .zg-mono { font-family: var(--zg-mono); }
+
+  .zg-spcc .zg-langbar {
+    display: flex; justify-content: flex-end; margin: 0 0 28px; padding: 0;
+    border-bottom: 1px solid var(--zg-rule);
+  }
+  .zg-spcc .zg-langbar button {
+    appearance: none; background: transparent; color: var(--zg-fg);
+    border: 1px solid var(--zg-rule); border-bottom: none;
+    padding: 6px 14px; cursor: pointer;
+    font-family: var(--zg-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 1px; text-transform: uppercase; margin-right: -1px;
+  }
+  .zg-spcc .zg-langbar button.active { background: var(--zg-fg); color: #000; }
+
+  .zg-spcc[data-lang="fr"] [data-lang-en] { display: none; }
+  .zg-spcc[data-lang="en"] [data-lang-fr] { display: none; }
+
+  .zg-spcc .zg-hero {
+    text-align: left; padding: 28px 0 36px;
+    border-bottom: 2px solid var(--zg-rule); margin-bottom: 34px;
+  }
+  .zg-spcc .zg-eyebrow {
+    font-family: var(--zg-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px;
+  }
+  .zg-spcc .zg-hero h1 {
+    font-family: var(--zg-sans); font-size: clamp(32px, 5.4vw, 58px);
+    font-weight: 800; line-height: 1.02; letter-spacing: -0.025em; margin: 0 0 20px;
+  }
+  .zg-spcc .zg-hero p { font-size: 18px; color: var(--zg-dim); max-width: 750px; margin: 0; line-height: 1.55; }
+  .zg-spcc .zg-meta {
+    margin-top: 22px; font-family: var(--zg-mono); font-size: 11px;
+    font-weight: 500; letter-spacing: 1px; color: var(--zg-fg); text-transform: uppercase;
+  }
+
+  .zg-spcc h2 {
+    font-family: var(--zg-sans); font-size: clamp(24px, 3.4vw, 34px);
+    font-weight: 700; line-height: 1.15; letter-spacing: -0.02em;
+    margin: 64px 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--zg-rule);
+  }
+  .zg-spcc h3 {
+    font-family: var(--zg-sans); font-size: 19px; font-weight: 600;
+    letter-spacing: -0.01em; margin: 30px 0 10px;
+  }
+  .zg-spcc p { margin: 0 0 16px; }
+  .zg-spcc ul, .zg-spcc ol { margin: 0 0 22px 22px; padding: 0; }
+  .zg-spcc li { margin-bottom: 8px; }
+  .zg-spcc li strong { font-weight: 700; }
+  .zg-spcc code {
+    font-family: var(--zg-mono); background: var(--zg-soft); padding: 1px 6px;
+    font-size: 12.5px; border: 1px solid var(--zg-soft-2); color: var(--zg-fg); border-radius: 3px;
+  }
+  .zg-spcc blockquote {
+    border-left: 3px solid var(--zg-rule); margin: 26px 0; padding: 6px 18px;
+    font-style: normal; font-weight: 600; font-size: 19px; line-height: 1.45;
+    letter-spacing: -0.01em; color: var(--zg-fg);
+  }
+
+  .zg-spcc .zg-kpi {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin: 24px 0 32px;
+  }
+  .zg-spcc .zg-item { border: 1px solid var(--zg-rule); padding: 20px 14px; text-align: left; }
+  .zg-spcc .zg-num {
+    font-family: var(--zg-sans); font-size: 34px; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1;
+  }
+  .zg-spcc .zg-lbl {
+    font-family: var(--zg-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--zg-dim); margin-top: 8px;
+  }
+
+  .zg-spcc .zg-tablewrap { overflow-x: auto; margin: 18px 0 28px; }
+  .zg-spcc table {
+    width: 100%; border-collapse: collapse; font-size: 14px;
+    border: 1px solid var(--zg-rule); font-family: var(--zg-sans);
+  }
+  .zg-spcc th, .zg-spcc td {
+    padding: 10px 12px; text-align: left;
+    border-bottom: 1px solid var(--zg-soft-2); border-right: 1px solid var(--zg-soft-2);
+    vertical-align: top;
+  }
+  .zg-spcc th:last-child, .zg-spcc td:last-child { border-right: none; }
+  .zg-spcc tbody tr:last-child td { border-bottom: none; }
+  .zg-spcc thead th {
+    background: var(--zg-fg); color: #000; font-weight: 700; font-size: 11px;
+    letter-spacing: 0.6px; text-transform: uppercase;
+  }
+  .zg-spcc td.zg-feat { font-weight: 700; }
+  .zg-spcc .zg-yes { font-weight: 700; }
+  .zg-spcc .zg-no { color: #777; }
+  .zg-spcc .zg-partial { font-style: italic; color: var(--zg-dim); }
+  .zg-spcc .zg-winner { background: var(--zg-soft); }
+
+  /* Barres comparatives en CSS pur : aucune librairie, aucun script. */
+  .zg-spcc .zg-bars { border: 1px solid var(--zg-rule); padding: 22px; margin: 22px 0 36px; }
+  .zg-spcc .zg-bars h4 {
+    font-family: var(--zg-sans); font-size: 16px; font-weight: 700;
+    letter-spacing: -0.01em; margin: 0 0 4px;
+  }
+  .zg-spcc .zg-sub {
+    font-size: 12px; color: var(--zg-dim); margin: 0 0 18px;
+    font-family: var(--zg-mono); font-weight: 500; letter-spacing: 0.5px;
+  }
+  .zg-spcc .zg-row { display: grid; grid-template-columns: 150px 1fr 52px; gap: 12px; align-items: center; margin-bottom: 9px; }
+  .zg-spcc .zg-row span { font-family: var(--zg-mono); font-size: 11px; letter-spacing: 0.5px; }
+  .zg-spcc .zg-track { height: 10px; background: var(--zg-soft); border: 1px solid var(--zg-soft-2); }
+  .zg-spcc .zg-fill { height: 100%; background: var(--zg-fg); }
+  .zg-spcc .zg-row b { font-size: 12px; font-weight: 700; text-align: right; }
+
+  .zg-spcc .zg-cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px; margin: 22px 0 36px;
+  }
+  .zg-spcc .zg-card { border: 1px solid var(--zg-rule); padding: 18px; }
+  .zg-spcc .zg-card.zg-hl { border-width: 2px; background: var(--zg-soft); }
+  .zg-spcc .zg-name {
+    font-family: var(--zg-sans); font-size: 18px; font-weight: 800;
+    letter-spacing: -0.01em; margin-bottom: 8px;
+  }
+  .zg-spcc .zg-tag {
+    font-family: var(--zg-mono); font-size: 11px; font-weight: 500;
+    padding: 2px 7px; border: 1px solid var(--zg-rule);
+    display: inline-block; margin-bottom: 10px;
+  }
+  .zg-spcc .zg-card p { font-size: 13px; color: var(--zg-dim); margin: 0; line-height: 1.5; }
+
+  .zg-spcc .zg-cta {
+    border: 2px solid var(--zg-rule); padding: 28px; text-align: center; margin: 48px 0 24px;
+  }
+  .zg-spcc .zg-cta h2 { border: none; padding: 0; margin: 0 0 10px; }
+  .zg-spcc .zg-cta a {
+    display: inline-block; margin: 10px 6px 0; padding: 11px 22px;
+    border: 1px solid var(--zg-rule); color: var(--zg-fg); text-decoration: none;
+    font-family: var(--zg-mono); font-size: 12px; font-weight: 500;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .zg-spcc .zg-cta a:hover { background: var(--zg-fg); color: #000; }
+
+  .zg-spcc .zg-foot {
+    margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--zg-rule);
+    text-align: center; color: var(--zg-dim); font-size: 12px; font-family: var(--zg-mono);
+  }
+  .zg-spcc .zg-foot a { color: var(--zg-fg); }
+
+  @media (max-width: 640px) {
+    .zg-spcc { font-size: 15px; }
+    .zg-spcc .zg-bars { padding: 16px; }
+    .zg-spcc th, .zg-spcc td { padding: 9px 10px; }
+    .zg-spcc .zg-row { grid-template-columns: 100px 1fr 40px; gap: 8px; }
+  }
+</style>
+
+<div class="zg-langbar">
+  <button type="button" data-zg-lang="fr" class="active">FR</button>
+  <button type="button" data-zg-lang="en">EN</button>
+</div>
+
+<header class="zg-hero">
+  <div class="zg-eyebrow">SIMIA · Version 0.1.8 · Novembre 2026</div>
+  <h1>
+    <span data-lang-fr>SIMIA : l’IA qui tourne sur votre machine, pas dans un centre de données</span>
+    <span data-lang-en>SIMIA: AI that runs on your machine, not in a data centre</span>
+  </h1>
+  <p>
+    <span data-lang-fr><strong>SIMIA</strong> fait tourner de vrais modèles de langage, un moteur d’images et un atelier de code directement sur votre ordinateur. Aucune conversation ne part sur un serveur, aucun compte n’est à créer, aucune clé API n’est à fournir. C’est un assistant qui fonctionne réseau coupé.</span>
+    <span data-lang-en><strong>SIMIA</strong> runs real language models, an image engine and a code workbench directly on your computer. No conversation leaves for a server, no account to create, no API key to provide. It is an assistant that works with the network turned off.</span>
+  </p>
+  <div class="zg-meta">
+    <span data-lang-fr>17 novembre 2026 · IA locale · 0 compte · 38 modèles</span>
+    <span data-lang-en>17 November 2026 · Local AI · 0 account · 38 models</span>
+  </div>
+</header>
+
+<div class="zg-kpi">
+  <div class="zg-item"><div class="zg-num">0 €</div><div class="zg-lbl"><span data-lang-fr>Prix, sans inscription</span><span data-lang-en>Free, no signup</span></div></div>
+  <div class="zg-item"><div class="zg-num">0 octet</div><div class="zg-lbl"><span data-lang-fr>Envoyé par message</span><span data-lang-en>Sent per message</span></div></div>
+  <div class="zg-item"><div class="zg-num">38</div><div class="zg-lbl"><span data-lang-fr>Modèles de texte</span><span data-lang-en>Text models</span></div></div>
+  <div class="zg-item"><div class="zg-num">3 + 1</div><div class="zg-lbl"><span data-lang-fr>Systèmes + web</span><span data-lang-en>Systems + web</span></div></div>
+</div>
+
+<h2><span data-lang-fr>Le problème que SIMIA renverse</span><span data-lang-en>The problem SIMIA reverses</span></h2>
+
+<p>
+  <span data-lang-fr>Un assistant en ligne fonctionne sur un principe simple : votre phrase quitte votre appareil, traverse un réseau, rencontre un modèle hébergé dans un centre de données, revient sous forme de réponse. Ce trajet a un coût. Il coûte de la latence, il coûte de l’énergie — un parc de serveurs doit rester allumé en permanence pour répondre à tous ses utilisateurs à la fois — et il coûte, surtout, une confiance aveugle : vous ne savez pas ce qui est conservé, ni pendant combien de temps.</span>
+  <span data-lang-en>An online assistant works on a simple principle: your sentence leaves your device, crosses a network, meets a model hosted in a data centre, and comes back as an answer. That trip has a cost. It costs latency, it costs energy — a fleet of servers must stay on permanently to answer every user at once — and above all it costs blind trust: you do not know what is kept, or for how long.</span>
+</p>
+
+<p>
+  <span data-lang-fr>SIMIA inverse le trajet. Le modèle est téléchargé une fois, puis il vit sur votre disque. Le calcul se fait sur le processeur ou la carte graphique que vous possédez déjà. Une fois le modèle en place, une conversation n’échange plus rien avec Internet. Ce n’est pas une promesse de confidentialité : c’est vérifiable en coupant le Wi-Fi, et l’assistant continue de répondre.</span>
+  <span data-lang-en>SIMIA reverses the trip. The model is downloaded once, then it lives on your disk. Computation happens on the CPU or graphics card you already own. Once the model is in place, a conversation exchanges nothing with the internet. This is not a privacy promise: it is verifiable by switching off Wi-Fi, and the assistant keeps answering.</span>
+</p>
+
+<blockquote>
+  <span data-lang-fr>« Un assistant personnel qui vous ressemble ne devrait pas avoir besoin de vous observer. »</span>
+  <span data-lang-en>“A personal assistant that resembles you should not need to observe you.”</span>
+</blockquote>
+
+<h2><span data-lang-fr>Ce que SIMIA fait vraiment</span><span data-lang-en>What SIMIA actually does</span></h2>
+
+<div class="zg-cards">
+  <div class="zg-card zg-hl">
+    <div class="zg-name"><span data-lang-fr>Conversation</span><span data-lang-en>Conversation</span></div>
+    <span class="zg-tag">CHAT</span>
+    <p><span data-lang-fr>Un vrai modèle de langage sur votre machine, avec historique local, export et reprise des conversations.</span><span data-lang-en>A real language model on your machine, with local history, export and conversation restore.</span></p>
+  </div>
+  <div class="zg-card zg-hl">
+    <div class="zg-name"><span data-lang-fr>Documents</span><span data-lang-en>Documents</span></div>
+    <span class="zg-tag">PDF · DOCX · ODS</span>
+    <p><span data-lang-fr>Analyse de PDF, Word, OpenDocument, EPUB, CSV et texte : le fichier est lu sur place, jamais téléversé.</span><span data-lang-en>Analyse PDF, Word, OpenDocument, EPUB, CSV and text: the file is read locally, never uploaded.</span></p>
+  </div>
+  <div class="zg-card zg-hl">
+    <div class="zg-name"><span data-lang-fr>Images</span><span data-lang-en>Images</span></div>
+    <span class="zg-tag">512 · 1024 PX</span>
+    <p><span data-lang-fr>11 packs d’image, de SDXS (651 Mo, 1 pas) à Z-Image Turbo (1024 px). Un style maison, « Gravure SIMIA », entraîné sur des planches botaniques du domaine public.</span><span data-lang-en>11 image packs, from SDXS (651 MB, single step) to Z-Image Turbo (1024 px). A house style, “Gravure SIMIA”, trained on public-domain botanical plates.</span></p>
+  </div>
+  <div class="zg-card">
+    <div class="zg-name"><span data-lang-fr>Atelier de code</span><span data-lang-en>Code workbench</span></div>
+    <span class="zg-tag">JS · PYTHON</span>
+    <p><span data-lang-fr>Éditeur intégré avec exécution JavaScript et Python, sans ouvrir de terminal.</span><span data-lang-en>Built-in editor with JavaScript and Python execution, no terminal to open.</span></p>
+  </div>
+  <div class="zg-card">
+    <div class="zg-name"><span data-lang-fr>Agent web</span><span data-lang-en>Web agent</span></div>
+    <span class="zg-tag">OPT-IN</span>
+    <p><span data-lang-fr>Recherche assistée, appelée seulement quand vous l’utilisez. Le reste du temps, SIMIA ne touche pas au réseau.</span><span data-lang-en>Assisted search, called only when you use it. The rest of the time, SIMIA does not touch the network.</span></p>
+  </div>
+  <div class="zg-card">
+    <div class="zg-name"><span data-lang-fr>Dictée et langues</span><span data-lang-en>Dictation and languages</span></div>
+    <span class="zg-tag">FR · EN · ES · JA</span>
+    <p><span data-lang-fr>Saisie au micro dans le navigateur, et une interface réellement traduite en quatre langues.</span><span data-lang-en>Microphone input in the browser, and an interface genuinely translated into four languages.</span></p>
+  </div>
+</div>
+
+<h2><span data-lang-fr>Sous le capot</span><span data-lang-en>Under the hood</span></h2>
+
+<p>
+  <span data-lang-fr>SIMIA n’entraîne pas de modèle et ne prétend pas en inventer un. C’est un assemblage exigeant de briques libres, choisi pour tenir sur une machine grand public.</span>
+  <span data-lang-en>SIMIA does not train a model and does not pretend to invent one. It is a demanding assembly of open components, chosen to fit on a consumer machine.</span>
+</p>
+
+<div class="zg-tablewrap">
+  <table>
+    <thead>
+      <tr>
+        <th><span data-lang-fr>Brique</span><span data-lang-en>Component</span></th>
+        <th><span data-lang-fr>Rôle</span><span data-lang-en>Role</span></th>
+        <th><span data-lang-fr>Pourquoi elle</span><span data-lang-en>Why it</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zg-feat">llama.cpp</td>
+        <td><span data-lang-fr>Inférence des modèles de texte</span><span data-lang-en>Text model inference</span></td>
+        <td><span data-lang-fr>Vulkan sur Windows et Linux, Metal sur macOS, repli processeur : la même base sur les trois systèmes.</span><span data-lang-en>Vulkan on Windows and Linux, Metal on macOS, CPU fallback: the same base on all three systems.</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat">stable-diffusion.cpp</td>
+        <td><span data-lang-fr>Génération d’images</span><span data-lang-en>Image generation</span></td>
+        <td><span data-lang-fr>Même famille de projet : des poids GGUF quantifiés, qui tiennent dans la mémoire d’une carte de milieu de gamme.</span><span data-lang-en>Same project family: quantised GGUF weights that fit in a mid-range card’s memory.</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat">WebGPU / WebLLM</td>
+        <td><span data-lang-fr>Version web, dans l’onglet</span><span data-lang-en>Web version, in the tab</span></td>
+        <td><span data-lang-fr>Aucune installation : le modèle se télécharge une fois dans le cache du navigateur.</span><span data-lang-en>No install: the model downloads once into the browser cache.</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat">Rust</td>
+        <td><span data-lang-fr>Lanceur de bureau</span><span data-lang-en>Desktop launcher</span></td>
+        <td><span data-lang-fr>Un seul binaire par système, sans runtime à installer, qui pilote les moteurs et la fenêtre.</span><span data-lang-en>One binary per system, no runtime to install, driving the engines and the window.</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat">Service worker</td>
+        <td><span data-lang-fr>Hors-ligne de l’interface</span><span data-lang-en>Interface offline</span></td>
+        <td><span data-lang-fr>L’application web s’ouvre sans réseau une fois installée, comme une application native.</span><span data-lang-en>The web app opens without a network once installed, like a native application.</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2><span data-lang-fr>SIMIA face aux assistants en ligne</span><span data-lang-en>SIMIA versus online assistants</span></h2>
+
+<p>
+  <span data-lang-fr>Soyons précis, y compris là où SIMIA perd. Les grands modèles en ligne sont aujourd’hui plus vastes et plus savants qu’un modèle de 2 à 9 Go qui tient sur un ordinateur personnel. SIMIA ne les remplace pas pour une dissertation de niveau expert. Il les remplace pour l’usage quotidien : reformuler, résumer un document, dégrossir du code, générer une illustration — là où envoyer sa vie privée sur un serveur n’a aucun intérêt.</span>
+  <span data-lang-en>Let us be precise, including where SIMIA loses. Large online models are today bigger and more knowledgeable than a 2 to 9 GB model that fits on a personal computer. SIMIA does not replace them for expert-level work. It replaces them for everyday use: rephrasing, summarising a document, roughing out code, generating an illustration — where sending your private life to a server brings no benefit.</span>
+</p>
+
+<div class="zg-tablewrap">
+  <table>
+    <thead>
+      <tr>
+        <th><span data-lang-fr>Critère</span><span data-lang-en>Criterion</span></th>
+        <th><span data-lang-fr>Assistant en ligne</span><span data-lang-en>Online assistant</span></th>
+        <th>SIMIA</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Compte obligatoire</span><span data-lang-en>Account required</span></td>
+        <td><span data-lang-fr>Oui, avec e-mail et souvent téléphone</span><span data-lang-en>Yes, with email and often phone</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>Non</span><span data-lang-en>No</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Données envoyées</span><span data-lang-en>Data sent</span></td>
+        <td><span data-lang-fr>Chaque message, chaque fichier joint</span><span data-lang-en>Every message, every attachment</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>0 octet, une fois le modèle chargé</span><span data-lang-en>0 bytes, once the model is loaded</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Fonctionne hors ligne</span><span data-lang-en>Works offline</span></td>
+        <td class="zg-no"><span data-lang-fr>Non</span><span data-lang-en>No</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>Oui</span><span data-lang-en>Yes</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Prix</span><span data-lang-en>Price</span></td>
+        <td><span data-lang-fr>Gratuit limité, puis abonnement mensuel</span><span data-lang-en>Limited free tier, then monthly subscription</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>0 €</span><span data-lang-en>€0</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Génération d’images</span><span data-lang-en>Image generation</span></td>
+        <td><span data-lang-fr>Oui, côté serveur, quota mensuel</span><span data-lang-en>Yes, server-side, monthly quota</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>Oui, sur votre GPU, sans quota</span><span data-lang-en>Yes, on your GPU, no quota</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Puissance du modèle</span><span data-lang-en>Model capability</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>Très élevée</span><span data-lang-en>Very high</span></td>
+        <td class="zg-partial"><span data-lang-fr>Bonne sur 1 à 9 Go, limitée au-delà</span><span data-lang-en>Good from 1 to 9 GB, limited beyond</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Recherche web</span><span data-lang-en>Web search</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>Intégrée et permanente</span><span data-lang-en>Built in, always on</span></td>
+        <td class="zg-partial"><span data-lang-fr>Optionnelle, à la demande</span><span data-lang-en>Optional, on demand</span></td>
+      </tr>
+      <tr>
+        <td class="zg-feat"><span data-lang-fr>Code source</span><span data-lang-en>Source code</span></td>
+        <td class="zg-no"><span data-lang-fr>Fermé</span><span data-lang-en>Closed</span></td>
+        <td class="zg-winner zg-yes"><span data-lang-fr>Public, sur GitHub</span><span data-lang-en>Public, on GitHub</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="zg-bars">
+  <h4><span data-lang-fr>Ce que change le local-first</span><span data-lang-en>What local-first changes</span></h4>
+  <p class="zg-sub"><span data-lang-fr>Part des données qui restent sur l’appareil · plus haut = mieux</span><span data-lang-en>Share of data staying on the device · higher is better</span></p>
+  <div class="zg-row"><span>SIMIA</span><div class="zg-track"><div class="zg-fill" style="width:100%"></div></div><b>100 %</b></div>
+  <div class="zg-row"><span data-lang-fr>Assistant en ligne</span><span data-lang-en>Online assistant</span><div class="zg-track"><div class="zg-fill" style="width:0%"></div></div><b>0 %</b></div>
+  <div class="zg-row"><span data-lang-fr>Suite PAO cloud</span><span data-lang-en>Cloud design suite</span><div class="zg-track"><div class="zg-fill" style="width:8%"></div></div><b>~8 %</b></div>
+</div>
+
+<h2><span data-lang-fr>L’empreinte : moins de serveurs, donc moins d’énergie</span><span data-lang-en>Footprint: fewer servers, so less energy</span></h2>
+
+<p>
+  <span data-lang-fr>Un service en ligne doit maintenir un parc de machines allumé en permanence, dimensionné pour son pic de charge, refroidi, renouvelé. SIMIA supprime cette part : le calcul se fait une fois, sur un appareil qui était déjà là, pour la durée strictement nécessaire à la réponse.</span>
+  <span data-lang-en>An online service must keep a fleet of machines permanently on, sized for its peak load, cooled and renewed. SIMIA removes that share: computation happens once, on a device that was already there, for exactly as long as the answer requires.</span>
+</p>
+
+<div class="zg-kpi">
+  <div class="zg-item"><div class="zg-num">0 octet</div><div class="zg-lbl"><span data-lang-fr>Par message, réseau coupé</span><span data-lang-en>Per message, network off</span></div></div>
+  <div class="zg-item"><div class="zg-num">1,44 Go</div><div class="zg-lbl"><span data-lang-fr>Téléchargés une seule fois</span><span data-lang-en>Downloaded once</span></div></div>
+  <div class="zg-item"><div class="zg-num">1 appareil</div><div class="zg-lbl"><span data-lang-fr>Au lieu d’un parc</span><span data-lang-en>Instead of a fleet</span></div></div>
+  <div class="zg-item"><div class="zg-num">0 copie</div><div class="zg-lbl"><span data-lang-fr>Stockée côté serveur</span><span data-lang-en>Stored server-side</span></div></div>
+</div>
+
+<p>
+  <span data-lang-fr>Ce que cet article ne dira pas : un chiffre d’empreinte carbone. Sans mesure indépendante, ce serait un argument commercial et non une donnée. Le chiffre vérifiable, lui, tient en une phrase : réseau coupé, SIMIA répond toujours.</span>
+  <span data-lang-en>What this article will not do: give a carbon figure. Without independent measurement that would be a marketing claim, not data. The verifiable fact fits in one sentence: with the network off, SIMIA still answers.</span>
+</p>
+
+<h2><span data-lang-fr>Les limites, dites franchement</span><span data-lang-en>The limits, stated plainly</span></h2>
+
+<ul>
+  <li>
+    <strong><span data-lang-fr>La taille compte.</span><span data-lang-en>Size matters.</span></strong>
+    <span data-lang-fr>Un modèle de 2 Go ne raisonne pas comme un modèle de plusieurs centaines de milliards de paramètres. SIMIA est excellent pour reformuler, résumer, expliquer, coder et illustrer ; il ne remplace pas un modèle de pointe sur une démonstration mathématique difficile.</span>
+    <span data-lang-en>A 2 GB model does not reason like one with hundreds of billions of parameters. SIMIA is excellent at rephrasing, summarising, explaining, coding and illustrating; it does not replace a frontier model on a hard mathematical proof.</span>
+  </li>
+  <li>
+    <strong><span data-lang-fr>Une carte graphique aide beaucoup.</span><span data-lang-en>A graphics card helps a lot.</span></strong>
+    <span data-lang-fr>Sans GPU, tout fonctionne encore, mais sur le processeur : les réponses arrivent, plus lentement. Une RTX 2060 suffit pour la génération d’images.</span>
+    <span data-lang-en>Without a GPU everything still works, on the CPU: answers arrive, more slowly. An RTX 2060 is enough for image generation.</span>
+  </li>
+  <li>
+    <strong><span data-lang-fr>Les binaires ne sont pas signés.</span><span data-lang-en>The binaries are not signed.</span></strong>
+    <span data-lang-fr>Conséquence directe : Windows affiche SmartScreen au premier lancement, macOS met le binaire en quarantaine. Les deux se contournent en trois clics, et l’empreinte SHA-256 est publiée dans chaque note de version pour vérifier le fichier reçu.</span>
+    <span data-lang-en>Direct consequence: Windows shows SmartScreen on first launch, macOS quarantines the binary. Both are bypassed in three clicks, and the SHA-256 hash is published in every release note to verify the file you received.</span>
+  </li>
+  <li>
+    <strong><span data-lang-fr>La version web a un plafond.</span><span data-lang-en>The web version has a ceiling.</span></strong>
+    <span data-lang-fr>Le navigateur limite la mémoire utilisable : les modèles au-delà de 1,9 Go sont réservés à l’application de bureau.</span>
+    <span data-lang-en>The browser caps usable memory: models beyond 1.9 GB are reserved for the desktop application.</span>
+  </li>
+</ul>
+
+<h2><span data-lang-fr>Installer SIMIA</span><span data-lang-en>Installing SIMIA</span></h2>
+
+<ol>
+  <li>
+    <span data-lang-fr><strong>Téléchargez l’archive</strong> de votre système depuis les versions publiées : Windows 10/11, macOS Apple Silicon, macOS Intel ou Linux x86_64, environ 1,44 Go. Le modèle d’image est déjà dedans, le bouton Image fonctionne au premier lancement.</span>
+    <span data-lang-en><strong>Download the archive</strong> for your system from the published releases: Windows 10/11, macOS Apple Silicon, macOS Intel or Linux x86_64, about 1.44 GB. The image model is already inside, the Image button works on first launch.</span>
+  </li>
+  <li>
+    <span data-lang-fr><strong>Décompressez où vous voulez.</strong> Aucun droit administrateur n’est nécessaire, rien ne s’installe dans le système.</span>
+    <span data-lang-en><strong>Unzip wherever you like.</strong> No administrator rights needed, nothing is installed into the system.</span>
+  </li>
+  <li>
+    <span data-lang-fr><strong>Windows</strong> : avant de décompresser, clic droit sur le <code>.zip</code> → Propriétés → cocher <em>Débloquer</em>. L’avertissement SmartScreen ne revient plus. <strong>macOS</strong> : <code>xattr -dr com.apple.quarantine simia-desktop</code> puis <code>chmod +x simia-desktop</code>.</span>
+    <span data-lang-en><strong>Windows</strong>: before unzipping, right-click the <code>.zip</code> → Properties → tick <em>Unblock</em>. The SmartScreen warning no longer appears. <strong>macOS</strong>: <code>xattr -dr com.apple.quarantine simia-desktop</code> then <code>chmod +x simia-desktop</code>.</span>
+  </li>
+  <li>
+    <span data-lang-fr><strong>Lancez <code>simia-desktop</code>.</strong> Au premier démarrage, SIMIA télécharge un petit modèle de conversation (469 Mo) avant d’ouvrir la fenêtre ; c’est la seule fois. Ensuite, chaque modèle choisi dans la bibliothèque se télécharge avec sa propre barre de progression, sur sa carte.</span>
+    <span data-lang-en><strong>Run <code>simia-desktop</code>.</strong> On first start, SIMIA downloads a small chat model (469 MB) before opening the window; that happens once. Afterwards, each model chosen in the library downloads with its own progress bar, on its card.</span>
+  </li>
+</ol>
+
+<p>
+  <span data-lang-fr>Vous préférez ne rien installer ? La version web s’ouvre dans un onglet et s’installe comme une application depuis Chrome ou Edge — ou depuis Safari sur iPhone et iPad, via <em>Partager → Sur l’écran d’accueil</em>.</span>
+  <span data-lang-en>Prefer to install nothing? The web version opens in a tab and installs as an application from Chrome or Edge — or from Safari on iPhone and iPad, via <em>Share → Add to Home Screen</em>.</span>
+</p>
+
+<div class="zg-cta">
+  <h2><span data-lang-fr>Essayer SIMIA</span><span data-lang-en>Try SIMIA</span></h2>
+  <p>
+    <span data-lang-fr>Aucun compte, aucune carte bleue, aucune clé API. La version web démarre en un clic ; l’application va beaucoup plus loin.</span>
+    <span data-lang-en>No account, no credit card, no API key. The web version starts in one click; the application goes much further.</span>
+  </p>
+  <a href="https://app.zigmoon.com/SIMIA/app/"><span data-lang-fr>Ouvrir la version web</span><span data-lang-en>Open the web app</span></a>
+  <a href="https://github.com/zigmoon/SIMIA/releases"><span data-lang-fr>Télécharger l’application</span><span data-lang-en>Download the app</span></a>
+  <a href="https://app.zigmoon.com/SIMIA/"><span data-lang-fr>Le site</span><span data-lang-en>The site</span></a>
+</div>
+
+<div class="zg-foot">
+  <span data-lang-fr>SIMIA 0.1.8 · un projet porté par Simon Dupont-Gellert · code source sur <a href="https://github.com/zigmoon/SIMIA">GitHub</a> · aucune donnée collectée</span>
+  <span data-lang-en>SIMIA 0.1.8 · a project led by Simon Dupont-Gellert · source code on <a href="https://github.com/zigmoon/SIMIA">GitHub</a> · no data collected</span>
+</div>
+
+<script>
+  (function () {
+    var root = document.currentScript ? document.currentScript.parentElement : document.querySelector('.zg-spcc');
+    if (!root) return;
+    var buttons = root.querySelectorAll('.zg-langbar [data-zg-lang]');
+    Array.prototype.forEach.call(buttons, function (button) {
+      button.addEventListener('click', function () {
+        var lang = button.getAttribute('data-zg-lang');
+        root.setAttribute('data-lang', lang);
+        Array.prototype.forEach.call(buttons, function (other) {
+          other.classList.toggle('active', other === button);
+        });
+      });
+    });
+  })();
+</script>
+</div>
