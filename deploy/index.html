@@ -142,6 +142,7 @@
 </script>
 <style>
   :root{
+    color-scheme:light;
     --ink:#1d2522; --muted:#6e7771; --line:#e7e6df; --paper:#f6f5f1;
     --surface:#fffefa; --accent:#d8f451; --accent-ink:#263400;
     --dim:#8b938d; --radius:14px;
@@ -518,22 +519,6 @@
   .release-asset{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border:1px solid #e2e5dc; border-radius:9px; background:#fdfcf8; text-decoration:none; font-size:12.5px; font-weight:700; transition:background .15s, border-color .15s}
   .release-asset:hover{background:#f2f8e6; border-color:#c2d39a}
   .release-asset small{font:500 10.5px "DM Mono",monospace; color:var(--dim); white-space:nowrap}
-  .release-list{display:grid; gap:6px; margin:0; padding:14px 0 0; border-top:1px solid var(--line); list-style:none}
-  .release-row{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; font-size:12.5px; color:var(--muted)}
-  .release-row a{font-weight:800; text-decoration:none; color:var(--ink)}
-  .release-row a:hover{text-decoration:underline}
-  /* Pastilles de systemes : une version ancienne peut ne pas couvrir toutes les
-     cibles. Ce qui est compile est en vert, ce qui manque reste en gris clair,
-     plutot que d'etre masque. */
-  .release-tags{display:inline-flex; flex-wrap:wrap; gap:4px; margin-left:auto}
-  .release-tag{padding:2px 7px; border:1px solid #d8e2c0; border-radius:999px; background:#f2f8e6; color:#4c6b1f; font:700 9px "DM Mono",monospace; letter-spacing:.04em; white-space:nowrap}
-  .release-tag.is-missing{border-color:#e7e6df; background:transparent; color:#a4aba4; font-weight:500; text-decoration:line-through}
-  .release-when{min-width:74px; text-align:right; color:var(--dim); font:500 10.5px "DM Mono",monospace}
-  @media (max-width:560px){
-    .release-row{gap:4px 8px}
-    .release-tags{margin-left:0; order:3; width:100%}
-    .release-when{margin-left:auto}
-  }
 
   /* Feuilles decoratives : deux canevas fixes dans la marge droite. Le dessin,
      la deformation et le flou sont recalcules image par image ; la mise en page
@@ -1087,7 +1072,7 @@
 
       <div class="releases reveal" id="releases">
         <div class="releases-head">
-          <h3>Versions publiées</h3>
+          <h3>Dernière version publiée</h3>
           <a href="https://github.com/zigmoon/SIMIA/releases" target="_blank" rel="noopener">Toutes les versions sur GitHub →</a>
         </div>
         <div class="releases-body" id="releases-body">
@@ -1366,17 +1351,18 @@
   const RELEASE_BASE = "https://github.com/zigmoon/SIMIA/releases/latest/download";
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
-  const RELEASES_API = `https://api.github.com/repos/zigmoon/SIMIA/releases?per_page=6`;
+  const RELEASES_API = `https://api.github.com/repos/zigmoon/SIMIA/releases?per_page=1`;
 
   /* Les paquets viennent tous de GitHub, et toujours de la derniere version
      publiee : `releases/latest/download/<nom>` resout tout seul vers la release
      marquee « Latest ». Aucune requete prealable, donc aucun consentement a
      demander, et un lien qui ne se fige pas sur une version ancienne.
 
-     L'API GitHub ne sert plus qu'a deux choses : lister les versions dans le
-     bloc « Versions publiees » (soumise au consentement, puisque c'est une
-     requete vers un tiers), et reperer une cible qui n'a pas ete compilee pour
-     cette release afin de ne pas laisser croire que le lien fonctionne.
+     L'API GitHub ne sert plus qu'a deux choses : afficher le numero et la date
+     de la derniere version dans le bloc « Derniere version publiee » (soumise
+     au consentement, puisque c'est une requete vers un tiers), et reperer une
+     cible qui n'a pas ete compilee pour cette release afin de ne pas laisser
+     croire que le lien fonctionne.
 
      Le manifeste local reste lu : si un paquet est heberge a cote de la landing
      (tools/prepare-ftp.ps1 peut y deposer un miroir), il est prefere pour
@@ -1798,30 +1784,8 @@
           <span>${escapeHtml(assetLabel(asset.name))}</span><small>${formatSize(asset.size)}</small>
         </a>`).join("");
 
-      /* Chaque version passee rappelle les systemes reellement compiles : sans
-         ces pastilles, on ne savait pas si une release ancienne couvrait encore
-         Linux ou restait bloquee sur Windows. Une cible absente est signalee
-         en creux, ce qui explique aussi une archive de quelques mega-octets. */
-      const shortLabel = name => {
-        if (name.includes("windows")) return "Windows";
-        if (name.includes("macos-arm64")) return "macOS ARM";
-        if (name.includes("macos-x64")) return "macOS Intel";
-        if (name.includes("linux")) return "Linux";
-        return "";
-      };
-      const releasePills = release => {
-        const built = new Set((release.assets || []).map(asset => shortLabel(asset.name)).filter(Boolean));
-        return ["Windows", "macOS ARM", "macOS Intel", "Linux"]
-          .map(label => `<span class="release-tag${built.has(label) ? "" : " is-missing"}">${escapeHtml(label)}</span>`)
-          .join("");
-      };
-
-      const previous = releases.slice(1).map(release => `<li class="release-row">
-          <a href="${release.html_url}" target="_blank" rel="noopener">${escapeHtml(release.tag_name || release.name)}</a>
-          <span class="release-tags">${releasePills(release)}</span>
-          <span class="release-when">${relativeDate(release.published_at)}</span>
-        </li>`).join("");
-
+      /* Seule la derniere version est citee. L'historique complet vit sur
+         GitHub, et le remettre ici allongeait le bloc sans rien apprendre. */
       releasesBody.innerHTML = `
         <div class="release-latest">
           <span class="release-pill">${escapeHtml(latest.tag_name || latest.name)}</span>
@@ -1829,8 +1793,7 @@
         </div>
         ${assetLinks
           ? `<div class="release-assets">${assetLinks}</div>`
-          : `<p class="releases-offline">Cette version n'a pas encore de paquet joint : la compilation est peut-être en cours.</p>`}
-        ${previous ? `<ul class="release-list">${previous}</ul>` : ""}`;
+          : `<p class="releases-offline">Cette version n'a pas encore de paquet joint : la compilation est peut-être en cours.</p>`}`;
     } catch {
       renderReleasesStatic(`Le détail des versions n'a pas pu être chargé (limite de l'API GitHub ou hors ligne).
         <a href="${REPO_URL}/releases" target="_blank" rel="noopener">La page Releases</a> reste disponible.`);

@@ -2,7 +2,10 @@
    consentement : un @import ici chargerait fonts.googleapis.com avant que la
    boite cookies ait pu demander quoi que ce soit. */
 
-:root { --ink:#1d2522; --muted:#6e7771; --line:#e7e6df; --paper:#f6f5f1; --surface:#fffefa; --accent:#d8f451; --accent-ink:#263400; --user:#e4efe8; --sidebar:#eeede7; --scroll-thumb:rgba(29,37,34,.20); --scroll-thumb-hover:rgba(29,37,34,.38); --scroll-thumb-active:rgba(29,37,34,.52); }
+/* La page n'a pas de variante sombre : sans cette declaration, un telephone en
+   mode nuit peut assombrir le fond tout seul et le theme-color ne correspond
+   plus a ce qui est affiche. */
+:root { color-scheme:light; --ink:#1d2522; --muted:#6e7771; --line:#e7e6df; --paper:#f6f5f1; --surface:#fffefa; --accent:#d8f451; --accent-ink:#263400; --user:#e4efe8; --sidebar:#eeede7; --scroll-thumb:rgba(29,37,34,.20); --scroll-thumb-hover:rgba(29,37,34,.38); --scroll-thumb-active:rgba(29,37,34,.52); }
 
 /* Scrollbars fines et flottantes : piste invisible, pouce arrondi qui s'intensifie au survol. */
 * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
