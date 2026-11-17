@@ -6,6 +6,8 @@
 
 **Assistant IA local, privé et hors ligne — Windows, macOS et Linux**
 
+[![Licence : Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-2f7d5d)](LICENSE)
+
 Conversation, génération d'images et atelier de code dans une seule interface,
 exécutés sur votre propre machine. Pas de compte, pas de clé API, pas de serveur :
 vos phrases ne quittent pas l'ordinateur.
@@ -633,8 +635,13 @@ de les déplacer.
 
 ## Licence et mentions légales
 
-Le code de SIMIA est publié ici à titre de source visible ; aucun fichier
-`LICENSE` n'accompagne encore le dépôt, donc tous droits réservés par défaut.
+Le code de SIMIA est publié sous **Apache License 2.0** : voir le fichier
+[LICENSE](LICENSE). Concrètement, vous pouvez l'utiliser, le modifier, le
+redistribuer et le revendre, y compris dans un produit fermé, à condition de
+conserver la mention de copyright et le texte de la licence, et de signaler les
+fichiers que vous avez modifiés. La clause 3 concède aussi une licence de
+brevets, et la clause 7 fournit le logiciel « en l'état », sans garantie.
+
 Les composants tiers conservent leurs licences respectives :
 
 | Composant | Licence |
@@ -643,6 +650,11 @@ Les composants tiers conservent leurs licences respectives :
 | [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) | MIT |
 | [WebLLM](https://github.com/mlc-ai/web-llm) | Apache-2.0 |
 | Modèles de texte et d'images | voir la colonne `license` des catalogues |
+
+Les poids des modèles ne sont **pas** couverts par la licence du code : chaque
+catalogue porte sa propre colonne `license` (Apache-2.0 pour la majorité,
+Llama 3.2, Gemma, MIT, LFM Open License pour les autres) et c'est elle qui
+s'applique au fichier téléchargé.
 
 Le LoRA « Gravure SIMIA » et son jeu d'entraînement (planches botaniques du
 domaine public) sont fournis avec le projet.
