@@ -196,6 +196,7 @@ jobs:
           cp "launcher/target/release/$binary" "$stage/"
 
           cp -r web "$stage/web"
+          mkdir -p "$stage/models/image"
           cp models/catalog.json models/versions.json "$stage/models/"
           cp models/image/catalog.json "$stage/models/image/"
 
