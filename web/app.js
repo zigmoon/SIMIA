@@ -4862,7 +4862,11 @@ function setAgentMode(active) {
   state.agentMode = Boolean(active);
   if (!ui.agentToggle) return;
   ui.agentToggle.setAttribute("aria-pressed", String(state.agentMode));
-  ui.agentToggle.textContent = localizedText(state.agentMode ? "Agent actif" : "Agent web", state.agentMode ? "Agent on" : "Web agent", state.agentMode ? "Agente activo" : "Agente web");
+  const agentLabel = state.agentMode
+    ? localizedText("Agent web actif", "Web agent on", "Agente web activo", "ウェブ検索：オン")
+    : localizedText("Agent web", "Web agent", "Agente web", "ウェブ検索");
+  ui.agentToggle.setAttribute("aria-label", agentLabel);
+  ui.agentToggle.title = agentLabel;
   if (state.imageMode) return;
   ui.prompt.placeholder = state.agentMode
     ? localizedText("Recherchez : posez une question à l'agent...", "Search: ask the agent a question...", "Busca: haz una pregunta al agente...")
@@ -5253,7 +5257,6 @@ function applyLanguage() {
   document.querySelector("#legal-toggle").textContent = text.legal;
   ui.home.setAttribute("aria-label", localizedText("Retour à l'accueil", "Back to home", "Volver al inicio"));
   ui.home.setAttribute("title", localizedText("Retour à l'accueil", "Back to home", "Volver al inicio"));
-  document.querySelector("#send-button").childNodes[0].textContent = `${text.send} `;
   document.querySelector("#clear-chat").setAttribute("aria-label", text.clear);
   document.querySelector("#clear-chat").setAttribute("title", text.clear);
   ui.attach.setAttribute("aria-label", text.attach);
