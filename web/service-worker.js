@@ -17,7 +17,7 @@
  * surprise au milieu d'une conversation.
  */
 
-const VERSION = "4.5.1";
+const VERSION = "4.6.0";
 const CACHE = `simia-app-${VERSION}`;
 
 /* Un cache laisse par une generation precedente signale un worker qui ne se met

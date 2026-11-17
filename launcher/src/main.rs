@@ -33,8 +33,17 @@ const DEFAULT_IMG_STEPS: u32 = 8;
 const HEURISTIC_WALK_UP: usize = 6;
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(240);
 
-/// Modeles charges en priorite au premier demarrage, du plus souhaite au moins.
-const PREFERRED_DEFAULTS: [&str; 4] = ["qwen3.5-2b", "qwen3-1.7b", "llama-3.2-1b", "qwen2.5-1.5b"];
+/// Modeles charges en priorite quand plusieurs sont deja sur le disque, du plus
+/// souhaite au moins.
+const PREFERRED_LOCAL: [&str; 4] = ["qwen3.5-2b", "qwen3-1.7b", "qwen2.5-1.5b", "llama-3.2-1b"];
+
+/// Modele telecharge au tout premier lancement, quand le disque est vide.
+/// Un Qwen generaliste, pas un modele de code : le tri par categorie tombait
+/// sinon sur « Code », et la premiere impression de SIMIA etait un assistant
+/// qui code. Taille volontairement modeste (~508 Mo) pour ne pas imposer plus
+/// d'un gigaoctet de telechargement avant la premiere fenetre.
+const PREFERRED_BOOTSTRAP: [&str; 4] = ["qwen3.5-0.8b", "qwen3-0.6b", "qwen2.5-1.5b", "llama-3.2-1b"];
+
 
 #[derive(Clone)]
 struct ModelEntry {
@@ -83,6 +92,11 @@ struct ImagePack {
     license: String,
     #[serde(default)]
     recommended: bool,
+    /// Ce pack est deja present dans l'archive : la generation d'images marche
+    /// des le premier lancement, sans telechargement. L'interface le signale,
+    /// sinon rien ne distingue un modele fourni d'un modele a recuperer.
+    #[serde(default)]
+    bundled: bool,
     #[serde(default)]
     steps: u32,
     #[serde(default = "default_cfg")]
@@ -1064,7 +1078,7 @@ fn human_size(bytes: u64) -> String {
 }
 
 fn choose_default(models: &[ModelEntry]) -> ModelEntry {
-    for preferred in PREFERRED_DEFAULTS {
+    for preferred in PREFERRED_LOCAL {
         if let Some(found) = models
             .iter()
             .filter(|model| model.local)
@@ -1079,6 +1093,17 @@ fn choose_default(models: &[ModelEntry]) -> ModelEntry {
         .min_by_key(|model| model.bytes)
     {
         return found.clone();
+    }
+    // Rien sur le disque : on choisit explicitement un Qwen generaliste a
+    // telecharger, au lieu de laisser le tri par categorie designer un modele
+    // de code.
+    for preferred in PREFERRED_BOOTSTRAP {
+        if let Some(found) = models
+            .iter()
+            .find(|model| model.id.to_lowercase().contains(preferred))
+        {
+            return found.clone();
+        }
     }
     models.first().cloned().expect("au moins un modele")
 }
@@ -1511,7 +1536,7 @@ fn image_packs_json(state: &Shared) -> String {
                     let local = guard.image.local_of(pack);
                     let bytes = pack_bytes(&guard.image.dir, pack);
                     format!(
-                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{}}}",
                         js_escape(&pack.id),
                         js_escape(&pack.name),
                         js_escape(&pack.mode),
@@ -1525,6 +1550,7 @@ fn image_packs_json(state: &Shared) -> String {
                         bytes,
                         local == false && (!pack.url.is_empty() || !pack.lora_url.is_empty()),
                         pack.recommended,
+                        pack.bundled,
                         js_escape(&pack.lora),
                         pack.lora_weight,
                         js_escape(&pack.prompt_prefix)

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "baseUrl": "https://app.zigmoon.com/SIMIA/models/",
   "note": "3 modeles principaux heberges sur le serveur (source=server, avec mirror CDN de secours), le reste en CDN HuggingFace.",
   "models": [

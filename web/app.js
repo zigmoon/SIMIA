@@ -4406,31 +4406,41 @@ async function renderNativeStatus() {
         `${local} modelo(s) en este disco · ${info.server} alojados en el servidor`
       )
     ];
+    const target = ui.downloadInfo;
+    /* Le bandeau annonce une difference entre le catalogue du poste et celui du
+       serveur. Il doit donc disparaitre quand les deux concordent, et rester
+       unique quel que soit le nombre de rafraichissements. */
+    const catalogueChanged = Boolean(info.remote?.reachable) && String(info.remote.version) !== String(info.catalog);
     if (info.remote?.reachable && info.remote.version) {
-      const same = String(info.remote.version) === String(info.catalog);
       parts.push(
-        same
-          ? localizedText(`Catalogue à jour (v${info.catalog}).`, `Catalog up to date (v${info.catalog}).`, `Catálogo al día (v${info.catalog}).`)
-          : localizedText(
+        catalogueChanged
+          ? localizedText(
               `Nouvelle version du catalogue sur le serveur : v${info.remote.version}${info.remote.published ? ` (${info.remote.published})` : ""}.`,
               `New catalog version on the server: v${info.remote.version}${info.remote.published ? ` (${info.remote.published})` : ""}.`,
               `Nueva versión del catálogo en el servidor: v${info.remote.version}${info.remote.published ? ` (${info.remote.published})` : ""}.`
             )
+          : localizedText(`Catalogue à jour (v${info.catalog}).`, `Catalog up to date (v${info.catalog}).`, `Catálogo al día (v${info.catalog}).`)
       );
-      if (!same) document.querySelector("#native-version-banner")?.remove();
     }
-    const target = ui.downloadInfo;
     if (target && !document.querySelector(".is-streaming")) target.textContent = parts.join(" ");
-    if (info.remote?.reachable && String(info.remote.version) !== String(info.catalog)) {
-      const banner = document.createElement("p");
-      banner.id = "native-version-banner";
-      banner.className = "native-version-banner";
-      banner.textContent = localizedText(
+    const existing = document.querySelector("#native-version-banner");
+    if (catalogueChanged) {
+      const text = localizedText(
         `Catalogue ${info.catalog} → ${info.remote.version} disponible sur ${info.base}`,
         `Catalog ${info.catalog} → ${info.remote.version} available on ${info.base}`,
         `Catálogo ${info.catalog} → ${info.remote.version} disponible en ${info.base}`
       );
-      document.querySelector(".model-library-header")?.after(banner);
+      if (existing) {
+        existing.textContent = text;
+      } else {
+        const banner = document.createElement("p");
+        banner.id = "native-version-banner";
+        banner.className = "native-version-banner";
+        banner.textContent = text;
+        document.querySelector(".model-library-header")?.after(banner);
+      }
+    } else if (existing) {
+      existing.remove();
     }
   } catch { /* serveur local indisponible : pas bloquant */ }
 }
@@ -5480,6 +5490,8 @@ function renderModelLibrary() {
       ? pack.downloadable
         ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>`
         : `<span class="model-badge model-badge-download">${escapeHtml(localizedText("MANUEL", "MANUAL", "MANUAL", "手動"))}</span>`
+      : pack.bundled
+        ? `<span class="model-badge">${escapeHtml(localizedText("INCLUS D'ORIGINE", "INCLUDED", "INCLUIDO", "同梱"))}</span>`
       : pack.recommended
         ? `<span class="model-badge">${escapeHtml(localizedText("RECOMMANDÉ", "RECOMMENDED", "RECOMENDADO", "おすすめ"))}</span>`
         : `<span class="model-origin model-origin-local">${escapeHtml(localizedText("SUR LE DISQUE", "ON DISK", "EN EL DISCO", "ローカル"))}</span>`;
