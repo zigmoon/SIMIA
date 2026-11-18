@@ -181,7 +181,11 @@ button { cursor:pointer; }
 @keyframes caret { 0%,45% { opacity:1; } 50%,100% { opacity:.12; } }
 .composer-wrap { grid-area:composer; padding:0 32px 19px; background:linear-gradient(transparent, var(--paper) 20%); }
 .composer, .settings-panel, .disclaimer { width:min(790px, 100%); margin-left:auto; margin-right:auto; }
-.composer { padding:13px 14px 10px; border:1px solid #d8d8d1; border-radius:9px; background:var(--surface); box-shadow:0 10px 30px rgba(34,43,36,.06); transition:.18s; }.composer.is-dropping{border-color:#6f9475;background:#f1f6ef}
+.composer { padding:13px 14px 10px; border:1px solid #d8d8d1; border-radius:9px; background:var(--surface); box-shadow:0 10px 30px rgba(34,43,36,.06); transition:.18s; }.composer.is-dropping{border-color:#6f9475;background:#f1f6ef}.composer.is-preparing{border-color:#c9d8bf;background:#f7faf4}
+/* Repere de depot : le seul retour visuel au survol etait une bordure en bas
+   de fenetre, que l'on ne voit pas quand on vise la conversation. */
+.drop-veil{position:fixed;inset:12px;z-index:60;display:flex;align-items:center;justify-content:center;border:2px dashed #9fbf9c;border-radius:14px;background:rgba(243,246,239,.84);backdrop-filter:blur(3px);color:#4d6b52;font:500 13px "DM Mono",monospace;letter-spacing:.08em;text-transform:uppercase;pointer-events:none}
+.drop-veil[hidden]{display:none}
 .composer:focus-within { border-color:#aebaa0; box-shadow:0 12px 31px rgba(34,43,36,.09); }
 textarea { display:block; resize:none; outline:0; border:0; width:100%; min-height:53px; max-height:180px; color:var(--ink); background:transparent; font-size:14px; line-height:1.55; }
 textarea::placeholder { color:#989e99; }

@@ -232,6 +232,10 @@ const state = {
   voiceFinal: "",
   voiceMessage: "",
   pendingAttachments: [],
+  /* Promesses de preparation en cours. Envoyer un message ne doit jamais
+     partir avant qu'elles soient resolues : sinon le modele recoit la fiche
+     d'un document vide et repond qu'il ne peut pas le lire. */
+  attachmentJobs: [],
   attachmentNotice: "",
   selectedModel: DEFAULT_MODEL_ID,
   code: { files: [], activeId: null, open: false, focus: "code" },
@@ -2648,6 +2652,7 @@ function displaySize(value) {
 
 function formatFileSize(bytes) {
   const fr = state.language === "fr";
+  if (!bytes) return fr ? "0 Ko" : "0 KB";
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} ${fr ? "Ko" : "KB"}`;
   const value = (bytes / (1024 * 1024)).toFixed(1);
   return `${fr ? value.replace(".", ",") : value} ${fr ? "Mo" : "MB"}`;
@@ -3531,7 +3536,7 @@ function attachmentCard(attachment, pending = false) {
         ].filter(Boolean).join(" · "));
     return `<div class="attachment-card attachment-${attachment.kind} attachment-document${status}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span><small class="attachment-detail">${escapeHtml(information)}</small></span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
   }
-  return `<div class="attachment-card attachment-${attachment.kind}${blind ? " needs-vision" : ""}${inert ? " inert-media" : ""}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span>${mediaNote ? `<small class="attachment-detail">${escapeHtml(mediaNote)}</small>` : ""}</span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
+  return `<div class="attachment-card attachment-${attachment.kind}${blind ? " needs-vision" : ""}${inert ? " inert-media" : ""}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span>${mediaNote || attachment.preparing ? `<small class="attachment-detail">${escapeHtml(attachment.preparing ? localizedText("Préparation…", "Preparing…", "Preparando…", "準備中…") : mediaNote)}</small>` : ""}</span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
 }
 
 function renderPendingAttachments() {
@@ -3541,46 +3546,113 @@ function renderPendingAttachments() {
   ui.attachmentTray.innerHTML = `${state.pendingAttachments.map(attachment => attachmentCard(attachment, true)).join("")}${notice ? `<p class="attachment-notice" role="status">${escapeHtml(notice)}</p>` : ""}`;
 }
 
+/* Un dossier depose depuis le bureau arrive comme un fichier sans type et sans
+   taille. L'accepter donnerait une piece jointe vide dont le modele dirait
+   qu'il ne peut pas la lire. */
+function looksLikeFolder(file) {
+  return file.size === 0 && !file.type && !attachmentExtension(file);
+}
+
+/* Le glisser-deposer du navigateur expose les dossiers dans `items`, pas dans
+   `files` : c'est le seul endroit ou l'on peut les reconnaitre avant de les
+   avoir acceptes. Un dossier n'a pas de contenu a donner a un modele. */
+function droppedEntries(dataTransfer) {
+  const files = [];
+  let folders = 0;
+  const items = dataTransfer?.items;
+  if (items?.length) {
+    for (const item of items) {
+      if (item.kind !== "file") continue;
+      const entry = typeof item.webkitGetAsEntry === "function" ? item.webkitGetAsEntry() : null;
+      if (entry?.isDirectory) { folders += 1; continue; }
+      const file = item.getAsFile();
+      if (file) files.push(file);
+    }
+  }
+  if (!files.length && !folders) for (const file of dataTransfer?.files || []) files.push(file);
+  return { files, folders };
+}
+
 async function addAttachments(files) {
   const selected = [...files].filter(Boolean);
   if (!selected.length) return;
-  const heavy = selected.length > DOCUMENT_ADVICE_COUNT || selected.some(file => file.size > DOCUMENT_ADVICE_BYTES);
-  const hasImage = selected.some(file => attachmentKind(file) === "image");
-  const errors = [];
-  for (const file of selected) {
-    const placeholder = { id: `pending-${crypto.randomUUID()}`, name: file.name, type: file.type, size: file.size, kind: attachmentKind(file), document: { ...newDocumentState({ name: file.name }, localizedText("Analyse…", "Analyzing…", "Analizando…")) } };
-    state.pendingAttachments.push(placeholder);
-    renderPendingAttachments();
-    try {
-      const attachment = await prepareAttachment(file);
-      const position = state.pendingAttachments.indexOf(placeholder);
-      state.pendingAttachments.splice(position >= 0 ? position : state.pendingAttachments.length - 1, 1, attachment);
-      if (attachment.document?.status === "indexing") startDocumentIndexing(attachment, file);
-      else if (attachment.document) storeDocumentRecord(attachment, true);
-    } catch (error) {
-      state.pendingAttachments = state.pendingAttachments.filter(item => item !== placeholder);
-      errors.push(`${file.name} : ${error?.message || copy[state.language].attachmentProblem}`);
-      console.warn("Pièce jointe ignorée", error);
-    }
-    renderPendingAttachments();
-    renderDocumentTools();
-  }
-  /* Le message d'avertissement ne doit pas remplacer les vignettes : il vit
-     dans son propre element, rendu avec elles. */
-  state.attachmentNotice = errors.length
-    ? errors.join(" · ")
-    : heavy
-      ? copy[state.language].attachmentAdvice
-      : "";
-  renderPendingAttachments();
-  if (hasImage && !activeModelIsVision()) {
+  const folders = selected.filter(looksLikeFolder);
+  const usable = selected.filter(file => !looksLikeFolder(file));
+  if (folders.length) {
     toast(localizedText(
-      "Cette image ne sera pas lue : le modèle actif ne voit pas les images. Choisissez un modèle de la catégorie Vision.",
-      "This image will not be read: the active model cannot see images. Choose a model from the Vision category.",
-      "Esta imagen no se leerá: el modelo activo no ve las imágenes. Elige un modelo de la categoría Visión.",
-      "この画像は読み取られません。現在のモデルは画像を見られません。「画像」カテゴリのモデルを選んでください。"
+      "Un dossier ne peut pas être joint. Ouvrez-le et déposez les fichiers qu'il contient.",
+      "A folder cannot be attached. Open it and drop the files inside.",
+      "No se puede adjuntar una carpeta. Ábrela y suelta los archivos que contiene.",
+      "フォルダは添付できません。フォルダを開いて中のファイルをドロップしてください。"
     ));
   }
+  if (!usable.length) return;
+
+  const heavy = usable.length > DOCUMENT_ADVICE_COUNT || usable.some(file => file.size > DOCUMENT_ADVICE_BYTES);
+  const hasImage = usable.some(file => attachmentKind(file) === "image");
+  const errors = [];
+  const job = (async () => {
+    for (const file of usable) {
+      const placeholder = { id: `pending-${crypto.randomUUID()}`, name: file.name, type: file.type, size: file.size, kind: attachmentKind(file), preparing: true };
+      state.pendingAttachments.push(placeholder);
+      renderPendingAttachments();
+      try {
+        const attachment = await prepareAttachment(file);
+        /* Si la vignette a disparu entre-temps, c'est que le message est parti
+           ou que l'utilisateur l'a retiree : la remettre ferait re-envoyer un
+           fichier deja envoye. */
+        const position = state.pendingAttachments.indexOf(placeholder);
+        if (position < 0) {
+          if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+          continue;
+        }
+        state.pendingAttachments.splice(position, 1, attachment);
+        if (attachment.document?.status === "indexing") startDocumentIndexing(attachment, file);
+        else if (attachment.document) storeDocumentRecord(attachment, true);
+      } catch (error) {
+        state.pendingAttachments = state.pendingAttachments.filter(item => item !== placeholder);
+        errors.push(`${file.name} : ${error?.message || copy[state.language].attachmentProblem}`);
+        console.warn("Pièce jointe ignorée", error);
+      }
+      renderPendingAttachments();
+      renderDocumentTools();
+    }
+    /* Le message d'avertissement ne doit pas remplacer les vignettes : il vit
+       dans son propre element, rendu avec elles. */
+    state.attachmentNotice = errors.length
+      ? errors.join(" · ")
+      : heavy
+        ? copy[state.language].attachmentAdvice
+        : "";
+    renderPendingAttachments();
+    if (hasImage && !activeModelIsVision()) {
+      toast(localizedText(
+        "Cette image ne sera pas lue : le modèle actif ne voit pas les images. Choisissez un modèle de la catégorie Vision.",
+        "This image will not be read: the active model cannot see images. Choose a model from the Vision category.",
+        "Esta imagen no se leerá: el modelo activo no ve las imágenes. Elige un modelo de la categoría Visión.",
+        "この画像は読み取られません。現在のモデルは画像を見られません。「画像」カテゴリのモデルを選んでください。"
+      ));
+    }
+  })();
+  state.attachmentJobs.push(job);
+  /* La promesse se retire elle-meme : sans cela, la liste grossirait a chaque
+     fichier joint pendant toute la duree de la session. */
+  job.finally(() => { state.attachmentJobs = state.attachmentJobs.filter(entry => entry !== job); });
+  return job;
+}
+
+/* Attend la fin des preparations en cours. Renvoie vrai si tout est pret. */
+async function settleAttachments() {
+  while (state.attachmentJobs.length) {
+    const jobs = state.attachmentJobs.slice();
+    await Promise.allSettled(jobs);
+    state.attachmentJobs = state.attachmentJobs.filter(job => !jobs.includes(job));
+  }
+  return !state.pendingAttachments.some(attachment => attachment.preparing);
+}
+
+function attachmentIsPreparing() {
+  return state.pendingAttachments.some(attachment => attachment.preparing);
 }
 
 function clearPendingAttachments() {
@@ -4958,7 +5030,20 @@ async function respondWithTransformersVision(prompt, model) {
 }
 
 async function submitPrompt(rawPrompt) {
-  const prompt = rawPrompt.trim();
+  let prompt = rawPrompt.trim();
+  /* Une piece jointe encore en preparation n'a pas de contenu : partir
+     maintenant ferait repondre au modele qu'il ne peut pas lire le fichier.
+     On attend qu'elle soit prete, en le disant sur le bouton. */
+  if (attachmentIsPreparing()) {
+    ui.send.disabled = true;
+    ui.form.classList.add("is-preparing");
+    setStatus(localizedText("Préparation des fichiers…", "Preparing files…", "Preparando los archivos…", "ファイルを準備中…"), "loading");
+    await settleAttachments();
+    ui.form.classList.remove("is-preparing");
+    ui.send.disabled = false;
+    setStatus(copy[state.language].ready);
+    prompt = ui.prompt.value.trim();
+  }
   const attachments = [...state.pendingAttachments];
   if ((!prompt && !attachments.length) || state.loadingEngine) return;
   const messageContent = prompt || localizedText("Analysez les fichiers joints.", "Analyze the attached files.", "Analiza los archivos adjuntos.");
@@ -6450,11 +6535,19 @@ async function purgeModelCaches() {
 
 ui.form.addEventListener("submit", event => {
   event.preventDefault();
+  /* Le bouton est deja desactive pendant une generation : sans cette garde,
+     Entree relancait une seconde generation en parallele de la premiere. */
+  if (ui.send.disabled) return;
   if (state.imageMode) requestImage(ui.prompt.value);
   else submitPrompt(ui.prompt.value);
 });
 ui.prompt.addEventListener("input", () => { autoResize(); scheduleDraftSave(); });
-ui.prompt.addEventListener("keydown", event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ui.form.requestSubmit(); } });
+ui.prompt.addEventListener("keydown", event => {
+  /* Une composition IME (japonais, chinois, coreen) utilise Entree pour valider
+     le candidat : envoyer a cet instant couperait le mot en deux. */
+  if (event.isComposing || event.keyCode === 229) return;
+  if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ui.form.requestSubmit(); }
+});
 ui.attach.addEventListener("click", () => ui.attachmentInput.click());
 ui.attachmentInput.addEventListener("change", event => addAttachments(event.target.files));
 ui.documentSummary.addEventListener("click", summarizeDocuments);
@@ -6469,9 +6562,66 @@ ui.attachmentTray.addEventListener("click", event => {
   state.attachmentNotice = "";
   renderPendingAttachments();
 });
-ui.form.addEventListener("dragover", event => { event.preventDefault(); ui.form.classList.add("is-dropping"); });
-ui.form.addEventListener("dragleave", event => { if (!ui.form.contains(event.relatedTarget)) ui.form.classList.remove("is-dropping"); });
-ui.form.addEventListener("drop", event => { event.preventDefault(); ui.form.classList.remove("is-dropping"); addAttachments(event.dataTransfer.files); });
+/* Le depot est intercepte sur toute la fenetre, pas seulement sur le champ de
+   saisie : lacher un fichier sur la conversation faisait sinon naviguer le
+   navigateur vers ce fichier, et la page — donc la conversation en cours —
+   disparaissait. */
+function carriesFiles(event) {
+  const types = event.dataTransfer?.types;
+  return Boolean(types && Array.from(types).includes("Files"));
+}
+let dragDepth = 0;
+const dropVeil = document.querySelector("#drop-veil");
+function showDropVeil(visible) {
+  if (!dropVeil) return;
+  dropVeil.hidden = !visible;
+  const label = document.querySelector("#drop-veil-label");
+  if (label) label.textContent = localizedText(copy.fr.dropFiles, copy.en.dropFiles, copy.es.dropFiles, "ここにファイルをドロップ");
+}
+document.addEventListener("dragenter", event => {
+  if (!carriesFiles(event)) return;
+  dragDepth += 1;
+  ui.form.classList.add("is-dropping");
+  showDropVeil(true);
+});
+document.addEventListener("dragover", event => {
+  if (!carriesFiles(event)) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "copy";
+});
+document.addEventListener("dragleave", event => {
+  if (!carriesFiles(event)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) { ui.form.classList.remove("is-dropping"); showDropVeil(false); }
+});
+document.addEventListener("drop", event => {
+  if (!carriesFiles(event)) return;
+  event.preventDefault();
+  dragDepth = 0;
+  ui.form.classList.remove("is-dropping");
+  showDropVeil(false);
+  const { files, folders } = droppedEntries(event.dataTransfer);
+  if (folders) {
+    toast(localizedText(
+      "Un dossier ne peut pas être joint. Ouvrez-le et déposez les fichiers qu'il contient.",
+      "A folder cannot be attached. Open it and drop the files inside.",
+      "No se puede adjuntar una carpeta. Ábrela y suelta los archivos que contiene.",
+      "フォルダは添付できません。フォルダを開いて中のファイルをドロップしてください。"
+    ));
+  }
+  if (files.length) addAttachments(files);
+});
+/* Coller une capture d'ecran (Ctrl+V / Cmd+V) est le geste le plus courant
+   apres le glisser-deposer. Le texte colle, lui, garde son comportement natif. */
+document.addEventListener("paste", event => {
+  const files = [...(event.clipboardData?.items || [])]
+    .filter(item => item.kind === "file")
+    .map(item => item.getAsFile())
+    .filter(Boolean);
+  if (!files.length) return;
+  event.preventDefault();
+  addAttachments(files);
+});
 document.querySelector("#home-model-button").addEventListener("click", () => openModelLibrary());
 ui.codeModelHintAction?.addEventListener("click", () => openModelLibrary("code"));
 ui.homeCodeButton?.addEventListener("click", openCodeWorkspaceEmpty);

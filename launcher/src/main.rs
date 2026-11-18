@@ -2083,8 +2083,18 @@ fn launch_browser(url: &str) -> Option<Child> {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
-        if let Ok(child) = command.spawn() {
-            return Some(child);
+        if let Ok(mut child) = command.spawn() {
+            /* `open` existe sur tous les Mac : si l'application demandee est
+               absente, le processus se termine aussitot avec un code d'erreur.
+               Sans cette verification, un Mac sans Chrome n'ouvrait aucune
+               fenetre alors que le lanceur annoncait le contraire. Un code 0
+               signifie au contraire que le navigateur a delegue l'ouverture a
+               une instance deja lancee : c'est un succes. */
+            thread::sleep(Duration::from_millis(700));
+            match child.try_wait() {
+                Ok(Some(status)) if !status.success() => continue,
+                _ => return Some(child),
+            }
         }
     }
 

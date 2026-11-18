@@ -1,6 +1,19 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.14": {
+      "title": "Le glisser-deposer tient partout, et un fichier joint part avec son contenu",
+      "highlights": [
+        "Lacher un fichier sur la conversation faisait quitter la page : le navigateur suivait le fichier depose, et la conversation en cours disparaissait. Le depot est desormais intercepte sur toute la fenetre, avec un repere plein ecran qui dit ou le fichier va atterrir.",
+        "Joindre un fichier puis envoyer aussitot partait sans son contenu : le modele recevait la fiche d'un document vide et repondait qu'il ne pouvait pas le lire. L'envoi attend maintenant la fin de la preparation, le dit sur le bouton, puis part avec le texte du fichier. Verifie sur un .txt joint et envoye dans la meme seconde.",
+        "Meme cause, autre degat : la piece jointe reapparaissait dans la zone de saisie apres l'envoi, prete a etre envoyee une seconde fois avec le message suivant. Elle ne revient plus.",
+        "Coller une capture d'ecran (Ctrl+V, Cmd+V) joint maintenant l'image. Le geste le plus courant apres le glisser-deposer ne faisait rien du tout.",
+        "Entree pendant une saisie IME (japonais, chinois, coreen) envoyait le message au lieu de valider le candidat : un mot en cours de composition partait tout seul. Entree est ignoree tant que la composition dure.",
+        "Entree pendant qu'une reponse se genere lancait une seconde generation en parallele : le bouton Envoyer etait deja desactive, la touche ne l'etait pas. Les deux suivent maintenant le meme etat.",
+        "Un dossier depose depuis le bureau etait accepte comme une piece jointe vide, et un format non lisible (.zip) passait pour un document. Un dossier est refuse avec une phrase qui dit quoi faire, et un fichier vide affiche 0 Ko au lieu de 1 Ko.",
+        "Sur macOS, le lanceur annoncait avoir ouvert la fenetre applicative meme quand aucun navigateur compatible n'etait installe : `open` existe toujours et rendait la main sans rien ouvrir. Le lanceur verifie maintenant que le processus a demarre, et retombe sur le navigateur par defaut."
+      ]
+    },
     "0.1.13": {
       "title": "Les images jointes arrivent enfin au modele, et l'atelier dit avec quoi on code",
       "highlights": [
