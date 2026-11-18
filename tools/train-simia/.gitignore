@@ -1,0 +1,14 @@
+# Environnement CUDA isole : plusieurs gigaoctets de roues.
+.venv/
+
+# SD 1.5 de depart, en composants diffusers (environ 4 Go).
+models/
+
+# Le corpus et son manifeste.
+data/
+
+# Sorties d'entrainement : checkpoints, echantillons, journaux.
+out/
+out-*/
+out_*/
+_staging_*/
