@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.13": {
+      "title": "Les images jointes arrivent enfin au modele, et l'atelier dit avec quoi on code",
+      "highlights": [
+        "Une image jointe n'atteignait jamais le modele dans l'application de bureau : le tour courant partait en texte, et la detection du multimodal ne regardait que la banque web. Un modele vision installe avec son mmproj repondait donc « je ne vois pas d'image ». Corrige : l'image voyage en image_url dans le message courant, et l'historique suit.",
+        "Un modele GGUF depose a la main avec son projecteur multimodal est desormais classe « Vision ». Il etait range dans « Generaliste », donc invisible dans le seul filtre ou l'on cherche un modele qui lit une capture.",
+        "Joindre une image a un modele qui ne voit pas ne passe plus inapercu : la vignette porte la raison, et un message propose la categorie Vision. Les videos et les scenes 3D, qu'aucun modele ne lit ici, sont annoncees comme jointes pour reference au lieu de laisser croire qu'elles sont analysees.",
+        "L'atelier de code affiche le modele avec lequel on travaille et ouvre la bibliotheque filtree sur la categorie Code : on pouvait coder avec un generaliste sans jamais savoir qu'un modele dedie existait.",
+        "Le message d'avertissement des pieces jointes ne remplace plus les vignettes : il vit sur sa propre ligne, donc les fichiers restent visibles et retirables.",
+        "Le bouton de retrait d'une piece jointe est annonce en francais aux lecteurs d'ecran, comme le reste de l'interface."
+      ]
+    },
     "0.1.12": {
       "title": "L'atelier de code a sa porte d'entree, et les mots justes partout",
       "highlights": [

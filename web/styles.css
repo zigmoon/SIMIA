@@ -137,6 +137,13 @@ button { cursor:pointer; }
 .message-attachments{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.attachment-card{display:grid;grid-template-columns:26px minmax(0,1fr) auto auto;align-items:center;gap:7px;min-width:170px;max-width:260px;padding:5px 7px;border:1px solid #d4dbd2;border-radius:5px;background:#f6f8f3;color:#526058;font:500 9px "DM Mono",monospace}.attachment-preview{display:grid;width:26px;height:26px;place-items:center;overflow:hidden;border-radius:3px;background:#e0e6df;color:#476052;font-size:8px}.attachment-preview img{width:100%;height:100%;object-fit:cover}.attachment-name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.attachment-card small{color:#8a948b;font-size:8px;white-space:nowrap}.attachment-card button{width:17px;height:17px;padding:0;border:0;border-radius:3px;background:transparent;color:#69736b;font-size:12px}.attachment-card button:hover{background:#e1e6df}.attachment-tray{display:flex;flex-wrap:wrap;gap:7px;margin:2px 0 8px}.attachment-tray[hidden]{display:none}
 .attachment-card.attachment-document .attachment-name{display:grid;min-width:0}.attachment-card.attachment-document .attachment-label{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .attachment-card.attachment-document.ready{border-color:#c9d8bd;background:#f3f8ee}.attachment-card.attachment-document.failed{border-color:#e0b9ad;background:#fff3ef}.attachment-card small.attachment-detail{display:block;overflow:hidden;color:#7d8a80;font-size:8px;white-space:nowrap;text-overflow:ellipsis}
+/* Image jointe a un modele qui ne voit pas, ou media qu'aucun modele ne lit :
+   la vignette le dit, l'utilisateur n'a aucun autre moyen de le savoir. */
+.attachment-card.needs-vision,.attachment-card.inert-media{border-color:#e0c4ad;background:#fff8ef;max-width:320px}
+.attachment-card.needs-vision .attachment-name,.attachment-card.inert-media .attachment-name{display:grid;min-width:0}
+.attachment-card.needs-vision .attachment-label,.attachment-card.inert-media .attachment-label{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.attachment-card.needs-vision small.attachment-detail,.attachment-card.inert-media small.attachment-detail{color:#9a6b3f;white-space:normal;line-height:1.35}
+.attachment-notice{flex:1 0 100%;margin:0;color:#8a6a3c;font:500 9.5px "DM Mono",monospace;line-height:1.5}
 .document-tools{width:min(790px,100%);margin:0 auto 8px;padding:10px 12px;border:1px solid #cdd9c8;border-radius:8px;background:#f5f9f0;color:var(--ink)}.document-tools[hidden]{display:none}.document-tools-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.document-tools-title{margin:0;color:var(--muted);font:500 9px "DM Mono",monospace;letter-spacing:.08em}.document-tools-status{overflow:hidden;color:#54604f;font-size:11px;white-space:nowrap;text-overflow:ellipsis}.document-tools-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.document-action{height:28px;padding:0 11px;border:0;border-radius:5px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:800}.document-action:hover{background:#c9e744}.document-action:disabled{opacity:.55;cursor:wait}
 .document-sources{margin-top:10px;padding:9px 11px;border:1px dashed #cbd3c4;border-radius:6px;background:#f7faf3;color:#4f5d51;font-size:11px;line-height:1.55}.document-sources ul{margin:6px 0 0;padding-left:17px}.document-sources li{margin:0 0 3px}
 .export-section{margin:16px 0 6px;color:var(--muted);font:500 9px "DM Mono",monospace;letter-spacing:.08em}.export-hint{margin:0 0 8px;color:var(--muted);font-size:11px;line-height:1.5}
@@ -364,6 +371,13 @@ textarea::placeholder { color:#989e99; }
 .code-lang:hover { border-color:#7fa464; color:#eef4e9; }
 .code-lang:disabled { opacity:.45; cursor:default; }
 .code-actions-bar { display:flex; flex-wrap:wrap; gap:5px; }
+/* L'atelier nomme le modele avec lequel on code, et ouvre la bibliotheque
+   filtree sur la categorie Code : sans cela, on code avec un generaliste sans
+   jamais savoir qu'un modele dedie existe. */
+.code-model-hint { flex:1 0 100%; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:0 0 6px; color:#8ea294; font:500 9.5px "DM Mono",monospace; }
+.code-model-hint[hidden] { display:none; }
+.code-model-hint button { padding:3px 8px; border:1px solid #3a4740; border-radius:5px; background:#28332c; color:#cfe0c9; font:500 9.5px "DM Mono",monospace; cursor:pointer; }
+.code-model-hint button:hover { border-color:#7fa464; color:#eef4e9; }
 .code-action { padding:5px 10px; border:1px solid #3a4740; border-radius:6px; background:#28332c; color:#c3d2c7; font:500 10.5px "DM Mono",monospace; transition:.15s ease; }
 .code-action:hover { border-color:#7fa464; background:#2f3b33; color:#e9f3e9; }
 .code-action:disabled { opacity:.5; cursor:wait; }

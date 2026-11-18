@@ -65,7 +65,7 @@ const MODELS = [
   // Vision
   { id: "HuggingFaceTB/SmolVLM-256M-Instruct", name: "SmolVLM 256M", category: "Vision", size: "~500 MB", vramMB: 1000, vision: true, engine: "transformers", note: "Le plus petit modèle multimodal au monde. Analyse les images jointes et décrit leur contenu, entièrement dans le navigateur.", instruction: "Décris précisément le contenu des images et réponds à la question posée." },
   { id: "HuggingFaceTB/SmolVLM-500M-Instruct", name: "SmolVLM 500M", category: "Vision", size: "~1 GB", vramMB: 1300, vision: true, engine: "transformers", note: "Plus précis que le 256M pour décrire, lire et répondre sur les images jointes.", instruction: "Décris précisément le contenu des images et réponds à la question posée." },
-  { id: "HuggingFaceTB/SmolVLM2-500M-Video-Instruct", name: "SmolVLM2 500M", category: "Vision", size: "~1 GB", vramMB: 1300, vision: true, engine: "transformers", note: "Nouvelle génération SmolVLM2 : analyse images et courtes vidéos, meilleure précision.", instruction: "Décris précisément le contenu des images et réponds à la question posée." }
+  { id: "HuggingFaceTB/SmolVLM2-500M-Video-Instruct", name: "SmolVLM2 500M", category: "Vision", size: "~1 GB", vramMB: 1300, vision: true, engine: "transformers", note: "Nouvelle génération SmolVLM2 : la plus précise de la sélection pour décrire et lire une capture jointe.", instruction: "Décris précisément le contenu des images et réponds à la question posée." }
 ];
 let DEFAULT_MODEL_ID = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 const MODEL_CONFIG_OVERRIDES = {
@@ -110,7 +110,7 @@ const MODEL_EN = {
   "Qwen3.5-9B-q4f16_1-MLC": ["Documents", "The high end of Qwen 3.5: fine-grained analysis, complex tables, and summaries of very large documents."],
   "HuggingFaceTB/SmolVLM-256M-Instruct": ["Vision", "Analyzes attached images and describes their content."],
   "HuggingFaceTB/SmolVLM-500M-Instruct": ["Vision", "More accurate than the 256M for describing, reading, and answering about attached images."],
-  "HuggingFaceTB/SmolVLM2-500M-Video-Instruct": ["Vision", "Next-generation SmolVLM2: analyzes images and short videos with better accuracy."]
+  "HuggingFaceTB/SmolVLM2-500M-Video-Instruct": ["Vision", "Next-generation SmolVLM2: the most precise of the selection for describing and reading an attached screenshot."]
 };
 
 const MODEL_ES = {
@@ -148,7 +148,7 @@ const MODEL_ES = {
   "Qwen3.5-9B-q4f16_1-MLC": ["Documentos", "La gama alta de Qwen 3.5: análisis detallados, tablas complejas y síntesis de documentos muy grandes."],
   "HuggingFaceTB/SmolVLM-256M-Instruct": ["Visión", "Analiza las imágenes adjuntas y describe su contenido."],
   "HuggingFaceTB/SmolVLM-500M-Instruct": ["Visión", "Más preciso que el 256M para describir, leer y responder sobre las imágenes adjuntas."],
-  "HuggingFaceTB/SmolVLM2-500M-Video-Instruct": ["Visión", "Nueva generación SmolVLM2: analiza imágenes y vídeos cortos con mejor precisión."]
+  "HuggingFaceTB/SmolVLM2-500M-Video-Instruct": ["Visión", "Nueva generación SmolVLM2: la más precisa de la selección para describir y leer una captura adjunta."]
 };
 
 const MODEL_JA = {
@@ -186,7 +186,7 @@ const MODEL_JA = {
   "Qwen3.5-9B-q4f16_1-MLC": ["文書", "Qwen 3.5のハイエンド。詳細な分析、複雑な表、非常に大きな文書の要約に適しています。"],
   "HuggingFaceTB/SmolVLM-256M-Instruct": ["画像", "世界最小のマルチモーダルモデル。添付画像を解析し、内容をブラウザ内で説明します。"],
   "HuggingFaceTB/SmolVLM-500M-Instruct": ["画像", "256Mより正確に、添付画像の説明・読み取り・回答ができます。"],
-  "HuggingFaceTB/SmolVLM2-500M-Video-Instruct": ["画像", "新しいSmolVLM2。画像と短い動画をより高精度に解析します。"]
+  "HuggingFaceTB/SmolVLM2-500M-Video-Instruct": ["画像", "新しいSmolVLM2。添付画像の説明と読み取りはこの選択肢で最も高精度です。"]
 };
 
 if (NATIVE && Array.isArray(NATIVE.models) && NATIVE.models.length) {
@@ -232,6 +232,7 @@ const state = {
   voiceFinal: "",
   voiceMessage: "",
   pendingAttachments: [],
+  attachmentNotice: "",
   selectedModel: DEFAULT_MODEL_ID,
   code: { files: [], activeId: null, open: false, focus: "code" },
   cachedModelId: null,
@@ -362,6 +363,9 @@ const ui = {
   codeHighlight: document.querySelector("#code-highlight"),
   codeGutter: document.querySelector("#code-gutter"),
   codeMeta: document.querySelector("#code-meta"),
+  codeModelHint: document.querySelector("#code-model-hint"),
+  codeModelHintText: document.querySelector("#code-model-hint-text"),
+  codeModelHintAction: document.querySelector("#code-model-hint-action"),
   codeLang: document.querySelector("#code-lang"),
   codeSwitch: document.querySelector("#code-mode-switch"),
   codeNew: document.querySelector("#code-new"),
@@ -1305,6 +1309,7 @@ function renderCodeTabs() {
 function updateCodeMeta() {
   if (!ui.codeMeta) return;
   const file = activeCodeFile();
+  renderCodeModelHint();
   if (!file) { ui.codeMeta.textContent = ""; return; }
   const lines = ui.codeInput.value.split("\n").length;
   const chars = ui.codeInput.value.length;
@@ -1313,6 +1318,30 @@ function updateCodeMeta() {
     `${lines} line(s) · ${chars} character(s) · ${file.language}`,
     `${lines} línea(s) · ${chars} carácter(es) · ${file.language}`,
     `${lines} 行 · ${chars} 文字 · ${file.language}`
+  );
+}
+
+/* L'atelier ne dit pas avec quel modele on code. Un generaliste y repond, mais
+   un modele de la categorie Code ecrit plus juste : on le signale ici, avec la
+   porte ouverte sur la bibliotheque deja filtree. */
+function renderCodeModelHint() {
+  if (!ui.codeModelHint) return;
+  const model = MODELS.find(candidate => candidate.id === state.selectedModel);
+  const isCodeModel = String(model?.category || "").toLowerCase() === "code";
+  const visible = Boolean(model && !isCodeModel && state.code.open);
+  ui.codeModelHint.hidden = !visible;
+  if (!visible) return;
+  ui.codeModelHintText.textContent = localizedText(
+    `Atelier ouvert avec ${model.name}.`,
+    `Workspace open with ${model.name}.`,
+    `Taller abierto con ${model.name}.`,
+    `作業台は ${model.name} で開いています。`
+  );
+  ui.codeModelHintAction.textContent = localizedText(
+    "Choisir un modèle de code",
+    "Pick a code model",
+    "Elegir un modelo de código",
+    "コード用モデルを選ぶ"
   );
 }
 
@@ -1667,6 +1696,7 @@ function enterCodeMode(focus) {
   renderCodeTabs();
   renderCodeEditor();
   setCodeFocus(focus || state.code.focus || "code");
+  renderCodeModelHint();
   saveState();
 }
 
@@ -1677,6 +1707,7 @@ function exitCodeMode() {
     delete ui.workspace.dataset.codePane;
   }
   if (ui.codeSwitch) ui.codeSwitch.hidden = true;
+  renderCodeModelHint();
   saveState();
   ui.prompt.focus();
 }
@@ -2236,7 +2267,19 @@ async function imageGenerate(prompt, bubble) {
 }
 
 async function requestImage(prompt) {
-  if (!imageUsable() || imageBusy) return;
+  if (imageBusy) return;
+  /* Le pack selectionne peut avoir disparu du disque entre deux sessions : sans
+     ce message, la touche Entree ne produisait rien du tout. */
+  if (!imageUsable()) {
+    openModelLibrary("image");
+    toast(localizedText(
+      "Modèle d'image introuvable sur ce disque. Choisissez-en un : il se télécharge une seule fois.",
+      "The image model is missing from this disk. Choose one: it downloads once.",
+      "El modelo de imagen no está en este disco. Elige uno: se descarga una sola vez.",
+      "画像モデルがこのディスクにありません。一度だけダウンロードされるモデルを選んでください。"
+    ));
+    return;
+  }
   const clean = String(prompt || "").trim();
   if (!clean) return;
   imageCancelPending = false;
@@ -2453,6 +2496,7 @@ function renderModeLabel() {
 }
 
 function updateModelActivityUi() {
+  renderCodeModelHint();
   const conversation = activeConversation();
   const conversationModel = MODELS.find(model => model.id === conversation?.modelId);
   const loadedModel = MODELS.find(model => model.id === state.loadedModelId);
@@ -3455,7 +3499,21 @@ async function prepareAttachment(file) {
 
 function attachmentCard(attachment, pending = false) {
   const preview = attachment.kind === "image" && attachment.previewUrl ? `<img src="${escapeHtml(attachment.previewUrl)}" alt="">` : attachment.kind === "video" ? "VID" : attachment.kind === "3d" ? "3D" : attachment.document ? escapeHtml(attachment.document.format || "DOC") : "DOC";
-  const remove = pending ? `<button type="button" data-remove-attachment="${attachment.id}" aria-label="Remove ${escapeHtml(attachment.name)}">x</button>` : "";
+  const remove = pending
+    ? `<button type="button" data-remove-attachment="${attachment.id}" aria-label="${escapeHtml(localizedText(`Retirer ${attachment.name}`, `Remove ${attachment.name}`, `Quitar ${attachment.name}`, `${attachment.name} を外す`))}">x</button>`
+    : "";
+  /* Une image jointe a un modele qui ne voit pas : on le dit sur la vignette
+     elle-meme, pas seulement dans le prompt. L'utilisateur n'a aucun moyen de
+     le deviner autrement, et le modele repondra a cote. Les videos et les
+     scenes 3D, elles, ne sont analysees par aucun modele : les accepter sans
+     le dire laissait croire qu'elles etaient lues. */
+  const blind = attachment.kind === "image" && pending && !activeModelIsVision();
+  const inert = (attachment.kind === "video" || attachment.kind === "3d") && pending;
+  const mediaNote = blind
+    ? copy[state.language].imageNeedsVision
+    : inert
+      ? localizedText("Joint pour référence : SIMIA ne l'analyse pas.", "Attached for reference: SIMIA does not read it.", "Adjunto como referencia: SIMIA no lo analiza.", "参考として添付：SIMIA は解析しません。")
+      : "";
   if (attachment.document) {
     const document_ = attachment.document;
     const passages = attachment.docIndex ? attachment.docIndex.chunks.length : 0;
@@ -3473,18 +3531,21 @@ function attachmentCard(attachment, pending = false) {
         ].filter(Boolean).join(" · "));
     return `<div class="attachment-card attachment-${attachment.kind} attachment-document${status}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span><small class="attachment-detail">${escapeHtml(information)}</small></span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
   }
-  return `<div class="attachment-card attachment-${attachment.kind}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name">${escapeHtml(attachment.name)}</span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
+  return `<div class="attachment-card attachment-${attachment.kind}${blind ? " needs-vision" : ""}${inert ? " inert-media" : ""}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span>${mediaNote ? `<small class="attachment-detail">${escapeHtml(mediaNote)}</small>` : ""}</span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
 }
 
 function renderPendingAttachments() {
-  ui.attachmentTray.hidden = state.pendingAttachments.length === 0;
-  ui.attachmentTray.innerHTML = state.pendingAttachments.map(attachment => attachmentCard(attachment, true)).join("");
+  const count = state.pendingAttachments.length;
+  const notice = count ? state.attachmentNotice : "";
+  ui.attachmentTray.hidden = count === 0;
+  ui.attachmentTray.innerHTML = `${state.pendingAttachments.map(attachment => attachmentCard(attachment, true)).join("")}${notice ? `<p class="attachment-notice" role="status">${escapeHtml(notice)}</p>` : ""}`;
 }
 
 async function addAttachments(files) {
   const selected = [...files].filter(Boolean);
   if (!selected.length) return;
   const heavy = selected.length > DOCUMENT_ADVICE_COUNT || selected.some(file => file.size > DOCUMENT_ADVICE_BYTES);
+  const hasImage = selected.some(file => attachmentKind(file) === "image");
   const errors = [];
   for (const file of selected) {
     const placeholder = { id: `pending-${crypto.randomUUID()}`, name: file.name, type: file.type, size: file.size, kind: attachmentKind(file), document: { ...newDocumentState({ name: file.name }, localizedText("Analyse…", "Analyzing…", "Analizando…")) } };
@@ -3504,12 +3565,21 @@ async function addAttachments(files) {
     renderPendingAttachments();
     renderDocumentTools();
   }
-  if (errors.length) {
-    ui.attachmentTray.textContent = errors.join(" · ");
-    ui.attachmentTray.hidden = false;
-  } else if (heavy) {
-    ui.attachmentTray.textContent = copy[state.language].attachmentAdvice;
-    ui.attachmentTray.hidden = false;
+  /* Le message d'avertissement ne doit pas remplacer les vignettes : il vit
+     dans son propre element, rendu avec elles. */
+  state.attachmentNotice = errors.length
+    ? errors.join(" · ")
+    : heavy
+      ? copy[state.language].attachmentAdvice
+      : "";
+  renderPendingAttachments();
+  if (hasImage && !activeModelIsVision()) {
+    toast(localizedText(
+      "Cette image ne sera pas lue : le modèle actif ne voit pas les images. Choisissez un modèle de la catégorie Vision.",
+      "This image will not be read: the active model cannot see images. Choose a model from the Vision category.",
+      "Esta imagen no se leerá: el modelo activo no ve las imágenes. Elige un modelo de la categoría Visión.",
+      "この画像は読み取られません。現在のモデルは画像を見られません。「画像」カテゴリのモデルを選んでください。"
+    ));
   }
 }
 
@@ -3518,6 +3588,7 @@ function clearPendingAttachments() {
     if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
   });
   state.pendingAttachments = [];
+  state.attachmentNotice = "";
   ui.attachmentInput.value = "";
   renderPendingAttachments();
   renderDocumentTools();
@@ -3819,7 +3890,12 @@ async function summarizeDocuments() {
 }
 
 function isVisionModel() {
-  return MODELS.find(model => model.id === state.selectedModel)?.vision;
+  /* La banque web marque `vision`, le catalogue de bureau marque `nativeVision`
+     (un mmproj a ete trouve a cote du GGUF). Sans les deux, une image jointe
+     n'etait jamais transmise au modele dans l'application de bureau, meme avec
+     un modele multimodal installe. */
+  const model = MODELS.find(model => model.id === state.selectedModel);
+  return Boolean(model?.vision || model?.nativeVision);
 }
 
 function activeModelIsVision() {
@@ -4655,7 +4731,13 @@ function estimateTokens(text) {
 }
 
 function messageTokens(message) {
-  return estimateTokens(typeof message.content === "string" ? message.content : JSON.stringify(message.content));
+  if (typeof message.content === "string") return estimateTokens(message.content);
+  if (Array.isArray(message.content)) {
+    /* Une image jointe arrive en base64 : la compter comme du texte ferait
+       exploser le budget et couperait l'historique pour rien. */
+    return estimateTokens(message.content.filter(part => part.type === "text").map(part => part.text || "").join("\n"));
+  }
+  return estimateTokens(JSON.stringify(message.content));
 }
 
 /* Le message systeme et la question courante sont intouchables : on retire
@@ -4705,10 +4787,20 @@ async function respond(prompt, currentAttachments = [], onDelta = null) {
     const images = isVisionModel() ? (message.attachments || []).filter(attachment => attachment.kind === "image" && attachment.dataUrl) : [];
     if (message.role === "user" && images.length) return { role: "user", content: [{ type: "text", text: content }, ...images.map(image => ({ type: "image_url", image_url: { url: image.dataUrl } }))] };
     return { role: message.role, content };
-  }), { role: "user", content: `${prompt}${attachmentContext(currentAttachments)}${excerpts ? `\n\n[EXTRAITS DES DOCUMENTS]\n${excerpts.text}\n[FIN DES EXTRAITS]` : ""}` }];
+  }), currentUserMessage(prompt, currentAttachments, excerpts)];
   const prepared = trimMessagesToContext(messages);
   if (NATIVE) return nativeChat(prepared, onDelta);
   return webllmChat(prepared, onDelta);
+}
+
+/* Le tour courant porte aussi ses images. Sans cela, la premiere question
+   accompagnée d'une capture partait en texte seul : le modele multimodal
+   repondait « je ne vois pas d'image » alors qu'elle etait jointe. */
+function currentUserMessage(prompt, attachments, excerpts) {
+  const text = `${prompt}${attachmentContext(attachments)}${excerpts ? `\n\n[EXTRAITS DES DOCUMENTS]\n${excerpts.text}\n[FIN DES EXTRAITS]` : ""}`;
+  const images = isVisionModel() ? (attachments || []).filter(attachment => attachment.kind === "image" && attachment.dataUrl) : [];
+  if (!images.length) return { role: "user", content: text };
+  return { role: "user", content: [{ type: "text", text }, ...images.map(image => ({ type: "image_url", image_url: { url: image.dataUrl } }))] };
 }
 
 async function webllmChat(messages, onDelta) {
@@ -6374,12 +6466,14 @@ ui.attachmentTray.addEventListener("click", event => {
   const attachment = state.pendingAttachments.find(item => item.id === remove.dataset.removeAttachment);
   if (attachment?.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
   state.pendingAttachments = state.pendingAttachments.filter(item => item.id !== remove.dataset.removeAttachment);
+  state.attachmentNotice = "";
   renderPendingAttachments();
 });
 ui.form.addEventListener("dragover", event => { event.preventDefault(); ui.form.classList.add("is-dropping"); });
 ui.form.addEventListener("dragleave", event => { if (!ui.form.contains(event.relatedTarget)) ui.form.classList.remove("is-dropping"); });
 ui.form.addEventListener("drop", event => { event.preventDefault(); ui.form.classList.remove("is-dropping"); addAttachments(event.dataTransfer.files); });
 document.querySelector("#home-model-button").addEventListener("click", () => openModelLibrary());
+ui.codeModelHintAction?.addEventListener("click", () => openModelLibrary("code"));
 ui.homeCodeButton?.addEventListener("click", openCodeWorkspaceEmpty);
 ui.sidebarCode?.addEventListener("click", openCodeWorkspaceEmpty);
 ui.appMenuCode?.addEventListener("click", openCodeWorkspaceEmpty);
@@ -6539,8 +6633,7 @@ ui.customModelImportFile.addEventListener("change", event => {
   event.target.value = "";
 });
 ui.modelLibrary.addEventListener("click", event => {
-  const close = event.target.closest("#model-library-close");
-  if (close) return ui.modelLibrary.close();
+  const close = event.target.closest("#model-library-close");  if (close) return ui.modelLibrary.close();
   if (event.target.closest("#model-recommend")) return recommendModel();
   const filter = event.target.closest("button[data-model-filter]");
   if (filter) {

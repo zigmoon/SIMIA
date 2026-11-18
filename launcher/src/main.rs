@@ -970,10 +970,18 @@ fn describe_model(path: &Path) -> ModelEntry {
         Some(quant) => format!("~{} ({quant})", human_size(bytes)),
         None => format!("~{}", human_size(bytes)),
     };
+    let mmproj = find_mmproj(path);
     ModelEntry {
         id: stem,
         name,
-        category: "Généraliste".to_string(),
+        // Un GGUF depose a la main avec son projecteur multimodal est un modele
+        // d'image : le cataloguer « Generaliste » le cachait du filtre Vision,
+        // seul endroit ou l'on comprend qu'il peut lire une capture.
+        category: if mmproj.is_some() {
+            "Vision".to_string()
+        } else {
+            "Généraliste".to_string()
+        },
         size,
         path: path.to_path_buf(),
         bytes,
@@ -982,7 +990,7 @@ fn describe_model(path: &Path) -> ModelEntry {
         mirror: None,
         hosted: false,
         recommended: false,
-        mmproj: find_mmproj(path),
+        mmproj,
     }
 }
 
