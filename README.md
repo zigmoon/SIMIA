@@ -595,6 +595,22 @@ Pour entraîner votre propre style, voir [tools/lora/README.md](tools/lora/READM
   le manifeste est invalide. `tools/sync-web.ps1` les copie dans `web/`.
 - **Port fixe** : `localStorage` est lié à l'origine. Changer de port perd les
   conversations locales.
+- **Fenêtre console** : le lanceur s'ouvre dans une fenêtre noire, et c'est le
+  premier contact avec l'application installée. Elle affiche donc une bannière
+  `SIMIA` en grandes lettres, des étapes numérotées (`1/3`, `2/3`, `3/3`), et une
+  barre de progression qui défile pendant le chargement du modèle dans le GPU
+  avec un compteur de secondes — à la place de la suite de points d'avant, qui
+  ne disait ni que le travail avançait ni combien de temps il restait. Couleurs
+  ANSI activées par `SetConsoleMode` sur Windows (sans cet appel, la fenêtre
+  afficherait les séquences en clair) ; `NO_COLOR` les coupe et
+  `CLICOLOR_FORCE=1` les garde dans un journal redirigé. La bannière n'utilise
+  que de l'ASCII : une fenêtre Windows en page de code 437 ou 850 n'afficherait
+  pas autre chose.
+- **Ouverture de la fenêtre** : le serveur écoute **avant** le lancement du
+  navigateur, et le lanceur attend que le port accepte une connexion. Dans
+  l'ordre inverse, le navigateur tombait sur un port encore fermé au premier
+  lancement — quand le modèle se télécharge — et il fallait recliquer sur l'icône
+  une fois SIMIA prêt.
 - **Contexte** : `--ctx` fixe la fenêtre du modèle (8 192 tokens par défaut, un
   seul slot pour ne pas gaspiller la VRAM). La page lit la valeur via
   `window.__SIMIA_NATIVE__.ctxSize` et en déduit la taille de code envoyée au

@@ -3565,8 +3565,8 @@ async function startWebModelDownload(modelId) {
    Le rendre des le depart evite de reconstruire la carte au moment du clic. */
 function downloadBlock(id) {
   return `<div class="card-progress" data-download="${escapeHtml(id)}" hidden>
-      <div class="card-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="card-progress-fill"></i></div>
       <p class="card-progress-text"></p>
+      <div class="card-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="card-progress-fill"></i></div>
     </div>`;
 }
 

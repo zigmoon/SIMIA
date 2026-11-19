@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.19": {
+      "title": "L'installation ressemble enfin a quelque chose, et l'application s'ouvre d'elle-meme",
+      "highlights": [
+        "La fenetre noire du lanceur porte maintenant une banniere SIMIA en grandes lettres, avec les etapes numerotees 1/3, 2/3, 3/3 et une vraie barre de progression pendant le chargement du modele. A la place : des couleurs (vert accent de l'interface), un compteur de secondes, et le nom du modele en cours.",
+        "La suite de points qui servait de loader est remplacee par une barre qui defile, six caracteres qui traversent la ligne, avec le temps ecoule. Les points ne disaient ni que le travail avançait ni combien de temps il restait.",
+        "Defaut corrige, et c'est celui qui se voyait : l'application ne s'ouvrait pas a la fin. Le navigateur etait lance AVANT que le serveur n'ecoute, donc il tombait sur un port ferme, et il fallait recliquer sur l'icone du bureau une fois SIMIA pret. Le serveur prend maintenant le port d'abord, le lanceur attend qu'il accepte une connexion, puis ouvre la fenetre.",
+        "Dans les cartes de modele a telecharger, le texte de progression passe au-dessus de la barre. Sous la barre, la phrase se collait au bord bas de la carte et se lisait comme une note de bas de bloc ; la carte s'agrandit de 16 px quand un telechargement commence.",
+        "Les messages d'erreur sont encadres et colores, les informations techniques sont regroupees sous la banniere, et --help affiche la meme banniere.",
+        "Le service worker change de version : sans cela, l'ancienne interface restait servie depuis le cache apres la mise a jour."
+      ]
+    },
     "0.1.18": {
       "title": "Les fenetres s'arretent a la taille de leur contenu, et un modele se telecharge depuis sa carte",
       "highlights": [

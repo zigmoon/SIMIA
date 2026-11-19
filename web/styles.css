@@ -164,17 +164,19 @@ button { cursor:pointer; }
 /* Barre de progression dans la carte d'un modele en cours de telechargement.
    Les poids pesent jusqu'a plusieurs giga-octets : sans elle, cliquer sur
    « Telecharger » ne montrait rien du tout. */
-.model-card.is-downloading{height:auto;min-height:180px;border-color:#9bb76c;box-shadow:inset 0 0 0 1px #c9df9a}
-.card-progress{display:grid;gap:6px;margin-top:2px}
+.model-card.is-downloading{height:auto;min-height:196px;border-color:#9bb76c;box-shadow:inset 0 0 0 1px #c9df9a}
+/* Progression dans la carte : le texte d'abord, la barre ensuite. Sous la
+   barre, la phrase se collait au bord bas de la carte et se lisait comme une
+   note de bas de bloc ; au-dessus, elle annonce ce qui avance avant la barre. */
+.card-progress{display:grid;gap:7px;margin-top:8px;padding-top:9px;border-top:1px solid #e6ebdf}
 .card-progress[hidden]{display:none}
-.model-card.is-downloading{height:auto;min-height:180px}
+.card-progress-text{margin:0;color:#43503f;font:600 10.5px "DM Mono",monospace;line-height:1.4}
 .card-progress-track{height:6px;border-radius:999px;background:#e8ece3;overflow:hidden}
 .card-progress-fill{display:block;width:0%;height:100%;border-radius:999px;background:var(--accent);transition:width .4s ease}
 /* Chargement dans le GPU : aucun pourcentage disponible, la barre pulse donc au
    lieu de rester vide. */
 .card-progress-track.is-indeterminate .card-progress-fill{animation:breathe 1.6s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.28}50%{opacity:.85}}
-.card-progress-text{margin:0;color:#5f6a62;font:500 10.5px "DM Mono",monospace}
 .model-card.is-downloading .model-card-footer button{background:#e8eee3;color:#3f4d3c;cursor:progress}
 .typing { display:flex; gap:4px; padding:7px 0; }
 .typing span { width:5px; height:5px; background:#89918b; border-radius:50%; animation:pulse 1s infinite; }.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}

@@ -7,11 +7,11 @@
 
 use std::env;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::{IsTerminal, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -331,6 +331,177 @@ struct AppState {
 
 type Shared = Arc<Mutex<AppState>>;
 
+// ---------------------------------------------------------------------------
+// Console : banniere, couleurs, progression
+// ---------------------------------------------------------------------------
+//
+// Le lanceur s'ouvre dans une fenetre noire : c'est le premier contact avec
+// SIMIA installe. Sans reperes ni couleur, cette fenetre ressemble a un journal
+// de debogage. On y pose donc une banniere, des etapes numerotees et une vraie
+// barre de progression.
+//
+// Les couleurs ne s'affichent que dans un terminal : redirigees vers un fichier
+// ou un service, les sequences ANSI seraient du bruit. La variable NO_COLOR
+// (norme reprise par la plupart des outils) les coupe aussi.
+//
+// Sous Windows, conhost n'interprete pas ces sequences tant que
+// ENABLE_VIRTUAL_TERMINAL_PROCESSING n'est pas arme sur le handle de sortie :
+// sans cet appel, la fenetre afficherait « ←[38;2;201;231;68m » en clair.
+
+const RESET: &str = "\x1b[0m";
+const BOLD: &str = "\x1b[1m";
+const DIM: &str = "\x1b[2m";
+/// Le vert de l'interface (#c9e744), puis deux teintes plus sourdes.
+const LIME: &str = "\x1b[38;2;201;231;68m";
+const GREEN: &str = "\x1b[38;2;143;174;92m";
+const GREY: &str = "\x1b[38;2;126;136;128m";
+const RED: &str = "\x1b[38;2;214;104;84m";
+
+fn color_setting() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        if env::var_os("NO_COLOR").is_some() {
+            return false;
+        }
+        // Convention CLICOLOR_FORCE : permet de garder les couleurs dans un
+        // journal redirige, et de les couper dans un terminal (NO_COLOR).
+        if env::var_os("CLICOLOR_FORCE").is_some_and(|value| value != "0") {
+            return true;
+        }
+        if !std::io::stdout().is_terminal() {
+            return false;
+        }
+        #[cfg(windows)]
+        if !win_console::enable_ansi() {
+            return false;
+        }
+        true
+    })
+}
+
+fn paint(text: &str, color: &str) -> String {
+    if color_setting() {
+        format!("{color}{text}{RESET}")
+    } else {
+        text.to_string()
+    }
+}
+
+/// `SIMIA` en grandes lettres. Chaque glyphe est decrit par colonne de rendu
+/// (six lignes), pour que l'alignement se verifie a la lecture du code et non
+/// dans une chaine de 300 caracteres. Uniquement des caracteres ASCII : une
+/// fenetre Windows en page de code 437 ou 850 n'afficherait pas autre chose.
+const SIMIA_GLYPHS: [[&str; 6]; 5] = [
+    [
+        "  ____  ",
+        " / ___| ",
+        " \\___ \\ ",
+        "  ___) |",
+        " |____/ ",
+        "        ",
+    ],
+    [" ___ ", "|_ _|", " | | ", " | | ", "|___|", "     "],
+    [
+        " __  __ ",
+        "|  \\/  |",
+        "| |\\/| |",
+        "| |  | |",
+        "|_|  |_|",
+        "        ",
+    ],
+    [" ___ ", "|_ _|", " | | ", " | | ", "|___|", "     "],
+    [
+        "    _    ",
+        "   / \\   ",
+        "  / _ \\  ",
+        " / ___ \\ ",
+        "/_/   \\_\\",
+        "         ",
+    ],
+];
+
+fn banner_rows() -> Vec<String> {
+    (0..6)
+        .map(|line| {
+            SIMIA_GLYPHS
+                .iter()
+                .map(|glyph| glyph[line])
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect()
+}
+
+fn print_banner() {
+    println!();
+    let shades = [LIME, LIME, GREEN, GREEN, GREEN, GREY];
+    for (index, row) in banner_rows().iter().enumerate() {
+        println!(" {}", paint(row, shades[index.min(shades.len() - 1)]));
+    }
+    println!();
+    println!(
+        "  {}   {}",
+        paint("assistant local, prive et hors ligne", GREY),
+        paint(&format!("v{APP_VERSION}"), DIM)
+    );
+    println!("  {}", paint(&"-".repeat(46), DIM));
+}
+
+/// Une etape annoncee avant d'agir : le lecteur sait ce qui est en cours et
+/// combien il en reste.
+fn step(number: u8, total: u8, label: &str) {
+    println!(
+        "  {} {}",
+        paint(&format!("{number}/{total}"), GREY),
+        paint(label, BOLD)
+    );
+}
+
+fn step_ok(label: &str) {
+    println!("      {} {}", paint("ok", LIME), paint(label, GREY));
+}
+
+fn step_info(label: &str, value: &str) {
+    println!("      {} {}", paint(label, GREY), value);
+}
+
+/// Efface la ligne courante : la barre de progression est reecrite sur place,
+/// et une ligne plus courte laisserait la fin de la precedente.
+fn clear_line(width: usize) {
+    print!("\r{}\r", " ".repeat(width));
+    let _ = std::io::stdout().flush();
+}
+
+#[cfg(windows)]
+mod win_console {
+    use std::ffi::c_void;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetStdHandle(kind: u32) -> *mut c_void;
+        fn GetConsoleMode(handle: *mut c_void, mode: *mut u32) -> i32;
+        fn SetConsoleMode(handle: *mut c_void, mode: u32) -> i32;
+    }
+
+    const STD_OUTPUT_HANDLE: u32 = 0xFFFF_FFF5; // -11 en u32
+    const ENABLE_VIRTUAL_TERMINAL_PROCESSING: u32 = 0x0004;
+
+    pub fn enable_ansi() -> bool {
+        unsafe {
+            let handle = GetStdHandle(STD_OUTPUT_HANDLE);
+            if handle.is_null() || handle as isize == -1 {
+                return false;
+            }
+            let mut mode = 0u32;
+            if GetConsoleMode(handle, &mut mode) == 0 {
+                return false;
+            }
+            SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0
+        }
+    }
+}
+
+
 fn main() {
     let mut web_arg: Option<String> = None;
     let mut model_arg: Option<String> = None;
@@ -376,6 +547,8 @@ fn main() {
     }
     let hosted_count = models.iter().filter(|model| model.hosted).count();
 
+    print_banner();
+
     let Some(llama_bin) = find_llama_server(llama_arg.as_deref()) else {
         fail("llama-server introuvable. Placez-le dans vendor/llama/<plateforme>/ ou utilisez --llama-server <chemin>.");
     };
@@ -404,10 +577,23 @@ fn main() {
         if url.is_empty() {
             fail("Aucun modele local et aucune URL de telechargement dans catalog.json.");
         }
-        println!("Premier lancement : telechargement de {} ({}).", start.name, start.size);
+        step(1, 3, &format!("Premier lancement : telechargement de {} ({})", start.name, start.size));
+        let bar_width = 26usize;
         if let Err(err) = download_model(&start, &models_dir, |downloaded, total| {
             let pct = if total > 0 { downloaded * 100 / total } else { 0 };
-            print!("\r  {} % ({} / {})      ", pct, human_size(downloaded), human_size(total));
+            let filled = (pct as usize * bar_width / 100).min(bar_width);
+            let bar = format!(
+                "{}{}",
+                "#".repeat(filled),
+                "-".repeat(bar_width - filled)
+            );
+            print!(
+                "\r      {} [{bar}] {:>3} %  {} / {}",
+                paint(">", GREEN),
+                pct,
+                human_size(downloaded),
+                human_size(total)
+            );
             let _ = std::io::stdout().flush();
         }) {
             fail(&format!("Telechargement impossible : {err}"));
@@ -426,20 +612,28 @@ fn main() {
     let local_count = models.iter().filter(|model| model.local).count();
     let catalog_bytes: u64 = models.iter().map(|model| model.bytes).sum();
 
-    println!("SIMIA Desktop {APP_VERSION}");
-    println!("  interface   : {}", web.display());
-    println!("  llama-server: {}", llama_bin.display());
-    println!(
-        "  modeles     : {local_count} local(aux) / {} au catalogue ({})",
-        models.len(),
-        human_size(catalog_bytes)
+    step_info("interface", &web.display().to_string());
+    step_info("moteur", &llama_bin.display().to_string());
+    step_info(
+        "modeles",
+        &format!(
+            "{local_count} sur le disque / {} au catalogue ({})",
+            models.len(),
+            human_size(catalog_bytes)
+        ),
     );
-    println!("  hebergement : {hosted_count} sur le serveur, {} en CDN", models.len() - hosted_count);
+    step_info(
+        "hebergement",
+        &format!("{hosted_count} sur le serveur, {} en CDN", models.len() - hosted_count),
+    );
     if !catalog_base.is_empty() {
-        println!("  catalogue   : v{catalog_version} ({catalog_base})");
+        step_info("catalogue", &format!("v{catalog_version} ({catalog_base})"));
     }
-    println!("  backend     : 127.0.0.1:{llama_port}");
-    println!("  contexte    : {ctx_size} tokens");
+    step_info(
+        "backend",
+        &format!("127.0.0.1:{llama_port} · contexte {ctx_size} tokens"),
+    );
+    println!();
 
     let (mut child, llama_log) = match spawn_llama(&llama_bin, &start.path, start.mmproj.as_deref(), llama_port, ctx_size) {
         Ok(pair) => pair,
@@ -447,7 +641,7 @@ fn main() {
     };
     let pid_file = write_pid_file(llama_port, child.id());
 
-    println!("Chargement de {} dans le GPU.", start.name);
+    step(2, 3, &format!("Chargement de {} dans le GPU", start.name));
     if let Err(reason) = wait_healthy(&mut child, llama_port, &llama_log) {
         let _ = fs::remove_file(&pid_file);
         fail(&format!(
@@ -502,7 +696,8 @@ fn main() {
     }));
 
     println!(
-        "  images      : {}",
+        "      {} {}",
+        paint("images", GREY),
         if image_available {
             format!("{image_label} sur 127.0.0.1:{image_port}")
         } else {
@@ -542,18 +737,10 @@ fn main() {
         });
     }
 
-    let url = format!("http://127.0.0.1:{ui_port}/");
-    if !no_browser {
-        match launch_browser(&url) {
-            Some(_) => println!("Fenetre applicative ouverte : {url}"),
-            None => println!("Ouvrez SIMIA dans votre navigateur : {url}"),
-        }
-    } else {
-        println!("Interface disponible sur {url}");
-    }
-    println!("Changez de modele depuis la bibliotheque de SIMIA.");
-    println!("Fermez cette fenetre ou appuyez sur Ctrl+C pour quitter.");
-
+    // Le serveur ecoute AVANT l'ouverture de la fenetre. Dans l'ordre inverse,
+    // le navigateur arrivait sur un port encore ferme : page d'erreur, et il
+    // fallait recliquer sur l'icone une fois SIMIA pret. C'est exactement ce
+    // qui se produisait au premier lancement, quand le modele se telecharge.
     let server = match Server::http(("127.0.0.1", ui_port)) {
         Ok(server) => server,
         Err(err) => {
@@ -562,6 +749,33 @@ fn main() {
             fail(&format!("Impossible d'ecouter sur le port {ui_port} : {err}"));
         }
     };
+
+    let url = format!("http://127.0.0.1:{ui_port}/");
+    step(3, 3, "Ouverture de l'interface");
+    if !no_browser {
+        // Ceinture et bretelles : la socket est deja ouverte, mais on attend
+        // qu'elle accepte reellement une connexion avant de lancer le
+        // navigateur, pour ne jamais lui montrer une page d'erreur.
+        wait_for_port(ui_port, Duration::from_secs(5));
+        match launch_browser(&url) {
+            Some(_) => step_ok(&format!("fenetre applicative ouverte : {url}")),
+            None => {
+                step_ok("aucun navigateur Chromium trouve");
+                step_info("ouvrez SIMIA dans votre navigateur", &url);
+            }
+        }
+    } else {
+        step_ok(&format!("interface disponible sur {url}"));
+    }
+    println!();
+    println!(
+        "  {}",
+        paint(
+            "Changez de modele depuis la bibliotheque. Fermez cette fenetre ou Ctrl+C pour quitter.",
+            GREY
+        )
+    );
+    println!();
 
     for request in server.incoming_requests() {
         let state = Arc::clone(&state);
@@ -573,8 +787,26 @@ fn main() {
     let _ = fs::remove_file(&pid_file);
 }
 
+/// Attend que le port accepte une connexion TCP, sans jamais echouer : le
+/// navigateur sait aussi afficher un rechargement.
+fn wait_for_port(port: u16, timeout: Duration) {
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if TcpStream::connect_timeout(
+            &format!("127.0.0.1:{port}").parse().expect("adresse locale valide"),
+            Duration::from_millis(200),
+        )
+        .is_ok()
+        {
+            return;
+        }
+        thread::sleep(Duration::from_millis(60));
+    }
+}
+
 fn print_help() {
-    println!("SIMIA Desktop {APP_VERSION}");
+    print_banner();
+    println!("  {}", paint("Options", BOLD));
     println!("  --web <dossier>         interface a servir (defaut : detection automatique)");
     println!("  --model <fichier.gguf>  modele charge au demarrage");
     println!("  --llama-server <chemin> binaire llama-server");
@@ -588,7 +820,8 @@ fn print_help() {
 }
 
 fn fail(message: &str) -> ! {
-    eprintln!("Erreur : {message}");
+    println!();
+    eprintln!("  {} {}", paint("erreur", RED), message);
     std::process::exit(1)
 }
 
@@ -1798,20 +2031,42 @@ fn spawn_llama(bin: &Path, model: &Path, mmproj: Option<&Path>, port: u16, ctx: 
     command.spawn().map(|child| (child, log_path))
 }
 
+/// Barre défilante pour une attente sans pourcentage : un bloc de six
+/// caractères traverse la barre. Fonction pure, pour être vérifiable seule.
+fn marquee(slide: usize, width: usize) -> String {
+    let wrapped = slide % (width + 8);
+    let head = wrapped.saturating_sub(6);
+    let tail = wrapped.min(width);
+    (0..width)
+        .map(|index| if index >= head && index < tail { '#' } else { '-' })
+        .collect()
+}
+
 /// Attend que le moteur reponde, en s'arretant des que le processus meurt.
 /// Un binaire incompatible sort en quelques millisecondes : l'ancienne boucle
 /// attendait alors jusqu'a 240 s avant d'accuser le GPU.
+///
+/// La progression remplace la suite de points : une barre qui defile, un
+/// compteur de secondes et le nom du modele. Les points ne disaient ni que le
+/// travail avançait ni combien de temps il restait ; ils ressemblaient a une
+/// animation d'attente sans fin.
 fn wait_healthy(child: &mut Child, port: u16, log_path: &Path) -> Result<(), String> {
-    print!("Chargement du modele dans le GPU");
-    let _ = std::io::stdout().flush();
-    let deadline = Instant::now() + HEALTH_TIMEOUT;
-    while Instant::now() < deadline {
+    const FRAMES: [&str; 4] = ["|", "/", "-", "\\"];
+    const BAR_WIDTH: usize = 26;
+    let started = Instant::now();
+    let deadline = started + HEALTH_TIMEOUT;
+    let mut tick: usize = 0;
+    loop {
         if let Ok((200, _, _)) = http_call(port, "GET", "/health", None, Duration::from_secs(2)) {
-            println!();
+            clear_line(BAR_WIDTH + 24);
+            step_ok(&format!(
+                "modele charge en {} s, GPU pret",
+                started.elapsed().as_secs()
+            ));
             return Ok(());
         }
         if let Ok(Some(status)) = child.try_wait() {
-            println!();
+            clear_line(BAR_WIDTH + 24);
             let detail = tail_of(log_path, 2);
             let mut message = format!("le moteur s'est arrete pendant le chargement ({status})");
             if !detail.is_empty() {
@@ -1820,17 +2075,29 @@ fn wait_healthy(child: &mut Child, port: u16, log_path: &Path) -> Result<(), Str
             }
             return Err(message);
         }
-        print!(".");
+        if Instant::now() >= deadline {
+            clear_line(BAR_WIDTH + 24);
+            let detail = tail_of(log_path, 2);
+            return Err(if detail.is_empty() {
+                "le moteur n'a pas repondu dans le delai imparti".to_string()
+            } else {
+                format!("le moteur n'a pas repondu dans le delai imparti. {detail}")
+            });
+        }
+        // Bloc de six caracteres qui traverse la barre : mouvement continu,
+        // sans laisser croire a un pourcentage que le moteur ne donne pas.
+        let bar = marquee(tick, BAR_WIDTH);
+        let line = format!(
+            "      {} [{}] {:>3} s",
+            FRAMES[tick % FRAMES.len()],
+            bar,
+            started.elapsed().as_secs()
+        );
+        print!("\r{}", paint(&line, GREEN));
         let _ = std::io::stdout().flush();
-        thread::sleep(Duration::from_millis(400));
+        tick += 1;
+        thread::sleep(Duration::from_millis(160));
     }
-    println!();
-    let detail = tail_of(log_path, 2);
-    Err(if detail.is_empty() {
-        "le moteur n'a pas repondu dans le delai imparti".to_string()
-    } else {
-        format!("le moteur n'a pas repondu dans le delai imparti. {detail}")
-    })
 }
 
 /// Arrete le modele courant, telecharge le modele demande s'il est absent du
@@ -2732,5 +2999,46 @@ fn mime_for(extension: &str) -> &'static str {
         "xml" => "application/xml",
         "txt" => "text/plain; charset=utf-8",
         _ => "application/octet-stream",
+    }
+}
+
+#[cfg(test)]
+mod console_tests {
+    use super::*;
+
+    /// Les six lignes de la banniere doivent avoir la meme largeur : une seule
+    /// ligne plus courte ou plus longue decalerait les lettres du mot.
+    #[test]
+    fn banner_rows_are_aligned() {
+        let rows = banner_rows();
+        assert_eq!(rows.len(), 6);
+        let width = rows[0].chars().count();
+        for row in &rows {
+            assert_eq!(row.chars().count(), width, "ligne de largeur differente : {row:?}");
+        }
+        assert!(width > 30, "banniere trop etroite : {width}");
+    }
+
+    /// La banniere ne doit contenir que de l'ASCII : une fenetre Windows en
+    /// page de code 437 ou 850 afficherait autrement des octets parasites.
+    #[test]
+    fn banner_is_pure_ascii() {
+        for row in banner_rows() {
+            assert!(row.is_ascii(), "caractere non ASCII dans la banniere : {row:?}");
+        }
+    }
+
+    /// La barre garde sa largeur a chaque image, et le bloc avance puis
+    /// revient au debut : sinon la ligne effacee laisserait des restes.
+    #[test]
+    fn marquee_keeps_its_width_and_moves() {
+        let width = 26;
+        let frames: Vec<String> = (0..width + 8).map(|slide| marquee(slide, width)).collect();
+        for frame in &frames {
+            assert_eq!(frame.chars().count(), width, "largeur instable : {frame:?}");
+        }
+        assert_ne!(frames[0], frames[6], "le bloc ne bouge pas");
+        assert_eq!(frames[0], marquee(width + 8, width), "le cycle ne se referme pas");
+        assert!(frames[6].starts_with("######"), "le bloc n'est pas en tete : {:?}", frames[6]);
     }
 }
