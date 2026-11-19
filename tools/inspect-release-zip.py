@@ -38,11 +38,18 @@ MARKERS = {
         "codePreviewRev: CODE_PREVIEW_REV",
         "markCodeBlockState",
         "codeRevealPath",
+        "replyTokensFor",
+        "codeAppendMerge",
+        "streamCodeDraft",
+        "settleCodeDrafts",
+        "continueInVibe",
+        "markReplyTruncated",
     ],
     "web/index.html": [
         "M3.4 3.4l17.2 17.2",
         "composer-steps",
         '<input id="setting-code-preview" type="checkbox">',
+        "code-draft-bar",
     ],
 }
 
