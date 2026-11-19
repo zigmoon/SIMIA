@@ -96,6 +96,13 @@ conversation s'étire dans un sens ou dans l'autre (flèches au clavier, double-
 pour revenir aux proportions d'origine), et la largeur choisie est conservée. La
 conversation ne descend jamais sous 320 px, le code garde au moins 420 px.
 
+La bascule « Code / Chat » de la barre du haut décide qui occupe la place, sans
+fermer Vibe. « Chat » affiche la conversation seule, à sa largeur de lecture
+habituelle ; « Code » ramène les deux volets tels qu'on les avait laissés, avec
+la même largeur de colonne, les mêmes fichiers ouverts, les brouillons en attente
+et l'aperçu dans l'état où il était. Sur téléphone, un seul volet s'affiche à la
+fois.
+
 Le projet n'est pas prisonnier du navigateur : les fichiers importés depuis un
 dossier peuvent être réécrits sur le disque (« Enregistrer sur le disque », API
 File System Access de Chrome et Edge, sur Windows, macOS et Linux), et tout

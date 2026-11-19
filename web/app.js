@@ -3899,7 +3899,9 @@ function applyCodeSplit() {
   const chat = document.querySelector(".chat");
   const measured = chat ? Math.round(chat.getBoundingClientRect().width) : 0;
   handle.setAttribute("aria-valuenow", String(Math.max(0, measured)));
-  handle.hidden = !state.code.open || window.matchMedia("(max-width: 900px)").matches;
+  handle.hidden = !state.code.open
+    || state.code.focus === "chat"
+    || window.matchMedia("(max-width: 900px)").matches;
 }
 
 function codeSplitBounds() {
@@ -3995,6 +3997,10 @@ function setCodeFocus(focus, options = {}) {
   }
   applyCodeSplit();
   renderComposerCodeContext();
+  if (state.code.focus === "code") {
+    updateCodeHighlight();
+    syncCodePreviewSplit();
+  }
   /* `moveFocus: false` : le volet s'ouvre, mais le curseur reste ou il etait.
      Appliquer un bloc depuis une reponse ne doit pas arracher le focus de la
      boite de prompt, sinon enchainer les etapes coute un clic a chaque fois. */
@@ -4020,6 +4026,7 @@ function enterCodeMode(focus, options = {}) {
 
 function exitCodeMode() {
   state.code.open = false;
+  state.code.focus = "code";
   setCodePreview(false);
   setCodeTreeVisible(true);
   if (ui.workspace) {
@@ -4155,6 +4162,11 @@ function renderCodeWorkspaceText() {
   ui.codeSwitch?.setAttribute("aria-label", localizedText("Vibe et conversation", "Vibe and chat", "Vibe y conversación", "Vibe とチャット"));
   document.querySelector("#code-tabs")?.setAttribute("aria-label", localizedText("Fichiers ouverts", "Open files", "Archivos abiertos", "開いているファイル"));
   document.querySelectorAll(".code-mode-switch [data-code-focus]").forEach(button => {
+    /* L'onglet ne change pas de page : il decide seulement qui occupe la
+       place. Le dire evite de croire que Vibe se ferme. */
+    button.setAttribute("title", button.dataset.codeFocus === "chat"
+      ? localizedText("Conversation seule, pleine largeur", "Chat only, full width", "Conversación sola, a todo el ancho", "会話のみ、全幅で表示")
+      : localizedText("Code et conversation côte à côte", "Code and chat side by side", "Código y conversación juntos", "コードと会話を並べて表示"));
     button.textContent = button.dataset.codeFocus === "chat"
       ? localizedText("Chat", "Chat", "Chat", "チャット")
       : localizedText("Code", "Code", "Código", "コード");

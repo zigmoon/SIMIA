@@ -1,6 +1,18 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.26": {
+      "title": "Vibe : l'onglet Chat ramene la conversation seule",
+      "highlights": [
+        "L'onglet Chat de la barre du haut ne faisait qu'elargir la colonne de droite : le volet de code restait ouvert, et l'on ne pouvait jamais revenir a la conversation pleine largeur sans fermer Vibe. Chat affiche desormais la conversation seule, avec la largeur de lecture habituelle, et Code ramene les deux volets exactement comme on les avait laisses.",
+        "Le projet ne bouge pas pendant la bascule : fichiers, onglets, brouillons en attente et etat de l'apercu (ouvert ou ferme, largeur simulee) sont retrouves tels quels en revenant sur Code. La largeur choisie a la souris pour la conversation est elle aussi conservee.",
+        "La poignee de redimensionnement disparait avec le volet de code au lieu de rester entre deux colonnes qui n'existent plus.",
+        "Sur telephone et en fenetre etroite, la bascule se comporte comme avant : un seul volet a la fois, sans separateur.",
+        "Chaque onglet porte une infobulle qui dit ce qu'il fait : « Conversation seule, pleine largeur » et « Code et conversation cote a cote ». Vibe ne se ferme pas quand on passe sur Chat.",
+        "Fermer Vibe remet la bascule sur Code : la prochaine ouverture montre l'editeur, pas une conversation seule.",
+        "Cote des textes, la conversation seule respecte la mesure de lecture du mode normal : 850 px centres pour les messages, 790 px pour la zone de saisie, plutot qu'une ligne de 1200 px de large."
+      ]
+    },
     "0.1.25": {
       "title": "Vibe : une page arrive en trois fichiers, et Continuer nomme le bon",
       "highlights": [

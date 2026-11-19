@@ -416,9 +416,19 @@ textarea::placeholder { color:#989e99; }
    Tout est en sombre pour detacher le code de la conversation claire. */
 .code-pane { display:none; grid-area:code; position:relative; min-width:0; min-height:0; border-right:1px solid #27312b; background:#171e1b; color:#dbe6dd; grid-template-rows:auto minmax(0,1fr) auto auto; --scroll-thumb:rgba(198,216,204,.26); --scroll-thumb-hover:rgba(198,216,204,.46); --scroll-thumb-active:rgba(198,216,204,.62); }
 .workspace[data-mode="code"] { grid-template-columns:minmax(0,1fr) 8px minmax(320px, var(--chat-width, 30%)); grid-template-areas:"topbar topbar topbar" "code split chat" "code split composer"; }
-/* Focus sur le chat : l'atelier garde de la place, la conversation en prend
-   davantage. Le mode code, lui, laisse l'essentiel a l'editeur. */
-.workspace[data-mode="code"][data-code-pane="chat"] { grid-template-columns:minmax(0,1fr) 8px minmax(360px, var(--chat-width, 46%)); }
+/* L'onglet « Chat » ramene la conversation seule : le volet de code et la
+   poignee disparaissent, et le projet reste ouvert (fichiers, brouillons et
+   aperçu sont retrouves tels quels en revenant sur « Code »). Le mode code,
+   lui, laisse l'essentiel a l'editeur. */
+.workspace[data-mode="code"][data-code-pane="chat"] { grid-template-columns:minmax(0,1fr); grid-template-areas:"topbar" "chat" "composer"; }
+.workspace[data-mode="code"][data-code-pane="chat"] .code-pane,
+.workspace[data-mode="code"][data-code-pane="chat"] .workspace-split { display:none; }
+/* La colonne de code bridait la conversation a 356 px ; seule, elle retrouve la
+   largeur de lecture du mode normal plutôt que d'etaler le texte sur 1200 px. */
+.workspace[data-mode="code"][data-code-pane="chat"] .chat { width:min(850px, 100%); margin:0 auto; padding:34px 32px 24px; }
+.workspace[data-mode="code"][data-code-pane="chat"] .composer,
+.workspace[data-mode="code"][data-code-pane="chat"] .disclaimer { width:min(790px, 100%); margin-left:auto; margin-right:auto; }
+.workspace[data-mode="code"][data-code-pane="chat"] .composer-wrap { padding:0 32px 19px; }
 /* Separateur entre le code et la conversation : une poignee de 8 px, un
    curseur col-resize, et une ligne visible qui s'epaissit au survol. */
 .workspace-split { display:none; }
@@ -638,6 +648,8 @@ body.is-resizing, body.is-resizing * { cursor:col-resize !important; user-select
   .workspace[data-mode="code"] .composer-wrap { padding:0 14px 12px; }
   .workspace[data-mode="code"][data-code-pane="chat"] { grid-template-areas:"topbar" "chat" "composer"; }
   .workspace[data-mode="code"][data-code-pane="chat"] .code-pane { display:none; }
+  .workspace[data-mode="code"][data-code-pane="chat"] .chat { padding:22px 18px 16px; }
+  .workspace[data-mode="code"][data-code-pane="chat"] .composer-wrap { padding:0 14px 12px; }
   .workspace[data-mode="code"][data-code-pane="code"] .chat, .workspace[data-mode="code"][data-code-pane="code"] .composer-wrap { display:none; }
   .code-pane { border-right:0; }
   .code-body { grid-template-columns:minmax(0,1fr); }
