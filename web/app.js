@@ -3413,11 +3413,12 @@ async function selectImagePack(id) {
    on retient donc l'identifiant concerne et chaque carte affiche sa propre
    barre. Le DOM est mis a jour sur place : re-rendre la bibliotheque a chaque
    sondage ferait sauter le defilement et clignoter les cartes. */
-const downloadState = { id: "", downloaded: 0, total: 0, stage: "", error: "", startedAt: 0 };
+const downloadState = { id: "", downloaded: 0, total: 0, stage: "", error: "", startedAt: 0, webPercent: 0, webLabel: "" };
 let downloadTicker = 0;
 let downloadFetching = false;
 
 function downloadPercent() {
+  if (downloadState.stage === "web") return Math.max(0, Math.min(100, Math.round(downloadState.webPercent || 0)));
   if (!downloadState.total) return 0;
   return Math.max(0, Math.min(100, Math.round((downloadState.downloaded / downloadState.total) * 100)));
 }
@@ -3429,6 +3430,12 @@ function downloadSeconds() {
 function downloadProgressText() {
   const percent = downloadPercent();
   const elapsed = `${downloadSeconds()} s`;
+  /* Web : WebLLM donne son propre libelle (« Fetching param tensors… ») qui
+     dit ce qui se passe pendant un telechargement de plusieurs centaines de
+     mega-octets ; le remplacer par un pourcentage nu serait une perte. */
+  if (downloadState.stage === "web") {
+    return downloadState.webLabel ? `${percent} % · ${downloadState.webLabel}` : `${percent} % · ${elapsed}`;
+  }
   /* Un modele de 9 Go met parfois une minute a entrer dans le GPU : le temps
      ecoule prouve que le travail avance, meme sans pourcentage. */
   if (downloadState.stage === "loading") {
@@ -3502,9 +3509,14 @@ function beginDownload(id, stage = "download") {
   downloadState.total = 0;
   downloadState.stage = stage;
   downloadState.error = "";
+  downloadState.webPercent = 0;
+  downloadState.webLabel = "";
   downloadState.startedAt = Date.now();
   paintDownloadState();
-  if (!downloadTicker) downloadTicker = setInterval(pollDownloadProgress, 600);
+  /* Le suivi par /_simia/progress est propre au lanceur de bureau : en web il
+     interrogerait une route absente toutes les 600 ms. La progression vient
+     alors du callback de WebLLM. */
+  if (NATIVE && !downloadTicker && stage !== "web") downloadTicker = setInterval(pollDownloadProgress, 600);
 }
 
 function endDownload() {
@@ -3512,8 +3524,41 @@ function endDownload() {
   downloadState.stage = "";
   downloadState.error = "";
   downloadState.startedAt = 0;
+  downloadState.webPercent = 0;
+  downloadState.webLabel = "";
   if (downloadTicker) { clearInterval(downloadTicker); downloadTicker = 0; }
   renderModelLibrary();
+}
+
+/* Web : « Telecharger » depuis une carte. La barre de la carte suit le
+   callback de WebLLM, la bibliotheque reste ouverte, et elle se ferme quand le
+   modele est pret. Aucune fenetre de reglages au milieu du parcours. */
+let webDownloadId = "";
+
+async function startWebModelDownload(modelId) {
+  if (NATIVE || webDownloadId || state.loadingEngine) return;
+  const model = MODELS.find(candidate => candidate.id === modelId);
+  if (!model || !modelIsCompatible(model)) return;
+  webDownloadId = modelId;
+  beginDownload(modelId, "web");
+  renderModelLibrary();
+  try {
+    await selectModelById(modelId, false, { keepConversation: true });
+    await loadWebLLM();
+  } finally {
+    webDownloadId = "";
+    const ready = state.loadedModelId === modelId;
+    endDownload();
+    if (ready) {
+      ui.modelLibrary.close();
+      toast(localizedText(
+        `${model.name} est prêt et reste en cache sur cet appareil.`,
+        `${model.name} is ready and stays cached on this device.`,
+        `${model.name} está listo y queda en la caché de este dispositivo.`,
+        `${model.name} の準備ができました。この端末にキャッシュされます。`
+      ));
+    }
+  }
 }
 
 /* Bloc de progression place dans chaque carte, masque tant que rien ne se passe.
@@ -6191,6 +6236,13 @@ async function loadWebLLM() {
         setStatus(`${copy[state.language].loading} ${percent}%`, "loading");
         ui.topbar.style.setProperty("--model-load-progress", `${percent}%`);
         ui.downloadInfo.textContent = progress.text || `${copy[state.language].loading} ${percent}%`;
+        /* Telechargement lance depuis une carte de la bibliotheque : la barre
+           de cette carte suit la meme source, sinon elle resterait a 0 %. */
+        if (webDownloadId && downloadState.id === webDownloadId) {
+          downloadState.webPercent = percent;
+          downloadState.webLabel = progress.text || "";
+          paintDownloadState();
+        }
       }
     });
     state.useWebLLM = true;
@@ -7402,6 +7454,7 @@ function renderSettingsText() {
   set("#settings-sec-composer", localizedText("Saisie", "Input", "Entrada", "入力"));
   set("#settings-sec-code", localizedText("Atelier de code", "Code workspace", "Taller de código", "コード作業台"));
   set("#settings-sec-data", localizedText("Historique et données", "History and data", "Historial y datos", "履歴とデータ"));
+  document.querySelector("#settings-tabs")?.setAttribute("aria-label", localizedText("Sections des paramètres", "Settings sections", "Secciones de los ajustes", "設定のセクション"));
   set("#settings-model-hint", localizedText("Celui qui répond dans cette conversation.", "The one that answers in this conversation.", "El que responde en esta conversación.", "この会話で応答するモデル。"));
   set("#auto-load-model-label", localizedText("Charger le modèle au lancement", "Load the model on start", "Cargar el modelo al iniciar", "起動時にモデルを読み込む"));
   set("#settings-autoload-hint", localizedText("Le modèle en cache est chargé dès l'ouverture, sans clic.", "The cached model loads as soon as SIMIA opens, without a click.", "El modelo en caché se carga al abrir, sin hacer clic.", "キャッシュ済みモデルを起動時に自動で読み込みます。"));
@@ -7574,6 +7627,12 @@ function renderModelLibrary() {
     const details = modelDetails(model);
     const active = model.id === state.selectedModel && !state.customModelActive;
     const remote = NATIVE && model.nativeLocal === false;
+    /* En web, un modele absent du cache doit s'annoncer comme tel : la carte
+       porte le badge « a telecharger » et son bouton lance le telechargement.
+       Sans cela, le bouton disait « Choisir ce modele » et le clic ouvrait les
+       reglages, sans jamais dire qu'il fallait telecharger quoi que ce soit. */
+    const webDownload = !NATIVE && state.cachedModelId !== model.id;
+    const needsDownload = remote || webDownload;
     const origin = NATIVE && remote
       ? model.nativeHosted
         ? `<span class="model-origin model-origin-server">${escapeHtml(localizedText("SERVEUR", "SERVER", "SERVIDOR", "サーバー"))}</span>`
@@ -7581,11 +7640,18 @@ function renderModelLibrary() {
       : NATIVE
         ? `<span class="model-origin model-origin-local">${escapeHtml(localizedText("LOCAL", "LOCAL", "LOCAL", "ローカル"))}</span>`
         : "";
-    const badge = model.recommended && !remote ? `<span class="model-badge">${escapeHtml(recommendedLabel)}</span>` : remote ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>` : "";
+    const badge = needsDownload
+      ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>`
+      : model.recommended ? `<span class="model-badge">${escapeHtml(recommendedLabel)}</span>` : "";
     const note = state.cachedModelId === model.id ? ` <span class="model-card-note">${escapeHtml(text.stored)}</span>` : "";
+    const label = active && !needsDownload
+      ? text.selected
+      : needsDownload
+        ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード")
+        : text.choose;
     const card = document.createElement("article");
     card.className = `model-card${active ? " selected" : ""}${model.recommended ? " recommended" : ""}${remote ? " remote" : ""}`;
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(model.size))}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(active ? text.selected : remote ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード") : text.choose)}</button></div>${downloadBlock(model.id)}`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(model.size))}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(label)}</button></div>${downloadBlock(model.id)}`;
     return card;
   }), ...ownModelCard, ...desktopCard);
   /* Resume chiffre : « 1 fourni · 2 sur votre disque · 8 a telecharger ». Sans
@@ -8462,6 +8528,22 @@ ui.chat.addEventListener("click", async event => {
 ui.home.addEventListener("click", showHome);
 document.querySelector("#settings-toggle").addEventListener("click", () => toggleSettings());
 document.querySelector("#settings-close").addEventListener("click", () => closeSettings());
+const settingsTabsEl = document.querySelector("#settings-tabs");
+settingsTabsEl?.addEventListener("click", event => {
+  const tab = event.target.closest("[data-settings-tab]");
+  if (tab) activateSettingsTab(tab.dataset.settingsTab);
+});
+settingsTabsEl?.addEventListener("keydown", event => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  const next = event.key === "Home"
+    ? SETTINGS_TABS[0]
+    : event.key === "End"
+      ? SETTINGS_TABS[SETTINGS_TABS.length - 1]
+      : settingsTabStep(settingsActiveTab, event.key === "ArrowRight" ? 1 : -1);
+  activateSettingsTab(next);
+  settingsTabsEl.querySelector(`[data-settings-tab="${next}"]`)?.focus();
+});
 ui.settingsDone?.addEventListener("click", () => closeSettings());
 ui.settingsBackdrop?.addEventListener("click", () => closeSettings());
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeSettings(); });
@@ -8470,10 +8552,40 @@ document.addEventListener("keydown", event => { if (event.key === "Escape") clos
    Chaque controle ecrit un champ de `state`, applique son effet tout de
    suite, puis sauvegarde. Aucun reglage n'est decoratif. */
 
+/* Cinq sections tiennent dans une carte courte : un onglet a la fois. Sans
+   cela, la carte mesurait 86 % de la hauteur de l'ecran et le bas du
+   formulaire n'etait atteignable qu'en defilant dans une fenetre modale. */
+const SETTINGS_TABS = ["model", "reply", "composer", "code", "data"];
+let settingsActiveTab = "model";
+
+function activateSettingsTab(tab) {
+  if (!ui.settings) return;
+  const next = SETTINGS_TABS.includes(tab) ? tab : "model";
+  settingsActiveTab = next;
+  const buttons = [...ui.settings.querySelectorAll("[data-settings-tab]")];
+  buttons.forEach(button => {
+    const active = button.dataset.settingsTab === next;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+    button.tabIndex = active ? 0 : -1;
+  });
+  ui.settings.querySelectorAll("[data-settings-panel]").forEach(panel => {
+    panel.hidden = panel.dataset.settingsPanel !== next;
+  });
+  ui.settings.querySelector(".settings-body")?.scrollTo({ top: 0 });
+}
+
+function settingsTabStep(from, step) {
+  const index = SETTINGS_TABS.indexOf(from);
+  const next = (index + step + SETTINGS_TABS.length) % SETTINGS_TABS.length;
+  return SETTINGS_TABS[next];
+}
+
 function openSettings() {
   if (!ui.settings) return;
   dismissCookieBanner();
   renderSettingsControls();
+  activateSettingsTab(settingsActiveTab);
   ui.settings.hidden = false;
   if (ui.settingsBackdrop) ui.settingsBackdrop.hidden = false;
   ui.settings.querySelector(".settings-body")?.scrollTo({ top: 0 });
@@ -8775,25 +8887,32 @@ ui.modelLibrary.addEventListener("click", event => {
   }
   const choice = event.target.closest("button[data-model-id]");
   if (!choice) return;
-  /* Le modele n'est pas encore actif : le lanceur va soit telecharger plusieurs
-     centaines de mega-octets, soit charger un modele deja present dans le GPU,
-     ce qui prend parfois une minute. Dans les deux cas la bibliotheque reste
-     ouverte et la carte affiche sa barre : fermer la fenetre tout de suite
-     priverait le visiteur de la seule indication de progression. Un modele
-     deja actif se contente de fermer, comme avant. */
   const target = MODELS.find(model => model.id === choice.dataset.modelId);
-  const pending = Boolean(NATIVE) && Boolean(target) && target.id !== state.selectedModel;
-  if (pending) {
-    beginDownload(choice.dataset.modelId, target.nativeLocal === false ? "download" : "loading");
-  } else {
-    openSettings();
-    ui.modelLibrary.close();
+  /* Web : le bouton dit « Telecharger » pour un modele absent du cache, et le
+     clic lance le telechargement avec sa barre dans la carte. Avant, le clic
+     fermait la bibliotheque et ouvrait la fenetre de reglages : un ecran
+     entier pour un telechargement, sans explication. */
+  if (!NATIVE && target && state.cachedModelId !== target.id) {
+    startWebModelDownload(target.id);
+    return;
   }
+  /* Desktop : le lanceur va soit telecharger plusieurs centaines de mega-octets,
+     soit charger un modele deja present dans le GPU, ce qui prend parfois une
+     minute. La bibliotheque reste ouverte et la carte affiche sa barre :
+     fermer la fenetre priverait le visiteur de la seule indication de
+     progression. Un modele deja actif se contente de fermer, comme avant. */
+  const pending = Boolean(NATIVE) && Boolean(target) && target.id !== state.selectedModel;
+  if (!pending) ui.modelLibrary.close();
+  else beginDownload(choice.dataset.modelId, target.nativeLocal === false ? "download" : "loading");
   selectModelById(choice.dataset.modelId).finally(() => {
     if (!pending) return;
     endDownload();
-    openSettings();
-    ui.modelLibrary.close();
+    toast(localizedText(
+      `${target.name} est prêt.`,
+      `${target.name} is ready.`,
+      `${target.name} está listo.`,
+      `${target.name} の準備ができました。`
+    ));
   });
 });
 ui.chat.addEventListener("click", event => {

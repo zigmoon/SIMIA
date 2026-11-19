@@ -313,7 +313,54 @@
       </section>
 
       <section class="composer-wrap">
-                <div class="settings-backdrop" id="settings-backdrop" hidden></div>
+                <div class="document-tools" id="document-tools" hidden>
+          <div class="document-tools-head">
+            <p class="document-tools-title" id="document-tools-title">DOCUMENTS</p>
+            <span class="document-tools-status" id="document-tools-status" role="status" aria-live="polite"></span>
+          </div>
+          <div class="document-tools-actions">
+            <button type="button" class="document-action" id="document-summary">Résumer les documents</button>
+            <button type="button" class="agent-toggle" id="document-semantic" aria-pressed="false">Recherche sémantique</button>
+            <button type="button" class="agent-toggle" id="document-export">Texte extrait</button>
+          </div>
+        </div>
+        <form class="composer" id="composer">
+          <div class="composer-context" id="composer-context">
+            <div class="composer-model-wrap" id="composer-model-wrap">
+              <button type="button" class="composer-chip composer-model" id="composer-model" aria-haspopup="menu" aria-expanded="false">
+                <span class="composer-model-dot" id="composer-model-dot" aria-hidden="true"></span>
+                <span class="composer-model-name" id="composer-model-name">Choisir un modèle</span>
+                <span class="composer-model-state" id="composer-model-state"></span>
+                <span class="composer-chip-caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="composer-model-menu" id="composer-model-menu" role="menu" hidden></div>
+            </div>
+            <button type="button" class="composer-chip composer-code-context" id="composer-code-context" aria-pressed="true" hidden>
+              <span class="composer-code-glyph" aria-hidden="true">›_</span>
+              <span id="composer-code-context-name">fichier actif</span>
+            </button>
+          </div>
+          <textarea id="prompt" rows="1" maxlength="4000" placeholder="Écrivez votre message..." aria-label="Votre message"></textarea>
+          <input id="attachment-input" type="file" multiple hidden accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.htm,.css,.js,.mjs,.ts,.py,.xml,.yml,.yaml,.log,.rtf,.pdf,.docx,.xlsx,.xlsm,.pptx,.odt,.ods,.odp,.epub,.tex,.png,.jpg,.jpeg,.webp,.gif,.avif,.webm,.mp4,.glb,text/*,application/json,application/rtf,text/rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/epub+zip,image/*,video/*,model/gltf-binary">
+          <div class="attachment-tray" id="attachment-tray" aria-live="polite" hidden></div>
+          <div class="composer-footer">
+            <div class="composer-tools">
+              <button type="button" class="icon-button" id="clear-chat" aria-label="Clear conversation" title="Clear conversation"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button>
+              <button type="button" class="agent-toggle agent-nav-toggle" id="agent-toggle" aria-pressed="false" aria-label="Agent web" title="Agent web"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.4"></circle><path d="M3.6 12h16.8"></path><path d="M12 3.6c2.5 2.4 3.9 5.2 3.9 8.4s-1.4 6-3.9 8.4c-2.5-2.4-3.9-5.2-3.9-8.4s1.4-6 3.9-8.4Z"></path></svg></button>
+              <button type="button" class="agent-toggle image-toggle" id="image-toggle" aria-pressed="false" hidden>Image</button>
+              <span class="voice-status" id="voice-status" role="status" aria-live="polite"></span>
+              <span id="char-count">0 / 4000</span>
+            </div>
+            <div class="composer-actions">
+              <button type="button" class="voice-button attach-button" id="attach-button" aria-label="Attach files" title="Attach files"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21.4 11.6-8.7 8.7a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.1a2 2 0 0 1-2.8-2.8l8.5-8.5"></path></svg></button>
+              <button type="button" class="voice-button" id="voice-toggle" aria-label="Start voice input" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="2" width="10" height="14" rx="5"></rect><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8"></path></svg></button>
+              <button type="submit" class="send-button" id="send-button" aria-label="Envoyer" title="Envoyer"><span class="send-glyph" aria-hidden="true">↵</span></button>
+            </div>
+          </div>
+        </form>
+        <p class="disclaimer" id="disclaimer">SIMIA can make mistakes. Verify important information.</p>
+      </section>
+<div class="settings-backdrop" id="settings-backdrop" hidden></div>
         <div class="settings-panel" id="settings-panel" role="dialog" aria-labelledby="settings-heading" hidden>
           <div class="settings-header">
             <div class="settings-head-text">
@@ -323,9 +370,16 @@
             <button class="icon-button" id="settings-close" type="button" aria-label="Fermer les paramètres" title="Fermer les paramètres"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button>
           </div>
 
+          <div class="settings-tabs" id="settings-tabs" role="tablist" aria-label="Sections des paramètres">
+            <button class="settings-tab is-active" id="settings-sec-model" type="button" role="tab" aria-controls="settings-panel-model" aria-selected="true" data-settings-tab="model">Modèle</button>
+            <button class="settings-tab" id="settings-sec-reply" type="button" role="tab" aria-controls="settings-panel-reply" aria-selected="false" tabindex="-1" data-settings-tab="reply">Réponses</button>
+            <button class="settings-tab" id="settings-sec-composer" type="button" role="tab" aria-controls="settings-panel-composer" aria-selected="false" tabindex="-1" data-settings-tab="composer">Saisie</button>
+            <button class="settings-tab" id="settings-sec-code" type="button" role="tab" aria-controls="settings-panel-code" aria-selected="false" tabindex="-1" data-settings-tab="code">Atelier de code</button>
+            <button class="settings-tab" id="settings-sec-data" type="button" role="tab" aria-controls="settings-panel-data" aria-selected="false" tabindex="-1" data-settings-tab="data">Historique et données</button>
+          </div>
+
           <div class="settings-body">
-            <section class="settings-section">
-              <h3 class="settings-section-title" id="settings-sec-model">Modèle</h3>
+            <section class="settings-section" id="settings-panel-model" role="tabpanel" aria-labelledby="settings-sec-model" data-settings-panel="model">
               <div class="setting-row setting-row-stack">
                 <div class="setting-text">
                   <span class="setting-name" data-i18n="chooseModel">Modèle de langage</span>
@@ -373,8 +427,7 @@
               <p class="setting-note" id="download-info">The first download can take a few minutes. The model stays cached on this device.</p>
             </section>
 
-            <section class="settings-section">
-              <h3 class="settings-section-title" id="settings-sec-reply">Réponses</h3>
+            <section class="settings-section" id="settings-panel-reply" role="tabpanel" aria-labelledby="settings-sec-reply" data-settings-panel="reply" hidden>
               <div class="setting-row">
                 <div class="setting-text">
                   <span class="setting-name" id="settings-stream-name">Écrire au fil de l'eau</span>
@@ -409,8 +462,7 @@
               </div>
             </section>
 
-            <section class="settings-section">
-              <h3 class="settings-section-title" id="settings-sec-composer">Saisie</h3>
+            <section class="settings-section" id="settings-panel-composer" role="tabpanel" aria-labelledby="settings-sec-composer" data-settings-panel="composer" hidden>
               <div class="setting-row">
                 <div class="setting-text">
                   <span class="setting-name" id="settings-draft-name">Enregistrer le brouillon</span>
@@ -427,8 +479,7 @@
               </div>
             </section>
 
-            <section class="settings-section">
-              <h3 class="settings-section-title" id="settings-sec-code">Atelier de code</h3>
+            <section class="settings-section" id="settings-panel-code" role="tabpanel" aria-labelledby="settings-sec-code" data-settings-panel="code" hidden>
               <div class="setting-row">
                 <div class="setting-text">
                   <span class="setting-name" id="settings-code-save-name">Enregistrer automatiquement</span>
@@ -464,8 +515,7 @@
               </div>
             </section>
 
-            <section class="settings-section">
-              <h3 class="settings-section-title" id="settings-sec-data">Historique et données</h3>
+            <section class="settings-section" id="settings-panel-data" role="tabpanel" aria-labelledby="settings-sec-data" data-settings-panel="data" hidden>
               <div class="setting-row">
                 <div class="setting-text">
                   <span class="setting-name" id="settings-history-name">Mémoriser l'historique</span>
@@ -501,53 +551,6 @@
             <button class="secondary-button" id="settings-done" type="button">Terminé</button>
           </div>
         </div>
-<div class="document-tools" id="document-tools" hidden>
-          <div class="document-tools-head">
-            <p class="document-tools-title" id="document-tools-title">DOCUMENTS</p>
-            <span class="document-tools-status" id="document-tools-status" role="status" aria-live="polite"></span>
-          </div>
-          <div class="document-tools-actions">
-            <button type="button" class="document-action" id="document-summary">Résumer les documents</button>
-            <button type="button" class="agent-toggle" id="document-semantic" aria-pressed="false">Recherche sémantique</button>
-            <button type="button" class="agent-toggle" id="document-export">Texte extrait</button>
-          </div>
-        </div>
-        <form class="composer" id="composer">
-          <div class="composer-context" id="composer-context">
-            <div class="composer-model-wrap" id="composer-model-wrap">
-              <button type="button" class="composer-chip composer-model" id="composer-model" aria-haspopup="menu" aria-expanded="false">
-                <span class="composer-model-dot" id="composer-model-dot" aria-hidden="true"></span>
-                <span class="composer-model-name" id="composer-model-name">Choisir un modèle</span>
-                <span class="composer-model-state" id="composer-model-state"></span>
-                <span class="composer-chip-caret" aria-hidden="true">▾</span>
-              </button>
-              <div class="composer-model-menu" id="composer-model-menu" role="menu" hidden></div>
-            </div>
-            <button type="button" class="composer-chip composer-code-context" id="composer-code-context" aria-pressed="true" hidden>
-              <span class="composer-code-glyph" aria-hidden="true">›_</span>
-              <span id="composer-code-context-name">fichier actif</span>
-            </button>
-          </div>
-          <textarea id="prompt" rows="1" maxlength="4000" placeholder="Écrivez votre message..." aria-label="Votre message"></textarea>
-          <input id="attachment-input" type="file" multiple hidden accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.htm,.css,.js,.mjs,.ts,.py,.xml,.yml,.yaml,.log,.rtf,.pdf,.docx,.xlsx,.xlsm,.pptx,.odt,.ods,.odp,.epub,.tex,.png,.jpg,.jpeg,.webp,.gif,.avif,.webm,.mp4,.glb,text/*,application/json,application/rtf,text/rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/epub+zip,image/*,video/*,model/gltf-binary">
-          <div class="attachment-tray" id="attachment-tray" aria-live="polite" hidden></div>
-          <div class="composer-footer">
-            <div class="composer-tools">
-              <button type="button" class="icon-button" id="clear-chat" aria-label="Clear conversation" title="Clear conversation"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button>
-              <button type="button" class="agent-toggle agent-nav-toggle" id="agent-toggle" aria-pressed="false" aria-label="Agent web" title="Agent web"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.4"></circle><path d="M3.6 12h16.8"></path><path d="M12 3.6c2.5 2.4 3.9 5.2 3.9 8.4s-1.4 6-3.9 8.4c-2.5-2.4-3.9-5.2-3.9-8.4s1.4-6 3.9-8.4Z"></path></svg></button>
-              <button type="button" class="agent-toggle image-toggle" id="image-toggle" aria-pressed="false" hidden>Image</button>
-              <span class="voice-status" id="voice-status" role="status" aria-live="polite"></span>
-              <span id="char-count">0 / 4000</span>
-            </div>
-            <div class="composer-actions">
-              <button type="button" class="voice-button attach-button" id="attach-button" aria-label="Attach files" title="Attach files"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21.4 11.6-8.7 8.7a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.1a2 2 0 0 1-2.8-2.8l8.5-8.5"></path></svg></button>
-              <button type="button" class="voice-button" id="voice-toggle" aria-label="Start voice input" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="2" width="10" height="14" rx="5"></rect><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8"></path></svg></button>
-              <button type="submit" class="send-button" id="send-button" aria-label="Envoyer" title="Envoyer"><span class="send-glyph" aria-hidden="true">↵</span></button>
-            </div>
-          </div>
-        </form>
-        <p class="disclaimer" id="disclaimer">SIMIA can make mistakes. Verify important information.</p>
-      </section>
     </main>
   </div>
   <dialog class="legal-dialog" id="legal-dialog" aria-labelledby="legal-title">

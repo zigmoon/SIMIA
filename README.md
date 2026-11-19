@@ -117,8 +117,9 @@ code que l'onglet, mis en cache par un service worker.
 | Pièces jointes | glisser-déposer depuis le bureau, sélection, ou collage d'une capture ; images analysées par un modèle vision | ✅ | ✅ |
 | Génération d'images | Stable Diffusion local, 512 et 1024 px, style maison « Gravure SIMIA » | — | ✅ |
 | Atelier de code | vrai projet : arborescence, onglets, recherche de fichier (Ctrl/⌘+P), import de fichiers ou d'un dossier, ouverture d'un dossier du disque avec enregistrement des modifications, export ZIP, aperçu live HTML/CSS/JS avec console, exécution JavaScript et Python, application du code reçu dans le fichier | ✅ | ✅ |
-| Paramètres | une seule fenêtre compacte (520 px) : modèle, réponses (flux, longueur, créativité), saisie (brouillon, Entrée), atelier (enregistrement automatique, retour à la ligne, taille du texte, aperçu automatique), historique et données | ✅ | ✅ |
+| Paramètres | une seule fenêtre courte, à cinq onglets (Modèle, Réponses, Saisie, Atelier de code, Historique et données) : 520 × 519 px au plus, jamais la hauteur de l'écran | ✅ | ✅ |
 | Mon assistant | profil local : un nom et des consignes permanentes posés devant un modèle existant, sans entraînement ni téléchargement ; création, export, suppression | ✅ | ✅ |
+| Choix d'un modèle | bibliothèque de 900 × 640 px au plus ; un modèle absent du cache s'annonce « à télécharger » et se télécharge depuis sa carte, avec sa barre de progression, sans quitter la bibliothèque | ✅ | ✅ |
 | Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | — |
 | Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
 | Quatre langues | français, anglais, espagnol, japonais | ✅ | ✅ |

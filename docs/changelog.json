@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.18": {
+      "title": "Les fenetres s'arretent a la taille de leur contenu, et un modele se telecharge depuis sa carte",
+      "highlights": [
+        "La fenetre de reglages ne fait plus 86 % de la hauteur de l'ecran. Cinq onglets (Modele, Reponses, Saisie, Atelier de code, Historique et donnees) remplacent les sections empilees : la carte mesure desormais 520 x 519 px au plus, 58 % d'un ecran de 900 px, et la section Saisie tient en 260 px. Sur un ecran etroit, les onglets passent sur deux lignes plutot que de defiler hors de vue.",
+        "La bibliotheque de modeles mesure 900 x 640 px au lieu de 940 x 780 px : 71 % de la hauteur au lieu de 87 %, avec un en-tete plus compact pour laisser la place aux cartes. Les fenetres Mentions legales, Comment ca marche, Exporter et Mon assistant sont plafonnees de la meme facon et defilent a l'interieur au lieu de deborder de l'ecran.",
+        "Defaut corrige, et c'etait le plus genant : en mode atelier sur un ecran etroit, ouvrir les reglages n'affichait rien du tout. La fenetre etait posee dans la colonne de saisie, elle-meme masquee dans ce mode ; elle vit maintenant a cote, donc elle s'affiche quel que soit le mode.",
+        "Le menu de l'application passait sous l'editeur de code sur ecran etroit : ses entrees devenaient inaccessibles, Reglages compris. L'en-tete passe au-dessus de l'atelier.",
+        "Choisir un modele dans la bibliotheque n'ouvre plus la fenetre de reglages. En version web, un modele absent du cache affiche « A telecharger » et un bouton « Telecharger » : le clic lance le telechargement et la barre de progression suit dans la carte, qui reste ouverte. Sur la version bureau, la bibliotheque reste ouverte pendant le telechargement et ne se referme plus pour rouvrir les reglages.",
+        "Le service worker change de version : sans cela, l'ancienne interface restait servie depuis le cache apres la mise a jour."
+      ]
+    },
     "0.1.17": {
       "title": "Une seule fenetre de reglages, qui regle vraiment quelque chose",
       "highlights": [
