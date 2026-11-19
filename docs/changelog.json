@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.21": {
+      "title": "Deux volets qui se reglent a la souris, et une page d'accueil qui respire",
+      "highlights": [
+        "En mode Vibe, une poignee separe maintenant le code et la conversation : on la glisse pour elargir l'un ou l'autre, avec le curseur qui va bien (double fleche verticale) et une ligne qui s'epaissit au survol. Pendant le glissement, le curseur reste une double fleche meme au-dessus de l'apercu, qui serait sinon le seul endroit ou il disparait.",
+        "La poignee se conduit aussi au clavier : fleches gauche et droite pour deplacer de 24 px, Maj pour aller de 80 px, Debut et Fin pour les extremes. Elle annonce sa position aux lecteurs d'ecran. Double-clic : retour aux proportions d'origine.",
+        "Les largeurs choisies sont respectees d'une session a l'autre, avec deux garde-fous : la conversation ne descend jamais sous 320 px et le code garde au moins 420 px, sinon un glissement trop franc rendait une des deux vues inutilisable.",
+        "Les trois cartes sous « Comment puis-je vous aider ? » ne se cassent plus en deux plus une. Elles s'empilent franchement, l'une sous l'autre, des que la colonne de conversation manque de place, et reviennent sur une ligne quand elle s'elargit. Le passage se fait en regardant la place reellement disponible, pas la taille de la fenetre : redimensionner la colonne suffit a le declencher.",
+        "Defaut corrige, visible seulement sur telephone : en mode Vibe, la bascule Code/Chat passait sous le bouton de menu et sous le selecteur de langue, et devenait impossible a toucher. La barre du haut leur reserve maintenant la place."
+      ]
+    },
     "0.1.20": {
       "title": "Vibe travaille sur plusieurs fichiers, et quatre modeles europeens entrent au catalogue",
       "highlights": [

@@ -255,6 +255,7 @@ const state = {
     collapsed: new Set(),
     emptyFolders: [],
     previewWidth: "full",
+    splitWidth: 0,
     dirHandle: null,
     saving: false,
     dirty: false,
@@ -415,6 +416,7 @@ const ui = {
   importBackup: document.querySelector("#import-backup"),
   modelRecommend: document.querySelector("#model-recommend"),
   workspace: document.querySelector(".workspace"),
+  workspaceSplit: document.querySelector("#workspace-split"),
   home: document.querySelector("#home-button"),
   codePane: document.querySelector("#code-pane"),
   codeTabs: document.querySelector("#code-tabs"),
@@ -3173,6 +3175,111 @@ function openCodeWorkspaceEmpty() {
   enterCodeMode("code");
 }
 
+/* --- Largeur des deux colonnes ------------------------------------------- */
+
+/* Colonne de conversation entre ces deux bornes, et assez de place laissee au
+   code pour qu'il reste utilisable. Sans ces bornes, un glissement trop franc
+   reduisait une des deux vues a une bande de quelques pixels, sans moyen d'en
+   sortir autrement que par le double-clic. */
+const SPLIT_CHAT_MIN = 320;
+const SPLIT_CODE_MIN = 420;
+
+function applyCodeSplit() {
+  if (!ui.workspace) return;
+  const width = Number(state.code.splitWidth);
+  if (width > 0) ui.workspace.style.setProperty("--chat-width", `${Math.round(width)}px`);
+  else ui.workspace.style.removeProperty("--chat-width");
+  const handle = ui.workspaceSplit;
+  if (!handle) return;
+  const chat = document.querySelector(".chat");
+  const measured = chat ? Math.round(chat.getBoundingClientRect().width) : 0;
+  handle.setAttribute("aria-valuenow", String(Math.max(0, measured)));
+  handle.hidden = !state.code.open || window.matchMedia("(max-width: 900px)").matches;
+}
+
+function codeSplitBounds() {
+  const total = ui.workspace?.getBoundingClientRect().width || 0;
+  const max = Math.max(SPLIT_CHAT_MIN, total - SPLIT_CODE_MIN);
+  return { min: SPLIT_CHAT_MIN, max };
+}
+
+function setCodeSplitWidth(width) {
+  const { min, max } = codeSplitBounds();
+  state.code.splitWidth = Math.min(max, Math.max(min, Math.round(width)));
+  applyCodeSplit();
+  return state.code.splitWidth;
+}
+
+function bindCodeSplitter() {
+  const handle = ui.workspaceSplit;
+  if (!handle || !ui.workspace) return;
+  handle.setAttribute("aria-valuemin", String(SPLIT_CHAT_MIN));
+  handle.setAttribute("aria-valuemax", String(Math.round(codeSplitBounds().max)));
+  let dragging = false;
+
+  const move = event => {
+    if (!dragging) return;
+    const rect = ui.workspace.getBoundingClientRect();
+    /* La conversation occupe la droite : c'est l'ecart entre le pointeur et le
+       bord droit de la fenetre qui donne sa largeur. */
+    setCodeSplitWidth(rect.right - event.clientX);
+  };
+
+  const stop = () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove("is-active");
+    document.body.classList.remove("is-resizing");
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+    saveState();
+    applyCodeSplit();
+  };
+
+  handle.addEventListener("pointerdown", event => {
+    if (event.button !== 0 && event.pointerType === "mouse") return;
+    dragging = true;
+    handle.classList.add("is-active");
+    document.body.classList.add("is-resizing");
+    handle.setPointerCapture?.(event.pointerId);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    event.preventDefault();
+  });
+
+  /* Clavier : la poignee est un vrai separateur, elle doit se deplacer sans
+     souris. La fleche gauche elargit la conversation, la droite l'affine. */
+  handle.addEventListener("keydown", event => {
+    const step = event.shiftKey ? 80 : 24;
+    const chat = document.querySelector(".chat");
+    const current = chat?.getBoundingClientRect().width || SPLIT_CHAT_MIN;
+    if (event.key === "ArrowLeft") setCodeSplitWidth(current + step);
+    else if (event.key === "ArrowRight") setCodeSplitWidth(current - step);
+    else if (event.key === "Home") setCodeSplitWidth(codeSplitBounds().max);
+    else if (event.key === "End") setCodeSplitWidth(SPLIT_CHAT_MIN);
+    else return;
+    event.preventDefault();
+    saveState();
+    applyCodeSplit();
+  });
+
+  /* Double-clic : retour aux proportions par defaut, sans avoir a retrouver
+     une largeur « a peu pres bien » a la main. */
+  handle.addEventListener("dblclick", () => {
+    state.code.splitWidth = 0;
+    applyCodeSplit();
+    saveState();
+    toast(localizedText("Largeurs réinitialisées.", "Widths reset.", "Anchos restablecidos.", "幅をリセットしました。"));
+  });
+
+  window.addEventListener("resize", () => {
+    if (Number(state.code.splitWidth) > 0) setCodeSplitWidth(state.code.splitWidth);
+    else applyCodeSplit();
+  });
+}
+
 function setCodeFocus(focus) {
   state.code.focus = focus === "chat" ? "chat" : "code";
   if (ui.workspace) ui.workspace.dataset.codePane = state.code.focus;
@@ -3181,6 +3288,7 @@ function setCodeFocus(focus) {
       button.setAttribute("aria-selected", String(button.dataset.codeFocus === state.code.focus));
     });
   }
+  applyCodeSplit();
   renderComposerCodeContext();
   if (state.code.focus === "chat") ui.prompt.focus();
   else ui.codeInput?.focus();
@@ -3195,6 +3303,7 @@ function enterCodeMode(focus) {
   renderCodeTree();
   renderCodeEditor();
   setCodeFocus(focus || state.code.focus || "code");
+  applyCodeSplit();
   renderCodeModelHint();
   renderComposerCodeContext();
   saveState();
@@ -3209,6 +3318,7 @@ function exitCodeMode() {
     delete ui.workspace.dataset.codePane;
   }
   if (ui.codeSwitch) ui.codeSwitch.hidden = true;
+  applyCodeSplit();
   renderCodeModelHint();
   renderComposerCodeContext();
   saveState();
@@ -5718,6 +5828,7 @@ function saveState() {
     customModelActive: state.customModelActive,
     codeOpen: state.code.open,
     codeFocus: state.code.focus,
+    codeSplitWidth: state.code.splitWidth,
     codeAttachFile: state.code.attachFile,
     codeContextIds: state.code.contextIds.slice(0, 40),
     codeOpenIds: state.code.openIds.slice(0, 40),
@@ -5768,6 +5879,7 @@ function loadState() {
     state.profile = typeof backup.profile === "string" ? backup.profile.slice(0, 600) : "";
     state.code.open = Boolean(backup.codeOpen);
     state.code.focus = backup.codeFocus === "chat" ? "chat" : "code";
+    state.code.splitWidth = Number.isFinite(Number(backup.codeSplitWidth)) ? Math.max(0, Math.round(Number(backup.codeSplitWidth))) : 0;
     state.code.attachFile = backup.codeAttachFile !== false;
     state.code.contextIds = Array.isArray(backup.codeContextIds) ? backup.codeContextIds.filter(id => typeof id === "string") : [];
     state.code.openIds = Array.isArray(backup.codeOpenIds) ? backup.codeOpenIds.filter(id => typeof id === "string") : [];
@@ -9298,6 +9410,8 @@ ui.codeLang?.addEventListener("change", () => applyCodeLanguage(ui.codeLang.valu
 
 /* --- Projet : arborescence, import, export, disque ---------------------- */
 ui.codeTreeToggle?.addEventListener("click", () => setCodeTreeVisible(!state.code.treeVisible));
+/* La largeur des deux colonnes se regle a la souris, au clavier et au doigt. */
+bindCodeSplitter();
 ui.codeTreeList?.addEventListener("click", event => {
   const toggle = event.target.closest("[data-tree-folder]");
   if (toggle && !event.target.closest("[data-tree-rename],[data-tree-delete]")) {

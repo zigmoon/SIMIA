@@ -63,6 +63,11 @@ Le projet entier s'exporte en `.zip` et se réimporte tel quel, dossiers vides
 compris ; les archives produites par d'autres outils sont lues aussi, sans rien
 installer.
 
+Les deux volets se règlent à la souris : une poignée entre le code et la
+conversation s'étire dans un sens ou dans l'autre (flèches au clavier, double-clic
+pour revenir aux proportions d'origine), et la largeur choisie est conservée. La
+conversation ne descend jamais sous 320 px, le code garde au moins 420 px.
+
 Le projet n'est pas prisonnier du navigateur : les fichiers importés depuis un
 dossier peuvent être réécrits sur le disque (« Enregistrer sur le disque », API
 File System Access de Chrome et Edge, sur Windows, macOS et Linux), et tout
