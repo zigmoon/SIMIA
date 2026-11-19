@@ -276,6 +276,10 @@ const state = {
   codeWrap: false,
   codeFontSize: 13,
   codeAutoPreview: true,
+  /* Chaque bloc de code attend une autorisation avant d'ecraser un fichier :
+     c'est le geste « valider l'etape » des editeurs de code. Desactivable
+     depuis la boite de prompt, et seulement actif dans Vibe. */
+  allowSteps: true,
   semanticSearch: false,
   semanticVectors: null,
   lastDocumentSources: [],
@@ -481,7 +485,9 @@ const ui = {
   composerModelMenu: document.querySelector("#composer-model-menu"),
   composerCodeContext: document.querySelector("#composer-code-context"),
   composerCodeContextName: document.querySelector("#composer-code-context-name"),
-  composerCodeMenu: document.querySelector("#composer-code-menu")
+  composerCodeMenu: document.querySelector("#composer-code-menu"),
+  composerSteps: document.querySelector("#composer-steps"),
+  composerStepsName: document.querySelector("#composer-steps-name")
 };
 
 const copy = {
@@ -883,6 +889,7 @@ const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false
 const ICON_REGENERATE = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11.5a8 8 0 1 0-2.6 5.9"></path><path d="M20 4.5v7h-7"></path></svg>';
 const ICON_CONTINUE = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h15"></path><path d="M13.5 6.5L20 12l-6.5 5.5"></path></svg>';
 const ICON_CODE = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 8.5L4.5 12l4 3.5"></path><path d="M15.5 8.5l4 3.5-4 3.5"></path><path d="M13.5 5.5l-3 13"></path></svg>';
+const ICON_CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg>';
 
 const HIGHLIGHT_FAMILIES = {
   clike: {
@@ -1060,11 +1067,14 @@ function renderCodeBlock(language, code, options = {}) {
      la main. Il n'apparait que si l'atelier est ouvert, ou juste apres une
      action de l'atelier (le fichier cible est alors connu). */
   const canApply = options.apply !== false && (state.code.open || Boolean(state.code.pendingApply));
-  const applyLabel = localizedText("Appliquer dans Vibe", "Apply in Vibe", "Aplicar en Vibe", "Vibe に適用");
-  const applyButton = canApply
-    ? `<button type="button" class="code-copy is-apply" data-action="apply-code" title="${escapeHtml(applyLabel)}" aria-label="${escapeHtml(applyLabel)}">${ICON_CHECK}<span>${escapeHtml(localizedText("Appliquer", "Apply", "Aplicar", "適用"))}</span></button>`
-    : "";
-  return `<div class="code-block"><div class="code-block-head"><span class="code-language">${escapeHtml(label)}</span><div class="code-actions">${applyButton}<button type="button" class="code-copy" data-action="open-code" title="${escapeHtml(openLabel)}" aria-label="${escapeHtml(openLabel)}">${ICON_CODE}<span>${escapeHtml(localizedText("Atelier", "Workspace", "Taller", "作業台"))}</span></button><button type="button" class="code-copy" data-action="copy-code" title="${escapeHtml(copyLabel)}" aria-label="${escapeHtml(copyLabel)}">${ICON_COPY}<span>${escapeHtml(localizedText("Copier", "Copy", "Copiar", "コピー"))}</span></button></div></div><pre><code>${highlightCode(code.replace(/\n+$/, ""), label)}</code></pre></div>`;
+  const applyLabel = localizedText("Autoriser cette étape dans Vibe", "Allow this step in Vibe", "Permitir este paso en Vibe", "このステップを Vibe で許可");
+  const skipLabel = localizedText("Refuser cette étape", "Skip this step", "Omitir este paso", "このステップを省略");
+  /* Les deux boutons sont toujours ecrits : la feuille de style les montre
+     selon le reglage « Valider chaque etape » et l'ouverture de Vibe. Les
+     cacher au rendu laissait les reponses deja affichees sans bouton quand on
+     activait le reglage, puisqu'elles ne sont pas redessinees. */
+  const applyButton = `<button type="button" class="code-copy is-apply" data-action="apply-code" title="${escapeHtml(applyLabel)}" aria-label="${escapeHtml(applyLabel)}">${ICON_CHECK}<span>${escapeHtml(localizedText("Autoriser", "Allow", "Permitir", "許可"))}</span></button><button type="button" class="code-copy is-skip" data-action="skip-code" title="${escapeHtml(skipLabel)}" aria-label="${escapeHtml(skipLabel)}">${ICON_CROSS}<span>${escapeHtml(localizedText("Refuser", "Skip", "Omitir", "省略"))}</span></button>`;
+  return `<div class="code-block${canApply ? " can-apply" : ""}"><div class="code-block-head"><span class="code-language">${escapeHtml(label)}</span><div class="code-actions">${applyButton}<button type="button" class="code-copy" data-action="open-code" title="${escapeHtml(openLabel)}" aria-label="${escapeHtml(openLabel)}">${ICON_CODE}<span>${escapeHtml(localizedText("Vibe", "Vibe", "Vibe", "Vibe"))}</span></button><button type="button" class="code-copy" data-action="copy-code" title="${escapeHtml(copyLabel)}" aria-label="${escapeHtml(copyLabel)}">${ICON_COPY}<span>${escapeHtml(localizedText("Copier", "Copy", "Copiar", "コピー"))}</span></button></div></div><pre><code>${highlightCode(code.replace(/\n+$/, ""), label)}</code></pre></div>`;
 }
 
 function renderMediaBlock(line) {
@@ -2947,6 +2957,43 @@ function codeTargetForBlock(language, pendingFile, activeFile, namedFile) {
   return null;
 }
 
+/* Marque visuellement l'etape comme autorisee (ou refusee) : sans cela, rien
+   dans la reponse ne disait que le clic avait fait quelque chose, et le meme
+   bloc pouvait etre applique plusieurs fois sans qu'on le sache. */
+function markCodeBlockState(block, applied) {
+  if (!block) return;
+  const applyButton = block.querySelector('[data-action="apply-code"]');
+  const skipButton = block.querySelector('[data-action="skip-code"]');
+  const applyText = applyButton?.querySelector("span");
+  const skipText = skipButton?.querySelector("span");
+  block.classList.toggle("is-applied", applied === "applied");
+  block.classList.toggle("is-skipped", applied === "skipped");
+  if (applyButton) {
+    applyButton.classList.toggle("is-applied", applied === "applied");
+    applyButton.setAttribute("aria-pressed", String(applied === "applied"));
+    if (applyText) {
+      applyText.textContent = applied === "applied"
+        ? localizedText("Autorisé", "Allowed", "Permitido", "許可済み")
+        : localizedText("Autoriser", "Allow", "Permitir", "許可");
+    }
+  }
+  if (skipButton) {
+    skipButton.classList.toggle("is-refused", applied === "skipped");
+    skipButton.setAttribute("aria-pressed", String(applied === "skipped"));
+    if (skipText) {
+      skipText.textContent = applied === "skipped"
+        ? localizedText("Refusé", "Skipped", "Omitido", "省略済み")
+        : localizedText("Refuser", "Skip", "Omitir", "省略");
+    }
+  }
+}
+
+function skipCodeBlock(button) {
+  const block = button.closest(".code-block");
+  if (!block) return;
+  markCodeBlockState(block, "skipped");
+}
+
 function applyCodeBlock(button) {
   const block = button.closest(".code-block");
   if (!block) return;
@@ -2973,10 +3020,11 @@ function applyCodeBlock(button) {
     codeMarkSaved();
     toast(localizedText(`Fichier de test ${codePathOf(file)}.`, `Test file ${codePathOf(file)}.`, `Archivo de prueba ${codePathOf(file)}.`, `テストファイル ${codePathOf(file)}。`));
     state.code.activeId = file.id;
+    markCodeBlockState(block, "applied");
     renderCodeTabs();
     renderCodeTree();
     renderCodeEditor();
-    enterCodeMode("code");
+    enterCodeMode("code", { moveFocus: false });
     return;
   }
 
@@ -2984,6 +3032,14 @@ function applyCodeBlock(button) {
      celui que l'utilisateur a nomme dans sa question, et seulement ensuite le
      fichier ouvert. */
   file = codeTargetForBlock(language, pendingFile, active, codeFileFromConversation(language));
+  /* Aucun fichier ouvert ne parle cette langue : si le projet n'en contient
+     qu'un seul de ce type, c'est lui que l'on veut (index.html pour du HTML,
+     style.css pour du CSS). Sans ce repli, appliquer un bloc HTML alors que
+     l'editeur affiche script.js creait un snippet.html a cote de index.html. */
+  if (!file) {
+    const sameLanguage = state.code.files.filter(candidate => !candidate.binary && candidate.language === language);
+    if (sameLanguage.length === 1) file = sameLanguage[0];
+  }
 
   state.code.pendingApply = null;
   if (!file) {
@@ -3017,6 +3073,9 @@ function applyCodeBlock(button) {
           renderCodeTabs();
           renderCodeTree();
           renderCodeEditor();
+          markCodeBlockState(block, "none");
+          codeStepsShown = null;
+          renderComposerSteps();
           toast(localizedText("Modification annulée.", "Change undone.", "Cambio deshecho.", "変更を元に戻しました。"));
         }
       }
@@ -3024,10 +3083,15 @@ function applyCodeBlock(button) {
   }
   state.code.activeId = file.id;
   if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
+  markCodeBlockState(block, "applied");
   renderCodeTabs();
   renderCodeTree();
+  /* L'apercu automatique se declenche au changement de fichier : sans cette
+     remise a zero, appliquer un bloc modifiait le code sans jamais rouvrir la
+     page a gauche, et le changement restait invisible. */
+  codeAutoPreviewForId = null;
   renderCodeEditor();
-  enterCodeMode("code");
+  enterCodeMode("code", { moveFocus: false });
   if (state.code.preview) refreshCodePreview();
 }
 
@@ -3152,10 +3216,12 @@ function openCodeWorkspace(seed) {
     renderCodeTabs();
     renderCodeTree();
     renderCodeEditor();
-  } else {
-    codeFileCreate({ language, content: seed.code, path: wantedName || suggestCodePath(language) });
+    enterCodeMode("code", { moveFocus: false });
+    return twin;
   }
-  enterCodeMode("code");
+  const created = codeFileCreate({ language, content: seed.code, path: wantedName || suggestCodePath(language) });
+  enterCodeMode("code", { moveFocus: false });
+  return created;
 }
 
 /* Entree permanente dans l'atelier : sans elle, la seule porte etait un bloc
@@ -3280,7 +3346,7 @@ function bindCodeSplitter() {
   });
 }
 
-function setCodeFocus(focus) {
+function setCodeFocus(focus, options = {}) {
   state.code.focus = focus === "chat" ? "chat" : "code";
   if (ui.workspace) ui.workspace.dataset.codePane = state.code.focus;
   if (ui.codeSwitch) {
@@ -3290,11 +3356,15 @@ function setCodeFocus(focus) {
   }
   applyCodeSplit();
   renderComposerCodeContext();
+  /* `moveFocus: false` : le volet s'ouvre, mais le curseur reste ou il etait.
+     Appliquer un bloc depuis une reponse ne doit pas arracher le focus de la
+     boite de prompt, sinon enchainer les etapes coute un clic a chaque fois. */
+  if (options.moveFocus === false) return;
   if (state.code.focus === "chat") ui.prompt.focus();
   else ui.codeInput?.focus();
 }
 
-function enterCodeMode(focus) {
+function enterCodeMode(focus, options = {}) {
   if (!ui.codePane) return;
   state.code.open = true;
   if (ui.workspace) ui.workspace.dataset.mode = "code";
@@ -3302,7 +3372,7 @@ function enterCodeMode(focus) {
   renderCodeTabs();
   renderCodeTree();
   renderCodeEditor();
-  setCodeFocus(focus || state.code.focus || "code");
+  setCodeFocus(focus || state.code.focus || "code", options);
   applyCodeSplit();
   renderCodeModelHint();
   renderComposerCodeContext();
@@ -5824,6 +5894,7 @@ function saveState() {
     codeWrap: state.codeWrap,
     codeFontSize: state.codeFontSize,
     codeAutoPreview: state.codeAutoPreview,
+    allowSteps: state.allowSteps,
     customModel: state.customModel,
     customModelActive: state.customModelActive,
     codeOpen: state.code.open,
@@ -5874,6 +5945,7 @@ function loadState() {
     state.codeWrap = Boolean(backup.codeWrap);
     state.codeFontSize = [12, 13, 15, 17].includes(Number(backup.codeFontSize)) ? Number(backup.codeFontSize) : 13;
     state.codeAutoPreview = backup.codeAutoPreview !== false;
+    state.allowSteps = backup.allowSteps !== false;
     state.customModel = normalizedCustomModel(backup.customModel);
     state.customModelActive = Boolean(state.customModel) && Boolean(backup.customModelActive);
     state.profile = typeof backup.profile === "string" ? backup.profile.slice(0, 600) : "";
@@ -6115,7 +6187,10 @@ function handleMessageAction(button) {
     if (!block) return;
     const language = block.querySelector(".code-language")?.textContent || "code";
     const code = block.querySelector("code")?.textContent || "";
-    openCodeWorkspace({ language, code });
+    const file = openCodeWorkspace({ language, code });
+    toast(file
+      ? localizedText(`Bloc ouvert dans ${codePathOf(file)}.`, `Block opened in ${codePathOf(file)}.`, `Bloque abierto en ${codePathOf(file)}.`, `ブロックを ${codePathOf(file)} で開きました。`)
+      : localizedText("Bloc ouvert dans Vibe.", "Block opened in Vibe.", "Bloque abierto en Vibe.", "ブロックを Vibe で開きました。"));
     return;
   }
   if (action === "open-all-code") {
@@ -6124,6 +6199,10 @@ function handleMessageAction(button) {
   }
   if (action === "apply-code") {
     applyCodeBlock(button);
+    return;
+  }
+  if (action === "skip-code") {
+    skipCodeBlock(button);
     return;
   }
   if (action === "copy" || action === "copy-code") {
@@ -7751,6 +7830,7 @@ function switchModelQuickly(modelId) {
 }
 
 function renderComposerCodeContext() {
+  renderComposerSteps();
   if (!ui.composerCodeContext) return;
   const textFiles = state.code.files.filter(file => !file.binary && file.content.trim());
   const visible = Boolean(state.code.open && textFiles.length);
@@ -9658,6 +9738,72 @@ document.addEventListener("keydown", event => {
     ui.composerCodeContext?.focus();
   }
 });
+
+/* --- Validation des etapes ------------------------------------------------ */
+
+/* Le reglage ne sert que dans Vibe : hors de l'atelier un bloc de code reste un
+   texte a copier, et deux boutons de plus sur chaque reponse seraient du bruit.
+   La feuille de style lit `body[data-allow-steps]`, ce qui agit aussi sur les
+   reponses deja affichees, sans avoir a les redessiner. */
+let codeStepsShown = null;
+
+function renderComposerSteps() {
+  const allow = Boolean(state.allowSteps) && Boolean(state.code.open);
+  document.body.dataset.allowSteps = allow ? "1" : "0";
+  if (ui.composerSteps) {
+    ui.composerSteps.hidden = !state.code.open;
+    ui.composerSteps.setAttribute("aria-pressed", String(Boolean(state.allowSteps)));
+    if (ui.composerStepsName) ui.composerStepsName.textContent = localizedText("Étapes", "Steps", "Pasos", "ステップ");
+    const hint = state.allowSteps
+      ? localizedText(
+        "Chaque bloc de code attend votre autorisation avant d'écrire dans un fichier. Cliquez pour appliquer directement.",
+        "Every code block waits for your approval before writing to a file. Click to apply directly.",
+        "Cada bloque de código espera tu autorización antes de escribir en un archivo. Haz clic para aplicar directamente.",
+        "各コードブロックはファイルに書き込む前に承認を待ちます。クリックすると直接適用します。"
+      )
+      : localizedText(
+        "Les blocs s'appliquent d'un clic sur « Appliquer ». Cliquez pour valider chaque étape.",
+        "Blocks apply with one click on “Apply”. Click to approve each step.",
+        "Los bloques se aplican con un clic en «Aplicar». Haz clic para validar cada paso.",
+        "ブロックは「適用」の 1 クリックで反映されます。クリックで各ステップを承認します。"
+      );
+    ui.composerSteps.title = hint;
+    ui.composerSteps.setAttribute("aria-label", hint);
+  }
+  if (codeStepsShown === allow) return;
+  codeStepsShown = allow;
+  /* Le libelle du bouton suit le reglage : « Autoriser » quand chaque etape est
+     validee, « Appliquer » sinon. Les blocs deja traites gardent le leur. */
+  const applyText = allow
+    ? localizedText("Autoriser", "Allow", "Permitir", "許可")
+    : localizedText("Appliquer", "Apply", "Aplicar", "適用");
+  document.querySelectorAll(".code-block .code-copy.is-apply:not(.is-applied) > span")
+    .forEach(node => { node.textContent = applyText; });
+}
+
+function setAllowSteps(on) {
+  state.allowSteps = Boolean(on);
+  codeStepsShown = null;
+  renderComposerSteps();
+  saveState();
+  toast(state.allowSteps
+    ? localizedText(
+      "Validation des étapes : rien n'écrit dans un fichier sans votre accord.",
+      "Step approval: nothing is written to a file without your consent.",
+      "Validación de pasos: nada se escribe en un archivo sin tu permiso.",
+      "ステップ承認：同意なくファイルに書き込まれることはありません。"
+    )
+    : localizedText(
+      "Application directe : « Appliquer » écrit dans le fichier ouvert.",
+      "Direct apply: “Apply” writes into the open file.",
+      "Aplicación directa: «Aplicar» escribe en el archivo abierto.",
+      "直接適用：「適用」で開いているファイルに書き込みます。"
+    ));
+}
+
+ui.composerSteps?.addEventListener("click", () => setAllowSteps(!state.allowSteps));
+renderComposerSteps();
+
 ui.exportToggle.addEventListener("click", () => ui.exportDialog.showModal());
 ui.purgeToggle.addEventListener("click", purgeModelCaches);
 document.querySelector("#export-close").addEventListener("click", () => ui.exportDialog.close());

@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.22": {
+      "title": "Valider chaque etape, et le code qui change vraiment a gauche",
+      "highlights": [
+        "La boite de prompt de Vibe porte une pastille « Etapes » : chaque bloc de code d'une reponse arrive avec « Autoriser » et « Refuser ». Autoriser ecrit dans le fichier ouvert et l'editeur de gauche affiche la nouvelle version immediatement, avec l'apercu. Refuser laisse le bloc de cote et l'estompe. Le reglage est retenu d'une session a l'autre, et coupe, les blocs reprennent le bouton « Appliquer » d'avant.",
+        "Le bouton d'application ne volait plus rien : il marque sa reponse. Le libelle passe a « Autorise », et « Annuler » dans la notification remet le fichier et le bouton dans leur etat precedent. Appliquer une etape ne deplace plus le curseur hors de la boite de prompt quand les deux volets sont cote a cote : on enchaine les etapes sans recliquer.",
+        "Defaut corrige, et il etait mechant : la regle globale des zones de texte plafonnait l'editeur de code a 180 px. On ne voyait qu'une bande en haut du volet, avec la barre de defilement horizontale au milieu, et le reste de la page etait inutilisable. L'editeur occupe maintenant toute la hauteur, sans debordement lateral.",
+        "Un bloc dont la langue ne correspondait a aucun fichier ouvert creait un doublon (snippet.html a cote de index.html). Si le projet ne contient qu'un seul fichier de cette langue, c'est lui qui est mis a jour. Le bouton des reponses dit « Vibe » et non plus « Atelier », et confirme ce qu'il a ouvert.",
+        "Le commutateur Code / Chat est plus large et plus lisible, avec un etat selectionne franc et un contour visible au clavier ; il ne chevauche plus rien jusqu'a 360 px de large."
+      ]
+    },
     "0.1.21": {
       "title": "Deux volets qui se reglent a la souris, et une page d'accueil qui respire",
       "highlights": [
