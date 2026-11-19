@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/latest",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.19",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -1286,7 +1286,7 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
           <p class="dl-note"><b>Avant de décompresser</b> : clic droit sur le <b>.zip</b> → <b>Propriétés</b> → <b>Débloquer</b>. Windows oublie ainsi que le fichier vient d'Internet, et l'application démarre sans demande. Fait après extraction, cela ne sert à rien.</p>
         </article>
@@ -1301,8 +1301,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1317,7 +1317,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1328,7 +1328,7 @@
 
       <div class="releases reveal" id="releases">
         <div class="releases-head">
-          <h3>Dernière version publiée</h3>
+          <h3>Version publiée</h3>
           <a href="https://github.com/zigmoon/SIMIA/releases" target="_blank" rel="noopener">Toutes les versions sur GitHub →</a>
         </div>
         <div class="releases-body" id="releases-body">
@@ -1607,23 +1607,30 @@
   /* ------------------------------------------------------------------
      Un seul endroit à modifier après la première publication GitHub.
      Les workflows de SIMIA-desktop/.github/workflows/ produisent
-     exactement ces noms de fichiers dans la release « latest ».
+     exactement ces noms de fichiers dans la release publiée.
      ------------------------------------------------------------------ */
-  const RELEASE_BASE = "https://github.com/zigmoon/SIMIA/releases/latest/download";
+  const RELEASE_TAG = "v0.1.19";
+  const RELEASE_BASE = `https://github.com/zigmoon/SIMIA/releases/download/${RELEASE_TAG}`;
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
-  const RELEASES_API = `https://api.github.com/repos/zigmoon/SIMIA/releases?per_page=1`;
+  const RELEASE_API = `https://api.github.com/repos/zigmoon/SIMIA/releases/tags/${RELEASE_TAG}`;
 
-  /* Les paquets viennent tous de GitHub, et toujours de la derniere version
-     publiee : `releases/latest/download/<nom>` resout tout seul vers la release
-     marquee « Latest ». Aucune requete prealable, donc aucun consentement a
-     demander, et un lien qui ne se fige pas sur une version ancienne.
+  /* Les paquets viennent tous de GitHub, et d'une version nommee : chaque lien
+     porte l'etiquette `releases/download/v0.1.19/<nom>`. Rien ne resout
+     « latest » a notre place : ce que le visiteur telecharge est exactement la
+     version annoncee sur la page, et une publication ulterieure ne remplace pas
+     sous ses pieds le fichier derriere un bouton deja affiche.
 
-     L'API GitHub ne sert plus qu'a deux choses : afficher le numero et la date
-     de la derniere version dans le bloc « Derniere version publiee » (soumise
-     au consentement, puisque c'est une requete vers un tiers), et reperer une
-     cible qui n'a pas ete compilee pour cette release afin de ne pas laisser
-     croire que le lien fonctionne.
+     L'etiquette est ecrite en dur a trois endroits : les quatre liens du HTML
+     (qui doivent marcher sans JavaScript), la constante ci-dessous, et le bloc
+     de donnees structurees. tools/prepare-ftp.ps1 refuse de preparer le site si
+     l'une de ces copies ne correspond plus a la version du lanceur.
+
+     L'API GitHub ne sert plus qu'a deux choses : afficher la date et la taille
+     de cette version dans le bloc « Version publiee » (soumise au consentement,
+     puisque c'est une requete vers un tiers), et reperer une cible qui n'a pas
+     ete compilee pour cette release afin de ne pas laisser croire que le lien
+     fonctionne.
 
      Le manifeste local reste lu : si un paquet est heberge a cote de la landing
      (tools/prepare-ftp.ps1 peut y deposer un miroir), il est prefere pour
@@ -1633,7 +1640,7 @@
   const releaseLinks = [...document.querySelectorAll("[data-release]")];
   const targetOf = name => String(name).replace(/\.(zip|tar\.gz)$/i, "");
   const localBuilds = new Map();
-  const latestUrlFor = name => `${RELEASE_BASE}/${RELEASE_PREFIX}${name}`;
+  const releaseUrlFor = name => `${RELEASE_BASE}/${RELEASE_PREFIX}${name}`;
 
   /* Les ressources externes ne sont chargees qu'avec l'accord du visiteur.
      Tant que la boite cookies n'a pas repondu, on considere que c'est non :
@@ -1656,14 +1663,14 @@
         link.classList.remove("is-pending");
         ready += 1;
       } else if (compiled) {
-        link.href = latestUrlFor(link.dataset.release);
+        link.href = releaseUrlFor(link.dataset.release);
         link.setAttribute("download", "");
         link.removeAttribute("aria-disabled");
         link.classList.remove("is-pending");
         ready += 1;
       } else {
         // L'API a repondu et ne connait pas ce fichier : cette cible n'a pas
-        // ete compilee pour la derniere version. On renvoie vers la liste
+        // ete compilee pour cette version. On renvoie vers la liste
         // plutot que vers un 404.
         link.href = `${REPO_URL}/releases`;
         link.removeAttribute("download");
@@ -1709,13 +1716,13 @@
   async function fetchGithubAssets() {
     if (!consentExternal()) return null;
     try {
-      const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+      const response = await fetch(RELEASE_API, { headers: { Accept: "application/vnd.github+json" } });
       if (!response.ok) return null;
-      const all = await response.json();
-      const latest = (Array.isArray(all) ? all : []).filter(item => !item.draft)[0];
-      if (!latest) return null;
+      const payload = await response.json();
+      const pinned = Array.isArray(payload) ? payload[0] : payload;
+      if (!pinned || pinned.draft) return null;
       const assets = {};
-      (latest.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name)).forEach(asset => {
+      (pinned.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name)).forEach(asset => {
         assets[asset.name] = asset.browser_download_url;
       });
       return assets;
@@ -2048,18 +2055,18 @@
   /* Les quatre paquets sont toujours listés, même sans l'API GitHub.
      Le bloc ne doit jamais se réduire à un texte : un visiteur qui refuse les
      cookies, ou une API limitée, voyait auparavant un paragraphe à la place des
-     boutons de téléchargement. Les liens `releases/latest/download/<nom>` ne
-     demandent aucune requête préalable, donc rien ne justifie de les cacher. */
+     boutons de téléchargement. Les liens `releases/download/<etiquette>/<nom>`
+     ne demandent aucune requête préalable, donc rien ne justifie de les cacher. */
   const staticAssetLinks = () => releaseLinks.map(link =>
-    `<a class="release-asset" href="${latestUrlFor(link.dataset.release)}" download>
+    `<a class="release-asset" href="${releaseUrlFor(link.dataset.release)}" download>
         <span>${escapeHtml(assetLabel(link.dataset.release))}</span></a>`).join("");
 
   const renderReleasesStatic = note => {
     if (!releasesBody) return;
     releasesBody.innerHTML = `
       <div class="release-latest">
-        <span class="release-pill">dernière version</span>
-        <span class="release-date">les liens ci-dessous pointent toujours sur la plus récente</span>
+        <span class="release-pill">${escapeHtml(RELEASE_TAG)}</span>
+        <span class="release-date">les liens ci-dessous pointent sur cette version</span>
       </div>
       <div class="release-assets">${staticAssetLinks()}</div>
       ${note ? `<p class="releases-offline">${note}</p>` : ""}`;
@@ -2084,31 +2091,30 @@
         <a href="${REPO_URL}/releases" target="_blank" rel="noopener">la page Releases</a> les donne aussi.`);      return;
     }
     try {
-      const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+      const response = await fetch(RELEASE_API, { headers: { Accept: "application/vnd.github+json" } });
       if (response.status === 404) {
         releasesEmpty("Aucune version publiée sur GitHub pour le moment.");
         return;
       }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const all = await response.json();
-      const releases = (Array.isArray(all) ? all : []).filter(item => !item.draft);
-      if (!releases.length) {
+      const payload = await response.json();
+      const pinned = Array.isArray(payload) ? payload[0] : payload;
+      if (!pinned || pinned.draft) {
         releasesEmpty("Aucune version publiée sur GitHub pour le moment.");
         return;
       }
 
-      const latest = releases[0];
-      const assets = (latest.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name));
+      const assets = (pinned.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name));
       const assetLinks = assets.map(asset => `<a class="release-asset" href="${asset.browser_download_url}" download>
           <span>${escapeHtml(assetLabel(asset.name))}</span><small>${formatSize(asset.size)}</small>
         </a>`).join("");
 
-      /* Seule la derniere version est citee. L'historique complet vit sur
+      /* Seule la version de la page est citee. L'historique complet vit sur
          GitHub, et le remettre ici allongeait le bloc sans rien apprendre. */
       releasesBody.innerHTML = `
         <div class="release-latest">
-          <span class="release-pill">${escapeHtml(latest.tag_name || latest.name)}</span>
-          <span class="release-date">publiée ${relativeDate(latest.published_at)}</span>
+          <span class="release-pill">${escapeHtml(pinned.tag_name || pinned.name)}</span>
+          <span class="release-date">publiée ${relativeDate(pinned.published_at)}</span>
         </div>
         ${assetLinks
           ? `<div class="release-assets">${assetLinks}</div>`

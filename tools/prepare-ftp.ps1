@@ -191,6 +191,24 @@ if (Test-Path $cargo) {
     $line = Select-String -Path $cargo -Pattern '^version\s*=' | Select-Object -First 1
     if ($line) { $version = ($line.Line -split '=', 2)[1].Trim().Trim('"') }
 }
+
+# La landing ne resout jamais « latest » : chaque lien porte l'etiquette de la
+# version, ecrite en dur dans le HTML, dans la constante RELEASE_TAG et dans les
+# donnees structurees. Si l'une de ces copies prend du retard sur le lanceur, le
+# visiteur telecharge une autre version que celle annoncee sur la page.
+$landing = Get-Content (Join-Path $Site "index.html") -Raw -Encoding UTF8
+$tag = "v$version"
+$ecarts = @()
+if (-not $landing.Contains('"softwareVersion": "' + $version + '"')) { $ecarts += "softwareVersion" }
+if (-not $landing.Contains('const RELEASE_TAG = "' + $tag + '";')) { $ecarts += "RELEASE_TAG" }
+if (-not $landing.Contains("/releases/tag/$tag")) { $ecarts += "downloadUrl" }
+$liens = ([regex]::Matches($landing, [regex]::Escape("/releases/download/$tag/simia-"))).Count
+if ($liens -ne 4) { $ecarts += "liens de telechargement ($liens sur 4)" }
+if ($landing -match "releases/latest") { $ecarts += "un lien pointe encore sur releases/latest" }
+if ($ecarts) {
+    throw ("deploy\index.html ne correspond pas a la version {0} du lanceur : {1}. Mettre la landing a jour avant de publier." -f $version, ($ecarts -join ", "))
+}
+
 $manifest = [ordered]@{
     version   = $version
     published = (Get-Date).ToString("yyyy-MM-dd")

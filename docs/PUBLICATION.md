@@ -39,8 +39,12 @@ cote serveur ; `versions.json` alimente la veille de version du lanceur.
 le lit pour savoir quels paquets sont hébergés ici. Il est vide par défaut, et
 c'est voulu : les quatre archives viennent de la release GitHub, compilée par la
 CI, donc toutes de la même fabrication. La landing construit alors ses liens sur
-`releases/latest/download/<nom>`, sans appel d'API et donc sans dépendre du
-consentement aux cookies.
+`releases/download/v<version>/<nom>`, sans appel d'API et donc sans dépendre du
+consentement aux cookies. L'étiquette de version est écrite en dur à trois
+endroits de `deploy/index.html` (les quatre liens du HTML, la constante
+`RELEASE_TAG`, et le `downloadUrl` des données structurées) : `prepare-ftp.ps1`
+**refuse** de préparer le site si l'une de ces copies ne correspond plus à la
+version du lanceur, ou si un lien pointe encore sur `releases/latest`.
 
 Un miroir local reste possible : déposer un `.zip` dans `deploy/downloads/` puis
 relancer le script le publie et l'inscrit au manifeste. Le script **refuse** un
@@ -389,11 +393,12 @@ curl.exe -sI https://app.zigmoon.com/SIMIA/app/offline.html
 curl.exe -sI https://app.zigmoon.com/SIMIA/    # la landing, en 200
 curl.exe -sI https://app.zigmoon.com/SIMIA/desktop/   # 301 vers la racine
 
-# les quatre paquets : la landing pointe sur releases/latest/download, donc ce
-# sont ces URL-la qu'il faut tester, pas une copie locale
+# les quatre paquets : la landing porte l'etiquette de la version, donc ce sont
+# ces URL-la qu'il faut tester, pas une copie locale. Remplacer v0.1.19 par la
+# version publiee (celle de launcher/Cargo.toml, prefixee d'un v).
 for f in simia-windows-x64.zip simia-macos-arm64.tar.gz simia-macos-x64.tar.gz simia-linux-x64.tar.gz; do
   curl.exe -sIL -o /dev/null -w "%{http_code} %{size_download} $f\n" \
-    https://github.com/zigmoon/SIMIA/releases/latest/download/$f
+    https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/$f
 done
 # 200 attendu pour les quatre, avec la taille de l'archive
 
