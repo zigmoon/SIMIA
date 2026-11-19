@@ -394,11 +394,11 @@ curl.exe -sI https://app.zigmoon.com/SIMIA/    # la landing, en 200
 curl.exe -sI https://app.zigmoon.com/SIMIA/desktop/   # 301 vers la racine
 
 # les quatre paquets : la landing porte l'etiquette de la version, donc ce sont
-# ces URL-la qu'il faut tester, pas une copie locale. Remplacer v0.1.21 par la
+# ces URL-la qu'il faut tester, pas une copie locale. Remplacer v0.1.23 par la
 # version publiee (celle de launcher/Cargo.toml, prefixee d'un v).
 for f in simia-windows-x64.zip simia-macos-arm64.tar.gz simia-macos-x64.tar.gz simia-linux-x64.tar.gz; do
   curl.exe -sIL -o /dev/null -w "%{http_code} %{size_download} $f\n" \
-    https://github.com/zigmoon/SIMIA/releases/download/v0.1.21/$f
+    https://github.com/zigmoon/SIMIA/releases/download/v0.1.23/$f
 done
 # 200 attendu pour les quatre, avec la taille de l'archive
 
@@ -434,9 +434,28 @@ Get-FileHash qwen2.5-1.5b-instruct-q4_k_m.gguf -Algorithm SHA256   # sur votre c
 
 Les valeurs complètes sont dans [models/versions.json](../models/versions.json).
 
-Puis relancer `simia-desktop.exe` : le journal doit afficher
-`catalogue : v2 (https://app.zigmoon.com/SIMIA/models/)`.
+### Vérifier le contenu d'une archive sans la télécharger
 
+Une archive Windows pèse 1,5 Go : la télécharger pour contrôler trois fichiers
+coûte une heure de connexion. Le répertoire central d'un ZIP se lit par requêtes
+`Range`, donc une archive publiée s'inspecte en quelques dizaines de kilo-octets :
+
+```powershell
+python tools/inspect-release-zip.py                  # archive de la version du lanceur
+python tools/inspect-release-zip.py v0.1.23          # une étiquette précise
+```
+
+Le script affiche la taille, le nombre d'entrées, la racine de l'archive et la
+version du cache hors ligne, vérifie la présence des fonctions attendues dans
+`web/app.js` et `web/index.html`, et compare l'empreinte de l'archive avec celle
+publiée dans la note de version. Code de sortie 1 si une vérification échoue.
+
+Les archives `tar.gz` ne se prêtent pas au même contrôle : le flux se décompresse
+dans l'ordre, et `web/` arrive après les moteurs, donc il faudrait lire l'archive
+entière. Pour macOS et Linux on s'appuie sur l'empreinte : la CI la calcule sur le
+fichier qu'elle vient de construire, l'API GitHub expose la même valeur pour
+l'archive téléversée, et leur égalité prouve que l'archive publiée est bien celle
+de l'étiquette.
 ## Symptôme d'un dossier `models/` absent
 
 Un hébergement mutualisé (LWS, o2switch…) qui reçoit une requête sur un dossier
