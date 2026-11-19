@@ -11,7 +11,6 @@
 Conversation, génération d'images et atelier de code dans une seule interface,
 exécutés sur votre propre machine. Pas de compte, pas de clé API, pas de serveur :
 vos phrases ne quittent pas l'ordinateur.
-
 **La version bureau est la version complète** : elle fait tourner des modèles
 jusqu'à 9,7 Go, génère des images jusqu'à 1024 px, et accepte n'importe quel
 `.gguf` supplémentaire déposé dans son dossier `models/`. La version web, dans le
@@ -48,6 +47,26 @@ navigateur, s'arrête à 1,9 Go par modèle et sert surtout à essayer.
 outils réunis dans une seule page : une conversation avec un modèle de langage,
 un générateur d'images Stable Diffusion, et un atelier de code capable
 d'exécuter le JavaScript et le Python que l'assistant écrit.
+
+L'atelier et la conversation forment une seule boucle : on ouvre un fichier ou un
+dossier de projet dans l'atelier, on l'envoie à l'assistant, et le code qu'il
+renvoie revient dans le fichier d'un clic, sans copier-coller. L'aperçu intégré
+reconstruit la page avec ses feuilles de style, ses scripts et ses images, et
+l'exécute dans une iframe isolée : le HTML, le CSS et le JavaScript du projet se
+comportent comme dans un navigateur, avec la console du projet sous les yeux, et
+sur un écran large l'aperçu se place à côté de l'éditeur.
+
+Le projet n'est pas prisonnier du navigateur : les fichiers importés depuis un
+dossier peuvent être réécrits sur le disque (« Enregistrer sur le disque », API
+File System Access de Chrome et Edge, sur Windows, macOS et Linux), et tout
+projet s'exporte en archive ZIP lisible par n'importe quel outil.
+
+Les réglages tiennent dans une seule fenêtre courte, ouverte depuis la barre
+latérale : le modèle qui répond, la longueur et la créativité des réponses,
+l'enregistrement du brouillon, la touche Entrée, l'enregistrement automatique de
+l'atelier, sa police, son retour à la ligne, l'aperçu automatique, et la
+mémoire de l'historique. Chaque réglage agit tout de suite, et seuls les
+réglages sont conservés quand on coupe l'historique.
 
 Rien n'est envoyé à un serveur. Ni compte, ni clé API, ni abonnement, ni limite de
 messages : les poids des modèles sont téléchargés une fois depuis un CDN, puis
@@ -93,10 +112,13 @@ code que l'onglet, mis en cache par un service worker.
 | Fonction | Détail | Web | Bureau |
 |---|---|:--:|:--:|
 | Conversation | modèle de langage local, réponse en flux, historique, export JSON | ✅ | ✅ |
-| Choix du modèle | plus de 30 modèles de texte, filtrés par usage (généraliste, documents, code, raisonnement, vision) | ✅ | ✅ |
+| Choix du modèle | plus de 30 modèles de texte, filtrés par usage (généraliste, documents, code, raisonnement, vision), et changement à la volée depuis le champ de saisie | ✅ | ✅ |
 | Lecture de documents | PDF, Word, OpenDocument, CSV, texte ; citations dans la réponse | ✅ | ✅ |
+| Pièces jointes | glisser-déposer depuis le bureau, sélection, ou collage d'une capture ; images analysées par un modèle vision | ✅ | ✅ |
 | Génération d'images | Stable Diffusion local, 512 et 1024 px, style maison « Gravure SIMIA » | — | ✅ |
-| Atelier de code | éditeur, exécution JavaScript et Python dans un Worker isolé, relecture par l'IA | ✅ | ✅ |
+| Atelier de code | vrai projet : arborescence, onglets, recherche de fichier (Ctrl/⌘+P), import de fichiers ou d'un dossier, ouverture d'un dossier du disque avec enregistrement des modifications, export ZIP, aperçu live HTML/CSS/JS avec console, exécution JavaScript et Python, application du code reçu dans le fichier | ✅ | ✅ |
+| Paramètres | une seule fenêtre compacte (520 px) : modèle, réponses (flux, longueur, créativité), saisie (brouillon, Entrée), atelier (enregistrement automatique, retour à la ligne, taille du texte, aperçu automatique), historique et données | ✅ | ✅ |
+| Mon assistant | profil local : un nom et des consignes permanentes posés devant un modèle existant, sans entraînement ni téléchargement ; création, export, suppression | ✅ | ✅ |
 | Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | — |
 | Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
 | Quatre langues | français, anglais, espagnol, japonais | ✅ | ✅ |
@@ -573,6 +595,21 @@ Pour entraîner votre propre style, voir [tools/lora/README.md](tools/lora/READM
   pour le déploiement web : ne pas envoyer de CSP par en-tête HTTP sur les `.js`
   (la CSP de SIMIA est dans un `<meta>` de `index.html`). Un en-tête global
   s'appliquerait au worker et bloquerait l'exécution du JavaScript collé.
+- **Aperçu de l'atelier** : la page du projet est reconstruite puis posée dans
+  une iframe `sandbox` (sans `allow-same-origin`), pour que le code de
+  l'utilisateur ne puisse jamais atteindre le stockage de SIMIA. Une iframe
+  sandboxée hérite de la CSP de la page : le JavaScript du projet ne tourne donc
+  que grâce au nonce `simiapreview` déclaré dans `script-src`. Retirer ce nonce
+  de la CSP de `index.html` éteint tout script dans l'aperçu, sans autre
+  message d'erreur que la console du navigateur. Les chemins relatifs
+  (`<link>`, `<script src>`, `<img>`, `url()` en CSS) sont résolus dans le
+  projet et intégrés à la page ; la console du projet remonte par `postMessage`.
+- **Réglages** : tous dans `localStorage` (`simia.backup.v1`), avec les valeurs
+  par défaut d'avant la fenêtre de réglages (aucun changement imposé par la
+  mise à jour). « Mémoriser l'historique » coupé écrit `conversations: []` :
+  une sauvegarde antérieure ne peut donc pas faire réapparaître les messages.
+  « Mon assistant » n'est pas un modèle : c'est `customModel` (nom + consignes)
+  ajouté devant la conversation et résolu vers un modèle existant.
 - **Génération d'images** : `vendor/sd/<plateforme>/sd-server`
   (stable-diffusion.cpp) + les jeux de fichiers déclarés dans
   `models/image/catalog.json`. Quatre packs sont fournis : SD-Turbo Q4 (1,72 Go,

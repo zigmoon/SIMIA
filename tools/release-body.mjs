@@ -150,7 +150,7 @@ ${table}
    nécessaire.
 2. Lancez \`simia-desktop\` (\`simia-desktop.exe\` sur Windows).
 3. **Premier lancement** : SIMIA télécharge un modèle de conversation
-   (Qwen 2.5 Coder 0.5B, 469 Mo) avant d'ouvrir la fenêtre. Le pourcentage
+   (Qwen 3.5 0.8B, 508 Mo) avant d'ouvrir la fenêtre. Le pourcentage
    défile dans la fenêtre noire ; c'est normal, et cela n'arrive qu'une fois.
 4. Ensuite, chaque modèle choisi dans la bibliothèque se télécharge avec sa
    propre barre de progression, sur sa carte.

@@ -103,16 +103,16 @@ peut être supprimé sans conséquence.
 
 ## 2. L'application (`app.zigmoon.com/SIMIA/app/`)
 
-18 fichiers, **1,5 Mo** :
+18 fichiers, **1,7 Mo** :
 
 ```
 app.zigmoon.com/SIMIA/app/
-+-- index.html                    30,6 Ko
-+-- app.js                       415,0 Ko
-+-- styles.css                    66,1 Ko
++-- index.html                    49,1 Ko
++-- app.js                       536,4 Ko
++-- styles.css                    87,0 Ko
 +-- code-runner.js                 3,7 Ko
 +-- cookies.js                    21,6 Ko
-+-- service-worker.js              8,2 Ko   <- simia-app-4.8.1
++-- service-worker.js              8,3 Ko   <- cache simia-app-4.11.1
 +-- manifest.webmanifest           2,3 Ko
 +-- offline.html                   2,5 Ko
 +-- icon.svg . simia-logo.svg . simia-logo-white.svg

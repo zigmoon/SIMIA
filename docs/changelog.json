@@ -1,6 +1,41 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.17": {
+      "title": "Une seule fenetre de reglages, qui regle vraiment quelque chose",
+      "highlights": [
+        "La fenetre de reglages tient maintenant dans une carte de 520 px posedee au centre, avec un en-tete fixe et un corps qui defile. Elle s'etirait auparavant sur toute la largeur et empilait ses blocs sans ordre lisible.",
+        "Cinq sections et dix-neuf lignes : Modele, Reponses, Saisie, Atelier de code, Historique et donnees. Chaque ligne dit ce qu'elle fait, et chaque interrupteur agit tout de suite.",
+        "Des reglages qui n'existaient pas : enregistrement automatique du brouillon, touche Entree (envoie, ou passe a la ligne avec Ctrl+Entree), ecriture au fil de l'eau, longueur des reponses, creativite, enregistrement automatique de l'atelier (coupe, Ctrl+S enregistre), retour a la ligne, taille du texte de l'editeur, apercu automatique, et memorisation de l'historique.",
+        "« Mon modele » devient « Mon assistant », avec une phrase qui dit ce que c'est : un nom et des consignes permanentes ajoutes devant un modele existant, sans entrainement ni telechargement. Un bouton « Supprimer » efface vraiment le profil ; jusque-la, la seule sortie etait « Revenir au standard », qui le gardait en memoire sans le dire.",
+        "La creativite et la longueur choisies partent reellement au modele, dans le navigateur comme dans l'application de bureau. « Historique » coupe vide la liste des conversations enregistrees : une ancienne sauvegarde ne peut pas les faire revenir.",
+        "Trois defauts corriges dans l'atelier au passage : le bouton « + » (nouveau fichier) ne faisait rien, l'arborescence continuait de designer le fichier precedent apres un changement d'onglet, et la barre d'etat restait sur « Modifications… » apres une creation ou un renommage pourtant deja enregistres.",
+        "Le service worker change de version : sans cela, l'ancienne interface restait servie depuis le cache apres la mise a jour."
+      ]
+    },
+    "0.1.16": {
+      "title": "L'atelier de code devient un vrai projet, et l'apercu execute le JavaScript",
+      "highlights": [
+        "L'atelier de code est reconstruit autour d'un projet : arborescence de dossiers, onglets de fichiers ouverts, creation de fichier et de dossier, renommage et suppression. Jusque-la, chaque fichier etait un onglet isole et un dossier depose depuis le bureau etait refuse.",
+        "L'apercu ne se contente plus d'afficher le HTML : il resout les chemins relatifs du projet (feuilles de style, scripts, images), execute le JavaScript du projet dans une iframe isolee et remonte sa console. Sur un ecran large, l'apercu se place a cote de l'editeur ; ailleurs il s'ouvre par-dessus, avec un choix de largeur (pleine, tablette, telephone).",
+        "Un dossier du disque s'ouvre d'un clic quand le navigateur le permet, et « Enregistrer sur le disque » y reecrit les fichiers modifies : le projet n'est plus prisonnier du navigateur. Sur les autres navigateurs, l'import reste une copie et le projet s'exporte en archive ZIP, lisible par n'importe quel outil.",
+        "Ctrl/Cmd+P ouvre la recherche de fichier, Entree garde l'indentation du bloc courant, et la barre d'etat dit si le fichier est enregistre. Le modele utilise reste affiche sous l'editeur, avec un acces direct a la bibliotheque.",
+        "« Appliquer » ne cree plus un fichier en double quand la question nomme le fichier (« corrige mon app.js ») : le bloc revient dans ce fichier, avec le nombre de lignes ajoutees et un bouton Annuler. « Tests » ecrit a cote au lieu d'ecraser le fichier teste.",
+        "Le composeur garde sous les yeux le modele qui va repondre et le fichier actif joint a la question, et un clic sur ce fichier suffit a l'exclure du prompt.",
+        "Le service worker change de version : sans cela, l'ancienne interface restait servie depuis le cache apres la mise a jour."
+      ]
+    },
+    "0.1.15": {
+      "title": "Relecture de fond : la reference remise a niveau, et plus de fichier joint en embuscade",
+      "highlights": [
+        "Le dossier de reference ../SIMIA/ etait reste a la version de minuit : il lui manquait les huit corrections de la 0.1.14. Les deux copies de l'interface sont de nouveau identiques, ce qui evite qu'une synchronisation ramene l'application en arriere.",
+        "Un fichier depose ou colle pendant qu'un dialogue est ouvert (bibliotheque de modeles, reglages, mentions legales) s'attachait derriere lui, sans aucune trace visible, puis repartait avec le message suivant. Le depot et le collage sont maintenant ignores tant qu'un dialogue modal occupe l'ecran ; la navigation reste empechee dans tous les cas.",
+        "La notice livree dans les archives annoncait 32 Mo pour le paquet macOS Intel, qui en fait 25. Le chiffre est corrige, et il correspond desormais au tableau des versions du README.",
+        "Le plan de deploiement (docs/PUBLICATION.md) listait encore les tailles de la 0.1.10 et un cache de service worker en 4.8.1 : les chiffres et le numero de cache sont a jour.",
+        "Le README ne decrivait nulle part les pieces jointes : une ligne leur est ajoutee, avec le glisser-deposer depuis le bureau, la selection par le bouton et le collage d'une capture.",
+        "Le sitemap portait la date de la veille : il est date de la publication."
+      ]
+    },
     "0.1.14": {
       "title": "Le glisser-deposer tient partout, et un fichier joint part avec son contenu",
       "highlights": [

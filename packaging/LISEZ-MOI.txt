@@ -55,7 +55,7 @@ Ce que contient cette archive
                        modele d'image deja pret (SD 1.5, 1,46 Go) pour que le
                        bouton Image fonctionne des le premier lancement, sur
                        Windows, Mac Apple Silicon et Linux. Sur Mac Intel,
-                       l'archive pese donc 32 Mo et non 1,4 Go : ni moteur, ni
+                       l'archive pese donc 25 Mo et non 1,4 Go : ni moteur, ni
                        modele d'image, puisque le moteur d'images de l'amont
                        n'est publie que pour Apple Silicon.
 

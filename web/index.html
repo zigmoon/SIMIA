@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: https://unpkg.com https://esm.run https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob: https:; connect-src 'self' data: blob: https://unpkg.com https://esm.run https://cdn.jsdelivr.net https://raw.githubusercontent.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://*.xethub.hf.co https://api.github.com; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: 'nonce-simiapreview' https://unpkg.com https://esm.run https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob: https:; connect-src 'self' data: blob: https://unpkg.com https://esm.run https://cdn.jsdelivr.net https://raw.githubusercontent.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://*.xethub.hf.co https://api.github.com; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="theme-color" content="#f6f5f1">
   <title>SIMIA — assistant IA local, privé et hors ligne</title>
   <meta name="description" content="SIMIA est un assistant IA local-first : discutez avec de vrais modèles de langage, analysez des documents et générez des images sans compte ni serveur. Fonctionne dans le navigateur et en application de bureau pour Windows, macOS et Linux.">
@@ -181,10 +181,15 @@
         </div>
       </header>
 
-      <section class="code-pane" id="code-pane" aria-label="Atelier code">
+            <section class="code-pane" id="code-pane" aria-label="Atelier code">
         <div class="code-pane-head">
-          <div class="code-tabs" id="code-tabs" role="tablist" aria-label="Fichiers de l'atelier"></div>
+          <button type="button" class="code-tool" id="code-tree-toggle" aria-pressed="true" aria-label="Arborescence du projet" title="Arborescence du projet"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h6M4 12h10M4 18h7"/></svg></button>
+          <div class="code-tabs" id="code-tabs" role="tablist" aria-label="Fichiers ouverts"></div>
           <div class="code-pane-tools">
+            <button type="button" class="code-tool" id="code-quick-open" aria-label="Rechercher un fichier" title="Rechercher un fichier (Ctrl+P)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.2"/><path d="m15.6 15.6 3.9 3.9"/></svg></button>
+            <button type="button" class="code-tool" id="code-import-files" aria-label="Importer des fichiers" title="Importer des fichiers"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v10"/><path d="m8 9 4 4 4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg></button>
+            <button type="button" class="code-tool" id="code-open-folder" aria-label="Importer un dossier complet" title="Importer un dossier complet"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2h9A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><path d="M12 11v5"/><path d="M9.5 13.5h5"/></svg></button>
+            <button type="button" class="code-tool" id="code-export" aria-label="Exporter le projet (ZIP)" title="Exporter le projet (ZIP)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V4"/><path d="m8 8 4-4 4 4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg></button>
             <div class="code-new-wrap" id="code-new-wrap">
               <button type="button" class="code-tool" id="code-new" aria-haspopup="menu" aria-expanded="false" aria-label="Nouveau fichier" title="Nouveau fichier">+</button>
               <div class="code-new-menu" id="code-new-menu" role="menu" hidden>
@@ -197,21 +202,73 @@
                 <button type="button" role="menuitem" data-code-new="text">Texte</button>
               </div>
             </div>
+            <button type="button" class="code-tool" id="code-preview-toggle" aria-label="Aperçu du fichier" title="Aperçu du fichier" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="16" height="14" rx="1.6"/><path d="M10 9.4 15 12l-5 2.6Z" fill="currentColor" stroke="none"/></svg></button>
             <button type="button" class="code-tool code-tool-close" id="code-close" aria-label="Fermer l'atelier" title="Fermer l'atelier">✕</button>
           </div>
         </div>
-        <div class="code-editor-wrap">
-          <div class="code-gutter" id="code-gutter" aria-hidden="true">1</div>
-          <div class="code-editor">
-            <pre class="code-highlight" id="code-highlight" aria-hidden="true"></pre>
-            <textarea class="code-input" id="code-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Éditeur de code"></textarea>
+        <div class="code-body" id="code-body" data-tree="shown">
+          <aside class="code-tree" id="code-tree" aria-label="Fichiers du projet">
+            <div class="code-tree-head">
+              <span class="code-tree-title" id="code-tree-title">PROJET</span>
+              <span class="code-tree-count" id="code-tree-count">0</span>
+              <span class="code-tree-actions">
+                <button type="button" id="code-tree-new-file" aria-label="Nouveau fichier" title="Nouveau fichier"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
+                <button type="button" id="code-tree-new-folder" aria-label="Nouveau dossier" title="Nouveau dossier"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2h9A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><path d="M12 11v5M9.5 13.5h5"/></svg></button>
+              </span>
+            </div>
+            <div class="code-tree-list" id="code-tree-list" role="tree"></div>
+            <div class="code-tree-foot">
+              <button type="button" class="code-write-back" id="code-write-back" hidden>Enregistrer sur le disque</button>
+            </div>
+          </aside>
+          <div class="code-main">
+            <div class="code-editor-wrap">
+              <div class="code-gutter" id="code-gutter" aria-hidden="true">1</div>
+              <div class="code-editor">
+                <pre class="code-highlight" id="code-highlight" aria-hidden="true"></pre>
+                <textarea class="code-input" id="code-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Éditeur de code"></textarea>
+                <div class="code-binary" id="code-binary" hidden></div>
+              </div>
+            </div>
+            <div class="code-preview" id="code-preview" hidden>
+              <div class="code-preview-head">
+                <span class="code-preview-title" id="code-preview-title">Aperçu</span>
+                <div class="code-preview-tools">
+                  <span class="code-preview-widths">
+                    <button type="button" data-preview-width="full" aria-pressed="true" title="Pleine largeur"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="6" width="18" height="12" rx="1.6"/></svg></button>
+                    <button type="button" data-preview-width="tablet" aria-pressed="false" title="Tablette"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="4" width="12" height="16" rx="1.6"/></svg></button>
+                    <button type="button" data-preview-width="phone" aria-pressed="false" title="Téléphone"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="3" width="8" height="18" rx="1.8"/></svg></button>
+                  </span>
+                  <button type="button" id="code-preview-refresh" title="Recharger l'aperçu" aria-label="Recharger l'aperçu">↻</button>
+                  <button type="button" id="code-preview-open" title="Ouvrir dans un onglet" aria-label="Ouvrir dans un onglet">↗</button>
+                  <button type="button" id="code-preview-close" title="Fermer l'aperçu" aria-label="Fermer l'aperçu">✕</button>
+                </div>
+              </div>
+              <div class="code-preview-stage" id="code-preview-stage" data-width="full">
+                <iframe id="code-preview-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups" title="Aperçu du fichier"></iframe>
+              </div>
+              <div class="code-preview-log-wrap" id="code-preview-log-wrap" hidden>
+                <div class="code-preview-log-head"><span>Console</span><button type="button" id="code-preview-log-clear">Effacer</button></div>
+                <pre id="code-preview-log"></pre>
+              </div>
+              <p class="code-preview-note" id="code-preview-note"></p>
+            </div>
+            <div class="code-quick" id="code-quick" hidden>
+              <div class="code-quick-box" role="dialog" aria-label="Rechercher un fichier">
+                <input id="code-quick-input" type="text" autocomplete="off" spellcheck="false" placeholder="Rechercher un fichier…" aria-label="Rechercher un fichier">
+                <div class="code-quick-list" id="code-quick-list" role="listbox"></div>
+              </div>
+            </div>
           </div>
         </div>
+        <input id="code-file-input" type="file" multiple hidden accept=".js,.mjs,.cjs,.jsx,.ts,.tsx,.py,.html,.htm,.css,.scss,.less,.sass,.json,.md,.markdown,.txt,.sql,.sh,.bash,.ps1,.yml,.yaml,.xml,.svg,.vue,.svelte,.astro,.toml,.env,.png,.jpg,.jpeg,.gif,.webp,.avif,.ico,.woff,.woff2,.ttf,.otf,.mp4,.webm,.mp3,.wav,.pdf,text/*,application/json,image/*">
+        <input id="code-folder-input" type="file" webkitdirectory directory multiple hidden>
         <div class="code-output" id="code-output" hidden>
           <div class="code-output-head">
             <span class="code-output-title" id="code-output-title">Sortie</span>
             <div class="code-output-tools">
               <span class="code-output-state" id="code-output-state" role="status" aria-live="polite"></span>
+              <button type="button" class="code-output-clear" id="code-output-chat" hidden>Envoyer au chat</button>
               <button type="button" class="code-output-clear" id="code-output-stop" hidden>Arrêter</button>
               <button type="button" class="code-output-clear" id="code-output-clear">Effacer</button>
             </div>
@@ -231,12 +288,12 @@
             <button type="button" class="code-action" data-code-action="tests">Tests</button>
           </div>
           <div class="code-foot-right">
+            <span class="code-save-state" id="code-save-state"></span>
             <select class="code-lang" id="code-lang" aria-label="Type de fichier"></select>
             <span class="code-meta" id="code-meta" aria-live="polite"></span>
           </div>
         </div>
       </section>
-
       <section class="chat" id="chat" aria-live="polite">
         <div class="welcome" id="welcome">
           <p class="eyebrow" data-i18n="personalAssistant">ASSISTANT PERSONNEL</p>
@@ -256,33 +313,195 @@
       </section>
 
       <section class="composer-wrap">
-        <div class="settings-panel" id="settings-panel" hidden>
-          <div class="settings-header"><p class="eyebrow" id="settings-heading">PARAMÈTRES</p><button class="icon-button" id="settings-close" type="button" aria-label="Fermer les paramètres" title="Fermer les paramètres"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button></div>
-          <div class="setting-main">
-            <p class="setting-label" data-i18n="localModel">LOCAL MODEL</p>
-            <p class="model-picker-label" data-i18n="chooseModel">Choisir un modèle</p>
-            <button class="model-picker" id="model-picker" type="button" aria-haspopup="dialog">
-              <span id="model-picker-name">Llama 3.2 1B</span><span id="model-picker-meta">Généraliste · ~600 MB</span>
-            </button>
-            <select id="model-select" aria-label="Choisir un modèle local" hidden></select>
-            <p id="model-info">A compact model recommended to get started.</p>
+                <div class="settings-backdrop" id="settings-backdrop" hidden></div>
+        <div class="settings-panel" id="settings-panel" role="dialog" aria-labelledby="settings-heading" hidden>
+          <div class="settings-header">
+            <div class="settings-head-text">
+              <p class="eyebrow" id="settings-heading">PARAMÈTRES</p>
+              <p class="settings-sub" id="settings-sub">Réglages conservés sur cet appareil.</p>
+            </div>
+            <button class="icon-button" id="settings-close" type="button" aria-label="Fermer les paramètres" title="Fermer les paramètres"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button>
           </div>
-          <div class="setting-actions">
-            <button id="webllm-toggle" type="button">Download model</button>
-            <button class="secondary-button" id="my-model-settings-toggle" type="button">Mon modèle</button>
+
+          <div class="settings-body">
+            <section class="settings-section">
+              <h3 class="settings-section-title" id="settings-sec-model">Modèle</h3>
+              <div class="setting-row setting-row-stack">
+                <div class="setting-text">
+                  <span class="setting-name" data-i18n="chooseModel">Modèle de langage</span>
+                  <span class="setting-hint" id="settings-model-hint">Celui qui répond dans cette conversation.</span>
+                </div>
+                <button class="model-picker" id="model-picker" type="button" aria-haspopup="dialog">
+                  <span id="model-picker-name">Llama 3.2 1B</span><span id="model-picker-meta">Généraliste · ~600 MB</span>
+                </button>
+                <select id="model-select" aria-label="Choisir un modèle local" hidden></select>
+                <p class="setting-note" id="model-info">A compact model recommended to get started.</p>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="auto-load-model-label">Charger le modèle au lancement</span>
+                  <span class="setting-hint" id="settings-autoload-hint">Le modèle en cache est chargé dès l'ouverture, sans clic.</span>
+                </div>
+                <label class="switch"><input id="auto-load-model" type="checkbox"><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="webllm-toggle-label">État du modèle</span>
+                  <span class="setting-hint" id="settings-webllm-hint">Télécharge ou active le modèle sélectionné.</span>
+                </div>
+                <button id="webllm-toggle" type="button">Download model</button>
+              </div>
+              <div class="setting-row setting-row-stack">
+                <div class="setting-text">
+                  <span class="setting-name" id="assistant-name">Mon assistant</span>
+                  <span class="setting-hint" id="settings-assistant-hint">Un nom et des consignes permanentes ajoutés à un modèle existant. Aucun entraînement, aucun téléchargement : vos consignes partent devant chaque conversation.</span>
+                </div>
+                <div class="setting-inline">
+                  <span class="setting-badge" id="settings-assistant-state" hidden></span>
+                  <button class="secondary-button" id="my-model-settings-toggle" type="button">Configurer</button>
+                </div>
+              </div>
+              <div class="setting-row setting-row-stack" id="setting-image" hidden>
+                <div class="setting-text">
+                  <span class="setting-name" id="setting-image-label">Modèle d'image</span>
+                  <span class="setting-hint" id="image-info">Génération d'images locale.</span>
+                </div>
+                <button class="model-picker" id="image-picker" type="button" aria-haspopup="dialog">
+                  <span id="image-picker-name">SD-Turbo</span><span id="image-picker-meta">512 px · 4 pas</span>
+                </button>
+              </div>
+              <p class="setting-note" id="download-info">The first download can take a few minutes. The model stays cached on this device.</p>
+            </section>
+
+            <section class="settings-section">
+              <h3 class="settings-section-title" id="settings-sec-reply">Réponses</h3>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-stream-name">Écrire au fil de l'eau</span>
+                  <span class="setting-hint" id="settings-stream-hint">Le texte apparaît pendant la génération. Coupé, la réponse arrive d'un bloc à la fin.</span>
+                </div>
+                <label class="switch"><input id="setting-stream" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-length-name">Longueur des réponses</span>
+                  <span class="setting-hint" id="settings-length-hint">Une réponse courte évite les développements inutiles.</span>
+                </div>
+                <select id="setting-length" aria-labelledby="settings-length-name">
+                  <option value="short">Courte</option>
+                  <option value="normal" selected>Normale</option>
+                  <option value="long">Longue</option>
+                </select>
+              </div>
+              <div class="setting-row setting-row-stack">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-temp-name">Créativité <span class="setting-value" id="setting-temp-value">0,7</span></span>
+                  <span class="setting-hint" id="settings-temp-hint">Basse, les réponses restent factuelles ; haute, elles sont plus variées.</span>
+                </div>
+                <input class="setting-range" id="setting-temperature" type="range" min="0.1" max="1.2" step="0.1" value="0.7" aria-labelledby="settings-temp-name">
+              </div>
+              <div class="setting-row setting-row-stack">
+                <div class="setting-text">
+                  <span class="setting-name" id="profile-label">À propos de moi (optionnel)</span>
+                  <span class="setting-hint" id="settings-profile-hint">Prénom, langue, ton préféré : ajouté en discret au contexte de vos questions.</span>
+                </div>
+                <textarea id="profile-input" maxlength="600" rows="2" placeholder="Prénom, langue, ton préféré, contexte..."></textarea>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <h3 class="settings-section-title" id="settings-sec-composer">Saisie</h3>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-draft-name">Enregistrer le brouillon</span>
+                  <span class="setting-hint" id="settings-draft-hint">Le texte en cours d'écriture revient après un rechargement accidentel.</span>
+                </div>
+                <label class="switch"><input id="setting-draft" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-enter-name">Entrée envoie le message</span>
+                  <span class="setting-hint" id="settings-enter-hint">Coupé, Entrée ajoute une ligne et Ctrl+Entrée envoie.</span>
+                </div>
+                <label class="switch"><input id="setting-enter" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <h3 class="settings-section-title" id="settings-sec-code">Atelier de code</h3>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-code-save-name">Enregistrer automatiquement</span>
+                  <span class="setting-hint" id="settings-code-save-hint">Une demi-seconde après la dernière frappe. Coupé, Ctrl+S enregistre.</span>
+                </div>
+                <label class="switch"><input id="setting-code-save" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-code-wrap-name">Retour à la ligne</span>
+                  <span class="setting-hint" id="settings-code-wrap-hint">Les longues lignes reviennent à la ligne au lieu de défiler horizontalement.</span>
+                </div>
+                <label class="switch"><input id="setting-code-wrap" type="checkbox"><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-code-font-name">Taille du texte</span>
+                  <span class="setting-hint" id="settings-code-font-hint">Éditeur de l'atelier uniquement.</span>
+                </div>
+                <select id="setting-code-font" aria-labelledby="settings-code-font-name">
+                  <option value="12">12 px</option>
+                  <option value="13" selected>13 px</option>
+                  <option value="15">15 px</option>
+                  <option value="17">17 px</option>
+                </select>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-code-preview-name">Aperçu automatique</span>
+                  <span class="setting-hint" id="settings-code-preview-hint">Ouvre l'aperçu dès qu'un fichier HTML, CSS ou Markdown est ouvert.</span>
+                </div>
+                <label class="switch"><input id="setting-code-preview" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <h3 class="settings-section-title" id="settings-sec-data">Historique et données</h3>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-history-name">Mémoriser l'historique</span>
+                  <span class="setting-hint" id="settings-history-hint">Les conversations restent sur cet appareil. Coupé, seuls les réglages sont conservés.</span>
+                </div>
+                <label class="switch"><input id="setting-history" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span></label>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-clearchat-name">Effacer cette conversation</span>
+                  <span class="setting-hint" id="settings-clearchat-hint">Vide les messages de la conversation ouverte, sans toucher aux autres.</span>
+                </div>
+                <button class="secondary-button" id="settings-clear-chat" type="button">Effacer</button>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-export-name">Sauvegarde</span>
+                  <span class="setting-hint" id="settings-export-hint">Exporter ou recharger réglages, conversations et documents indexés.</span>
+                </div>
+                <button class="secondary-button" id="settings-export" type="button">Exporter</button>
+              </div>
+              <div class="setting-row">
+                <div class="setting-text">
+                  <span class="setting-name" id="settings-purge-name">Tout purger</span>
+                  <span class="setting-hint" id="settings-purge-hint">Supprime conversations, réglages, caches de modèles et documents.</span>
+                </div>
+                <button class="danger-button" id="settings-purge" type="button">Purger</button>
+              </div>
+            </section>
           </div>
-          <div class="setting-image" id="setting-image" hidden>
-            <p class="setting-label" id="setting-image-label">MODÈLE D'IMAGE</p>
-            <button class="model-picker" id="image-picker" type="button" aria-haspopup="dialog">
-              <span id="image-picker-name">SD-Turbo</span><span id="image-picker-meta">512 px · 4 pas</span>
-            </button>
-            <p id="image-info">Génération d'images locale.</p>
+          <div class="settings-foot">
+            <span class="settings-device" id="settings-device"></span>
+            <button class="secondary-button" id="settings-done" type="button">Terminé</button>
           </div>
-          <label class="model-autoload"><input id="auto-load-model" type="checkbox"><span id="auto-load-model-label">Charger automatiquement le modèle au lancement</span></label>
-          <label class="profile-field"><span id="profile-label">À propos de moi (optionnel)</span><textarea id="profile-input" maxlength="600" rows="2" placeholder="Prénom, langue, ton préféré, contexte..."></textarea></label>
-          <p class="download-info" id="download-info">The first download can take a few minutes. The model stays cached on this device.</p>
         </div>
-        <div class="document-tools" id="document-tools" hidden>
+<div class="document-tools" id="document-tools" hidden>
           <div class="document-tools-head">
             <p class="document-tools-title" id="document-tools-title">DOCUMENTS</p>
             <span class="document-tools-status" id="document-tools-status" role="status" aria-live="polite"></span>
@@ -294,6 +513,21 @@
           </div>
         </div>
         <form class="composer" id="composer">
+          <div class="composer-context" id="composer-context">
+            <div class="composer-model-wrap" id="composer-model-wrap">
+              <button type="button" class="composer-chip composer-model" id="composer-model" aria-haspopup="menu" aria-expanded="false">
+                <span class="composer-model-dot" id="composer-model-dot" aria-hidden="true"></span>
+                <span class="composer-model-name" id="composer-model-name">Choisir un modèle</span>
+                <span class="composer-model-state" id="composer-model-state"></span>
+                <span class="composer-chip-caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="composer-model-menu" id="composer-model-menu" role="menu" hidden></div>
+            </div>
+            <button type="button" class="composer-chip composer-code-context" id="composer-code-context" aria-pressed="true" hidden>
+              <span class="composer-code-glyph" aria-hidden="true">›_</span>
+              <span id="composer-code-context-name">fichier actif</span>
+            </button>
+          </div>
           <textarea id="prompt" rows="1" maxlength="4000" placeholder="Écrivez votre message..." aria-label="Votre message"></textarea>
           <input id="attachment-input" type="file" multiple hidden accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.htm,.css,.js,.mjs,.ts,.py,.xml,.yml,.yaml,.log,.rtf,.pdf,.docx,.xlsx,.xlsm,.pptx,.odt,.ods,.odp,.epub,.tex,.png,.jpg,.jpeg,.webp,.gif,.avif,.webm,.mp4,.glb,text/*,application/json,application/rtf,text/rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/epub+zip,image/*,video/*,model/gltf-binary">
           <div class="attachment-tray" id="attachment-tray" aria-live="polite" hidden></div>
@@ -352,7 +586,7 @@
   <dialog class="model-library" id="model-library" aria-labelledby="model-library-title">
     <div class="model-library-header">
       <div><p class="eyebrow" id="model-library-eyebrow">BIBLIOTHÈQUE DE MODÈLES</p><h2 id="model-library-title">Choisissez un modèle</h2></div>
-      <div class="model-library-actions"><button class="model-help-button" id="model-recommend" type="button">M'aider à choisir</button><button class="my-model-button" id="my-model-toggle" type="button">Mon modèle</button><button class="icon-button" id="model-library-close" type="button" aria-label="Fermer"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button></div>
+      <div class="model-library-actions"><button class="model-help-button" id="model-recommend" type="button">M'aider à choisir</button><button class="my-model-button" id="my-model-toggle" type="button">Mon assistant</button><button class="icon-button" id="model-library-close" type="button" aria-label="Fermer"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button></div>
     </div>
     <p class="model-library-intro" id="model-library-intro">Choisissez selon votre usage. Vous pourrez télécharger le modèle sélectionné juste après.</p>
     <div class="model-filters" id="model-filters" role="tablist" aria-label="Filtrer les modèles"></div>
@@ -360,8 +594,8 @@
     <div class="model-cards" id="model-cards"></div>
   </dialog>
   <dialog class="custom-model-dialog" id="custom-model-dialog" aria-labelledby="custom-model-title">
-    <div class="legal-header"><p class="eyebrow" id="custom-model-eyebrow">MON MODÈLE</p><button class="icon-button" id="custom-model-close" type="button" aria-label="Fermer"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button></div>
-    <h2 id="custom-model-title">Créer mon modèle</h2>
+    <div class="legal-header"><p class="eyebrow" id="custom-model-eyebrow">MON ASSISTANT</p><button class="icon-button" id="custom-model-close" type="button" aria-label="Fermer"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button></div>
+    <h2 id="custom-model-title">Mon assistant personnalisé</h2>
     <p class="custom-model-intro" id="custom-model-intro">Un modèle personnel, c'est un nom et des consignes permanentes posés sur un modèle de base déjà existant. Aucun poids d'IA n'est téléchargé ni entraîné ici.</p>
 
     <div class="custom-step">
@@ -394,6 +628,7 @@
       <button class="secondary-button" id="custom-model-disable" type="button">Revenir au modèle standard</button>
       <button class="secondary-button" id="custom-model-export" type="button">Exporter</button>
       <button class="secondary-button" id="custom-model-import" type="button">Importer</button>
+      <button class="secondary-button" id="custom-model-delete" type="button">Supprimer</button>
     </div>
     <input id="custom-model-import-file" type="file" accept="application/json,.json" hidden>
   </dialog>

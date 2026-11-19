@@ -238,9 +238,39 @@ const state = {
   attachmentJobs: [],
   attachmentNotice: "",
   selectedModel: DEFAULT_MODEL_ID,
-  code: { files: [], activeId: null, open: false, focus: "code" },
+  code: {
+    files: [],
+    openIds: [],
+    activeId: null,
+    open: false,
+    focus: "code",
+    attachFile: true,
+    preview: false,
+    pendingApply: null,
+    treeVisible: true,
+    collapsed: new Set(),
+    emptyFolders: [],
+    previewWidth: "full",
+    dirHandle: null,
+    saving: false,
+    dirty: false,
+    quick: false
+  },
   cachedModelId: null,
   autoLoadModel: false,
+  /* Reglages de la carte Parametres. Chacun a un effet reel : rien n'est
+     stocke pour l'apparence. Les valeurs par defaut reproduisent le
+     comportement d'avant, pour ne surprendre personne a la mise a jour. */
+  autoSaveDraft: true,
+  rememberHistory: true,
+  enterToSend: true,
+  streaming: true,
+  replyLength: "normal",
+  temperature: 0.7,
+  codeAutosave: true,
+  codeWrap: false,
+  codeFontSize: 13,
+  codeAutoPreview: true,
   semanticSearch: false,
   semanticVectors: null,
   lastDocumentSources: [],
@@ -309,6 +339,26 @@ const ui = {
   installTitle: document.querySelector("#install-title"),
   installClose: document.querySelector("#install-close"),
   settings: document.querySelector("#settings-panel"),
+  settingsBackdrop: document.querySelector("#settings-backdrop"),
+  settingsSub: document.querySelector("#settings-sub"),
+  settingsDevice: document.querySelector("#settings-device"),
+  settingsAssistantState: document.querySelector("#settings-assistant-state"),
+  settingsModelHint: document.querySelector("#settings-model-hint"),
+  settingStream: document.querySelector("#setting-stream"),
+  settingLength: document.querySelector("#setting-length"),
+  settingTemperature: document.querySelector("#setting-temperature"),
+  settingTempValue: document.querySelector("#setting-temp-value"),
+  settingDraft: document.querySelector("#setting-draft"),
+  settingEnter: document.querySelector("#setting-enter"),
+  settingCodeSave: document.querySelector("#setting-code-save"),
+  settingCodeWrap: document.querySelector("#setting-code-wrap"),
+  settingCodeFont: document.querySelector("#setting-code-font"),
+  settingCodePreview: document.querySelector("#setting-code-preview"),
+  settingHistory: document.querySelector("#setting-history"),
+  settingsClearChat: document.querySelector("#settings-clear-chat"),
+  settingsExport: document.querySelector("#settings-export"),
+  settingsPurge: document.querySelector("#settings-purge"),
+  settingsDone: document.querySelector("#settings-done"),
   webllm: document.querySelector("#webllm-toggle"),
   model: document.querySelector("#model-select"),
   modelInfo: document.querySelector("#model-info"),
@@ -344,6 +394,7 @@ const ui = {
   customModelDisable: document.querySelector("#custom-model-disable"),
   customModelExport: document.querySelector("#custom-model-export"),
   customModelImport: document.querySelector("#custom-model-import"),
+  customModelDelete: document.querySelector("#custom-model-delete"),
   autoLoadModel: document.querySelector("#auto-load-model"),
   exportDialog: document.querySelector("#export-dialog"),
   exportToggle: document.querySelector("#export-toggle"),
@@ -380,8 +431,49 @@ const ui = {
   codeOutputBody: document.querySelector("#code-output-body"),
   codeOutputState: document.querySelector("#code-output-state"),
   codeOutputStop: document.querySelector("#code-output-stop"),
+  codeOutputChat: document.querySelector("#code-output-chat"),
   codeOutputClear: document.querySelector("#code-output-clear"),
-  codeRun: document.querySelector("#code-run")
+  codeRun: document.querySelector("#code-run"),
+  codeBody: document.querySelector("#code-body"),
+  codeMain: document.querySelector(".code-main"),
+  codeTree: document.querySelector("#code-tree"),
+  codeTreeList: document.querySelector("#code-tree-list"),
+  codeTreeTitle: document.querySelector("#code-tree-title"),
+  codeTreeCount: document.querySelector("#code-tree-count"),
+  codeTreeToggle: document.querySelector("#code-tree-toggle"),
+  codeTreeNewFile: document.querySelector("#code-tree-new-file"),
+  codeTreeNewFolder: document.querySelector("#code-tree-new-folder"),
+  codeOpenFolder: document.querySelector("#code-open-folder"),
+  codeWriteBack: document.querySelector("#code-write-back"),
+  codeExport: document.querySelector("#code-export"),
+  codeQuick: document.querySelector("#code-quick"),
+  codeQuickOpen: document.querySelector("#code-quick-open"),
+  codeQuickInput: document.querySelector("#code-quick-input"),
+  codeQuickList: document.querySelector("#code-quick-list"),
+  codeSaveState: document.querySelector("#code-save-state"),
+  codeBinary: document.querySelector("#code-binary"),
+  codeFileInput: document.querySelector("#code-file-input"),
+  codeFolderInput: document.querySelector("#code-folder-input"),
+  codeImportFiles: document.querySelector("#code-import-files"),
+  codePreview: document.querySelector("#code-preview"),
+  codePreviewToggle: document.querySelector("#code-preview-toggle"),
+  codePreviewFrame: document.querySelector("#code-preview-frame"),
+  codePreviewStage: document.querySelector("#code-preview-stage"),
+  codePreviewTitle: document.querySelector("#code-preview-title"),
+  codePreviewNote: document.querySelector("#code-preview-note"),
+  codePreviewLog: document.querySelector("#code-preview-log"),
+  codePreviewLogWrap: document.querySelector("#code-preview-log-wrap"),
+  codePreviewLogClear: document.querySelector("#code-preview-log-clear"),
+  codePreviewOpen: document.querySelector("#code-preview-open"),
+  codePreviewRefresh: document.querySelector("#code-preview-refresh"),
+  codePreviewClose: document.querySelector("#code-preview-close"),
+  composerModel: document.querySelector("#composer-model"),
+  composerModelWrap: document.querySelector("#composer-model-wrap"),
+  composerModelName: document.querySelector("#composer-model-name"),
+  composerModelState: document.querySelector("#composer-model-state"),
+  composerModelMenu: document.querySelector("#composer-model-menu"),
+  composerCodeContext: document.querySelector("#composer-code-context"),
+  composerCodeContextName: document.querySelector("#composer-code-context-name")
 };
 
 const copy = {
@@ -536,7 +628,7 @@ const JA_PHRASES = {
   "Modèle sélectionné. Les modèles déjà téléchargés restent disponibles dans le cache. Cliquez sur Télécharger le modèle pour l'activer.": "モデルを選択しました。ダウンロード済みのモデルはキャッシュに残ります。有効にするには「モデルをダウンロード」をクリックしてください。",
   "Modèle vision prêt. Il reste en cache pour les prochaines visites.": "画像モデルの準備ができました。次回以降もキャッシュされます。",
   "Modèle vision sélectionné. Cliquez sur Télécharger le modèle pour analyser des images dans le navigateur.": "画像モデルを選択しました。「モデルをダウンロード」をクリックすると、ブラウザで画像を解析できます。",
-  "Mon modèle": "マイモデル",
+  "Mon assistant": "マイアシスタント",
   "Mémoire graphique insuffisante.": "グラフィックメモリが不足しています。",
   "Notes par partie": "部分ごとのメモ",
   "Nouvelle conversation": "新しい会話",
@@ -555,7 +647,7 @@ const JA_PHRASES = {
   "Recherche web en cours...": "ウェブを検索中…",
   "Recherchez : posez une question à l'agent...": "検索：エージェントに質問してください…",
   "Retour à l'accueil": "ホームに戻る",
-  "Réglages exportés : langue, modèle, profil et modèle personnalisé.": "設定を書き出しました：言語、モデル、プロフィール、マイモデル。",
+  "Réglages exportés : langue, modèle, profil et modèle personnalisé.": "設定を書き出しました：言語、モデル、プロフィール、マイアシスタント。",
   "Régénérer": "再生成",
   "Résume en 3 points": "3点で要約して",
   "Résumer les documents": "文書を要約",
@@ -601,9 +693,9 @@ const JA_PATTERNS = [
   [/^CONVERSATION · (.+) \(base (.+)\) ACTIF$/, m => `会話 · ${m[1]}（ベース：${m[2]}）稼働中`],
   [/^CONVERSATION · (.+) ACTIF$/, m => `会話 · ${m[1]} 稼働中`],
   [/^MODÈLE CHARGÉ · (.+)$/, m => `読み込み済みモデル · ${m[1]}`],
-  [/^MODÈLE PERSO · base (.+)$/, m => `マイモデル · ベース：${m[1]}`],
-  [/^MODÈLE PERSO · (.+)$/, m => `マイモデル · ${m[1]}`],
-  [/^« (.+) » : vos consignes permanentes[\s\S]*$/, m => `「${m[1]}」：あなたの永続的な指示がベースモデルに追加されます。「マイモデル」ボタンで編集できます。`],
+  [/^MODÈLE PERSO · base (.+)$/, m => `マイアシスタント · ベース：${m[1]}`],
+  [/^MODÈLE PERSO · (.+)$/, m => `マイアシスタント · ${m[1]}`],
+  [/^« (.+) » : vos consignes permanentes[\s\S]*$/, m => `「${m[1]}」：あなたの永続的な指示がベースモデルに追加されます。「マイアシスタント」ボタンで編集できます。`],
   [/^(\d+) documents? prêts? · (\d+) passages? indexés?$/, m => `${m[1]}件の文書 · ${m[2]}個の箇所を索引化`],
   [/^(\d+) document\(s\) rechargé\(s\) depuis cet appareil[\s\S]*$/, m => `${m[1]}件の文書をこのデバイスから再読み込みしました。ファイルを添付し直さずに質問できます。`],
   [/^(.+) : ([\s\S]+)$/, m => `${m[1]}：${m[2]}`],
@@ -881,12 +973,15 @@ function mediaExtension(url) {
   return new URL(url).pathname.split(".").pop()?.toLowerCase() || "";
 }
 
-/* Decoupe le contenu en segments texte / blocs de code (accepte un bloc non ferme). */
+/* Decoupe le contenu en segments texte / blocs de code (accepte un bloc non ferme).
+   L'info-string du bloc peut porter un nom de fichier (` ```html title=index.html `) :
+   il sert a nommer le fichier cree dans l'atelier. */
 function splitFences(source) {
   const segments = [];
   let text = [];
   let code = [];
   let language = "";
+  let meta = "";
   let inCode = false;
   const flushText = () => {
     if (!text.length) return;
@@ -895,12 +990,12 @@ function splitFences(source) {
     text = [];
   };
   for (const line of String(source).split(/\r?\n/)) {
-    const fence = line.match(/^[ \t]*(?:```|~~~)[ \t]*([a-zA-Z0-9+#._-]*)[ \t]*$/);
-    if (!inCode && fence) { flushText(); inCode = true; language = fence[1] || ""; code = []; continue; }
-    if (inCode && fence) { segments.push({ type: "code", language, value: code.join("\n") }); inCode = false; code = []; continue; }
+    const fence = line.match(/^[ \t]*(?:```|~~~)[ \t]*([a-zA-Z0-9+#._-]*)[ \t]*(.*)$/);
+    if (!inCode && fence) { flushText(); inCode = true; language = fence[1] || ""; meta = fence[2] || ""; code = []; continue; }
+    if (inCode && fence) { segments.push({ type: "code", language, meta, value: code.join("\n") }); inCode = false; code = []; meta = ""; continue; }
     if (inCode) code.push(line); else text.push(line);
   }
-  if (inCode) segments.push({ type: "code", language, value: code.join("\n") });
+  if (inCode) segments.push({ type: "code", language, meta, value: code.join("\n") });
   flushText();
   return segments;
 }
@@ -947,11 +1042,20 @@ function renderInline(source) {
   return output + escapeHtml(text.slice(lastIndex));
 }
 
-function renderCodeBlock(language, code) {
+function renderCodeBlock(language, code, options = {}) {
   const label = String(language || "").toLowerCase() || "code";
   const copyLabel = localizedText("Copier le code", "Copy code", "Copiar el código", "コードをコピー");
   const openLabel = localizedText("Ouvrir dans l'atelier", "Open in code workspace", "Abrir en el taller", "コード作業台で開く");
-  return `<div class="code-block"><div class="code-block-head"><span class="code-language">${escapeHtml(label)}</span><div class="code-actions"><button type="button" class="code-copy" data-action="open-code" title="${escapeHtml(openLabel)}" aria-label="${escapeHtml(openLabel)}">${ICON_CODE}<span>${escapeHtml(localizedText("Atelier", "Workspace", "Taller", "作業台"))}</span></button><button type="button" class="code-copy" data-action="copy-code" title="${escapeHtml(copyLabel)}" aria-label="${escapeHtml(copyLabel)}">${ICON_COPY}<span>${escapeHtml(localizedText("Copier", "Copy", "Copiar", "コピー"))}</span></button></div></div><pre><code>${highlightCode(code.replace(/\n+$/, ""), label)}</code></pre></div>`;
+  /* Un bloc de code peut revenir dans l'atelier d'un clic : sans ce bouton,
+     corriger un fichier demandait de copier la reponse puis de la recoller a
+     la main. Il n'apparait que si l'atelier est ouvert, ou juste apres une
+     action de l'atelier (le fichier cible est alors connu). */
+  const canApply = options.apply !== false && (state.code.open || Boolean(state.code.pendingApply));
+  const applyLabel = localizedText("Appliquer dans l'atelier", "Apply to the workspace", "Aplicar en el taller", "作業台に適用");
+  const applyButton = canApply
+    ? `<button type="button" class="code-copy is-apply" data-action="apply-code" title="${escapeHtml(applyLabel)}" aria-label="${escapeHtml(applyLabel)}">${ICON_CHECK}<span>${escapeHtml(localizedText("Appliquer", "Apply", "Aplicar", "適用"))}</span></button>`
+    : "";
+  return `<div class="code-block"><div class="code-block-head"><span class="code-language">${escapeHtml(label)}</span><div class="code-actions">${applyButton}<button type="button" class="code-copy" data-action="open-code" title="${escapeHtml(openLabel)}" aria-label="${escapeHtml(openLabel)}">${ICON_CODE}<span>${escapeHtml(localizedText("Atelier", "Workspace", "Taller", "作業台"))}</span></button><button type="button" class="code-copy" data-action="copy-code" title="${escapeHtml(copyLabel)}" aria-label="${escapeHtml(copyLabel)}">${ICON_COPY}<span>${escapeHtml(localizedText("Copier", "Copy", "Copiar", "コピー"))}</span></button></div></div><pre><code>${highlightCode(code.replace(/\n+$/, ""), label)}</code></pre></div>`;
 }
 
 function renderMediaBlock(line) {
@@ -1103,7 +1207,7 @@ function renderBlocks(source) {
   return html.join("");
 }
 
-function formatMessageContent(content) {
+function formatMessageContent(content, options = {}) {
   if (content.startsWith(AGENT_RESULT_PREFIX)) {
     try {
       return formatAgentResult(JSON.parse(content.slice(AGENT_RESULT_PREFIX.length)));
@@ -1112,17 +1216,30 @@ function formatMessageContent(content) {
     }
   }
   return splitFences(content)
-    .map(segment => (segment.type === "code" ? renderCodeBlock(segment.language, segment.value) : renderBlocks(segment.value)))
+    .map(segment => (segment.type === "code" ? renderCodeBlock(segment.language, segment.value, options) : renderBlocks(segment.value)))
     .join("");
 }
 
 /* --------------------------------------------------------------------------
- * Atelier code : editeur a gauche, conversation a droite.
- * Les fichiers vivent dans IndexedDB (localStorage est trop petit).
+ * Atelier de code : un projet, pas un brouillon.
+ * Les fichiers vivent dans IndexedDB (localStorage est trop petit) avec leur
+ * chemin, ce qui permet une arborescence, un import de dossier complet et un
+ * export en archive. L'apercu reconstruit la page demandee avec ses CSS, ses
+ * scripts et ses images, puis l'affiche dans une iframe sandboxee.
  * ------------------------------------------------------------------------ */
 
-const CODE_DB_NAME = "simia.workspace";
+const CODE_DB_NAME = "simia.project";
+const CODE_LEGACY_DB_NAME = "simia.workspace";
 const CODE_STORE = "files";
+/* L'aperçu a besoin de laisser tourner le JavaScript du projet. Une iframe
+   sandboxee herite de la CSP de la page : sans nonce, tout script inline est
+   bloque. Ce nonce est donc le seul moyen d'executer le code de l'utilisateur
+   sans ouvrir 'unsafe-inline' a toute la page. */
+const CODE_PREVIEW_NONCE = "simiapreview";
+const CODE_PREVIEW_EVENT = "simia-preview";
+const CODE_IMPORT_MAX_BYTES = 2 * 1024 * 1024;
+const CODE_IMPORT_MAX_FILES = 800;
+
 /* Budget du prompt, partage par la conversation et l'atelier.
  * - CODE_CTX_TOKENS : fenetre reelle du modele (le lanceur l'annonce) ;
  * - CHARS_PER_TOKEN : ratio volontairement pessimiste, le code repetitif et le
@@ -1131,8 +1248,11 @@ const CODE_STORE = "files";
  *   retirees ; au-dela, llama-server et WebLLM renvoient une erreur. */
 const CODE_CTX_TOKENS = NATIVE && Number(NATIVE.ctxSize) > 0 ? Number(NATIVE.ctxSize) : 4096;
 const CHAT_REPLY_TOKENS = 640;
+/* Le reglage « longueur des reponses » peut monter a 1024 : le budget du
+   prompt se cale sur ce maximum, sinon la fenetre du modele deborde. */
+const CHAT_REPLY_TOKENS_MAX = 1024;
 const CHARS_PER_TOKEN = 2.6;
-const PROMPT_TOKEN_BUDGET = Math.max(1200, Math.floor(CODE_CTX_TOKENS * 0.92) - CHAT_REPLY_TOKENS);
+const PROMPT_TOKEN_BUDGET = Math.max(1200, Math.floor(CODE_CTX_TOKENS * 0.92) - CHAT_REPLY_TOKENS_MAX);
 /* Il reste a loger la consigne systeme et l'historique recent. */
 const CODE_PROMPT_LIMIT = Math.max(4000, Math.floor((PROMPT_TOKEN_BUDGET - 700) * CHARS_PER_TOKEN));
 const CODE_RUN_TIMEOUT = NATIVE ? 15000 : 12000;
@@ -1142,20 +1262,36 @@ const CODE_LANGUAGES = {
   ts: "typescript", tsx: "tsx", rs: "rust", go: "go", java: "java", kt: "kotlin",
   c: "c", h: "c", cpp: "cpp", cc: "cpp", hpp: "cpp", cs: "csharp", rb: "ruby",
   php: "php", swift: "swift", dart: "dart", html: "html", htm: "html", css: "css",
-  scss: "scss", json: "json", sql: "sql", sh: "bash", bash: "bash", zsh: "bash",
-  ps1: "powershell", yml: "yaml", yaml: "yaml", md: "markdown", txt: "text"
+  scss: "scss", sass: "scss", less: "css", json: "json", sql: "sql", sh: "bash",
+  bash: "bash", zsh: "bash", ps1: "powershell", yml: "yaml", yaml: "yaml",
+  md: "markdown", markdown: "markdown", txt: "text", svg: "svg", xml: "xml",
+  vue: "html", svelte: "html", astro: "html", toml: "text", env: "text"
 };
 
 const CODE_EXTENSIONS = {
   python: "py", javascript: "js", jsx: "jsx", typescript: "ts", tsx: "tsx", rust: "rs",
   go: "go", java: "java", kotlin: "kt", c: "c", cpp: "cpp", csharp: "cs", ruby: "rb",
   php: "php", swift: "swift", dart: "dart", html: "html", css: "css", scss: "scss",
-  json: "json", sql: "sql", bash: "sh", powershell: "ps1", yaml: "yml",
-  markdown: "md", text: "txt"
+  json: "json", sql: "sql", bash: "sh", powershell: "ps1", yaml: "yml", xml: "xml",
+  svg: "svg", markdown: "md", text: "txt"
 };
+
+const CODE_RUNNABLE = ["javascript", "python"];
+/* Le moteur vit dans code-runner.js : un worker charge depuis un fichier a sa
+ * propre politique de securite, alors que le document interdit 'unsafe-eval'.
+ * Un worker Blob heriterait de la CSP de la page et refuserait le code colle. */
+const CODE_RUNNER_URL = "code-runner.js";
+const CODE_BINARY_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "ico", "bmp", "woff", "woff2", "ttf", "otf", "mp4", "webm", "mp3", "wav", "pdf", "zip", "gz"]);
+const CODE_PREVIEWABLE = new Set(["html", "htm", "svg", "css", "scss", "md", "markdown", "javascript", "mjs", "cjs"]);
 
 let codeDbPromise = null;
 let codeSaveTimer = 0;
+let codePreviewTimer = 0;
+let codeRunWorker = null;
+let activeCodeRun = null;
+let codeQuickIndex = 0;
+
+/* --- Stockage ------------------------------------------------------------ */
 
 function codeDatabase() {
   if (!("indexedDB" in window)) return Promise.resolve(null);
@@ -1197,13 +1333,60 @@ async function codeFileDelete(id) {
   try { db.transaction(CODE_STORE, "readwrite").objectStore(CODE_STORE).delete(id); } catch { /* stockage indisponible */ }
 }
 
-function activeCodeFile() {
-  return state.code.files.find(file => file.id === state.code.activeId) || null;
+/* Les versions precedentes ne connaissaient qu'un nom de fichier. Le chemin
+   ajoute l'arborescence : on reprend les anciens fichiers tels quels. */
+async function codeMigrateLegacyFiles() {
+  if (!("indexedDB" in window)) return;
+  await new Promise(resolve => {
+    let request;
+    try { request = indexedDB.open(CODE_LEGACY_DB_NAME); } catch { resolve(); return; }
+    request.onupgradeneeded = () => { /* base absente : rien a reprendre */ };
+    request.onerror = () => resolve();
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(CODE_STORE)) { db.close(); resolve(); return; }
+      try {
+        const read = db.transaction(CODE_STORE, "readonly").objectStore(CODE_STORE).getAll();
+        read.onsuccess = async () => {
+          const legacy = Array.isArray(read.result) ? read.result : [];
+          for (const item of legacy) {
+            if (!item?.content && item?.content !== "") continue;
+            const path = uniqueCodePath(String(item.name || "snippet.txt"));
+            await codeFileSave({ id: item.id, path, content: String(item.content), binary: false, updatedAt: item.updatedAt || Date.now(), diskPath: "" });
+          }
+          db.close();
+          try { indexedDB.deleteDatabase(CODE_LEGACY_DB_NAME); } catch { /* optionnel */ }
+          resolve();
+        };
+        read.onerror = () => { db.close(); resolve(); };
+      } catch { db.close(); resolve(); }
+    };
+  });
 }
 
-function codeLanguageFor(name, fallback = "text") {
-  const extension = String(name || "").split(".").pop()?.toLowerCase() || "";
-  return CODE_LANGUAGES[extension] || fallback;
+/* --- Modele de fichier --------------------------------------------------- */
+
+function codePathOf(file) {
+  return String(file?.path || file?.name || "");
+}
+
+function codeFileNameOf(path) {
+  return String(path || "").split("/").filter(Boolean).pop() || "";
+}
+
+function codeDirOf(path) {
+  const parts = String(path || "").split("/").filter(Boolean);
+  parts.pop();
+  return parts.join("/");
+}
+
+function codeExtensionOf(path) {
+  const name = codeFileNameOf(path);
+  return name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+}
+
+function codeLanguageFor(path, fallback = "text") {
+  return CODE_LANGUAGES[codeExtensionOf(path)] || fallback;
 }
 
 /* Accepte aussi bien « js » (extension) que « javascript » (nom de langage). */
@@ -1215,30 +1398,238 @@ function normalizeCodeLanguage(value) {
   return "text";
 }
 
-function suggestCodeName(language) {
-  const extension = CODE_EXTENSIONS[String(language || "").toLowerCase()] || "txt";
-  const taken = new Set(state.code.files.map(file => file.name));
-  let name = `snippet.${extension}`;
-  let index = 1;
-  while (taken.has(name)) {
+function codeNormalizePath(raw) {
+  return String(raw || "")
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter(part => part && part !== ".")
+    .join("/");
+}
+
+function activeCodeFile() {
+  return state.code.files.find(file => file.id === state.code.activeId) || null;
+}
+
+function codeFileById(id) {
+  return state.code.files.find(file => file.id === id) || null;
+}
+
+function uniqueCodePath(path) {
+  const clean = codeNormalizePath(path) || "snippet.txt";
+  if (!state.code.files.some(file => codePathOf(file).toLowerCase() === clean.toLowerCase())) return clean;
+  const dir = codeDirOf(clean);
+  const name = codeFileNameOf(clean);
+  const dot = name.lastIndexOf(".");
+  const base = dot > 0 ? name.slice(0, dot) : name;
+  const extension = dot > 0 ? name.slice(dot) : "";
+  let index = 2;
+  let candidate = `${dir ? `${dir}/` : ""}${base}-${index}${extension}`;
+  while (state.code.files.some(file => codePathOf(file).toLowerCase() === candidate.toLowerCase())) {
     index += 1;
-    name = `snippet-${index}.${extension}`;
+    candidate = `${dir ? `${dir}/` : ""}${base}-${index}${extension}`;
   }
-  return name;
+  return candidate;
 }
 
-function setCodeNewMenu(open) {
-  if (!ui.codeNewMenu || !ui.codeNew) return;
-  ui.codeNewMenu.hidden = !open;
-  ui.codeNew.setAttribute("aria-expanded", String(Boolean(open)));
+function suggestCodePath(language) {
+  const extension = CODE_EXTENSIONS[String(language || "").toLowerCase()] || "txt";
+  return uniqueCodePath(`snippet.${extension}`);
 }
 
-/* Types proposes dans le selecteur du bas : changer l'extension change le
- * langage, la coloration et l'execution possible. */
+function codeFileCreate(seed = {}) {
+  const path = uniqueCodePath(seed.path || suggestCodePath(seed.language));
+  const file = {
+    id: globalThis.crypto?.randomUUID?.() || `f${Date.now()}${Math.random().toString(16).slice(2)}`,
+    path,
+    content: String(seed.content ?? ""),
+    binary: Boolean(seed.binary),
+    dataUrl: seed.dataUrl || "",
+    language: normalizeCodeLanguage(seed.language || codeLanguageFor(path)),
+    diskPath: seed.diskPath || "",
+    updatedAt: Date.now()
+  };
+  state.code.files.push(file);
+  codeFileSave(file);
+  state.code.activeId = file.id;
+  if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
+  codeMarkSaved();
+  return file;
+}
+
+function codeFileRemove(id) {
+  const index = state.code.files.findIndex(file => file.id === id);
+  if (index < 0) return;
+  state.code.files.splice(index, 1);
+  state.code.openIds = state.code.openIds.filter(openId => openId !== id);
+  codeFileDelete(id);
+  if (state.code.activeId === id) {
+    state.code.activeId = state.code.openIds[state.code.openIds.length - 1] || state.code.files[0]?.id || null;
+  }
+  codeMarkSaved();
+}
+
+function codeFolderCreate(path) {
+  const clean = codeNormalizePath(path);
+  if (!clean) return;
+  /* Un dossier n'existe que par ses fichiers : on garde une liste de dossiers
+     vides pour qu'il apparaisse et accepte un fichier. */
+  if (!state.code.emptyFolders.includes(clean)) state.code.emptyFolders.push(clean);
+  codeMarkSaved();
+}
+
+function codeRenameFile(id, nextPath) {
+  const file = codeFileById(id);
+  if (!file) return;
+  const clean = codeNormalizePath(nextPath);
+  if (!clean || clean === codePathOf(file)) return;
+  const clash = state.code.files.some(other => other.id !== id && codePathOf(other).toLowerCase() === clean.toLowerCase());
+  file.path = clash ? uniqueCodePath(clean) : clean;
+  file.language = normalizeCodeLanguage(codeLanguageFor(file.path, file.language));
+  file.updatedAt = Date.now();
+  file.diskPath = "";
+  codeFileSave(file);
+  codeMarkSaved();
+  renderCodeTabs();
+  renderCodeEditor();
+  renderCodeTree();
+}
+
+function codeRenameFolder(oldPath, nextPath) {
+  const from = codeNormalizePath(oldPath);
+  const to = codeNormalizePath(nextPath);
+  if (!from || !to || from === to) return;
+  state.code.files.forEach(file => {
+    const path = codePathOf(file);
+    if (path !== from && !path.startsWith(`${from}/`)) return;
+    file.path = `${to}${path.slice(from.length)}`;
+    file.updatedAt = Date.now();
+    file.diskPath = "";
+    codeFileSave(file);
+  });
+  state.code.emptyFolders = state.code.emptyFolders.map(folder => (folder === from || folder.startsWith(`${from}/`) ? `${to}${folder.slice(from.length)}` : folder));
+  codeMarkSaved();
+  renderCodeTabs();
+  renderCodeEditor();
+  renderCodeTree();
+}
+
+function codeDeleteFolder(path) {
+  const dir = codeNormalizePath(path);
+  if (!dir) return;
+  [...state.code.files].forEach(file => {
+    const filePath = codePathOf(file);
+    if (filePath === dir || filePath.startsWith(`${dir}/`)) codeFileRemove(file.id);
+  });
+  state.code.emptyFolders = state.code.emptyFolders.filter(folder => folder !== dir && !folder.startsWith(`${dir}/`));
+  codeMarkSaved();
+  renderCodeTabs();
+  renderCodeEditor();
+  renderCodeTree();
+}
+
+/* --- Arborescence -------------------------------------------------------- */
+
+function codeTreeModel() {
+  const root = { type: "folder", name: "", path: "", children: new Map(), depth: 0 };
+  const insert = (path, node) => {
+    const parts = path.split("/").filter(Boolean);
+    let cursor = root;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const name = parts[index];
+      if (!cursor.children.has(name)) {
+        cursor.children.set(name, {
+          type: "folder",
+          name,
+          path: parts.slice(0, index + 1).join("/"),
+          children: new Map(),
+          depth: index + 1
+        });
+      }
+      cursor = cursor.children.get(name);
+    }
+    cursor.children.set(node.name, node);
+  };
+  state.code.emptyFolders.forEach(folder => {
+    const parts = folder.split("/").filter(Boolean);
+    let cursor = root;
+    parts.forEach((name, index) => {
+      if (!cursor.children.has(name)) {
+        cursor.children.set(name, { type: "folder", name, path: parts.slice(0, index + 1).join("/"), children: new Map(), depth: index + 1 });
+      }
+      cursor = cursor.children.get(name);
+    });
+  });
+  state.code.files.forEach(file => {
+    const path = codePathOf(file);
+    insert(path, { type: "file", name: codeFileNameOf(path), path, file, depth: path.split("/").length - 1 });
+  });
+  return root;
+}
+
+function codeCollator() {
+  return new Intl.Collator(state.language, { numeric: true, sensitivity: "base" });
+}
+
+function renderCodeTree() {
+  if (!ui.codeTreeList) return;
+  const collapsed = state.code.collapsed;
+  const sortNodes = nodes => [...nodes].sort((first, second) => {
+    if (first.type !== second.type) return first.type === "folder" ? -1 : 1;
+    return codeCollator().compare(first.name, second.name);
+  });
+  const rows = [];
+  const walk = (node, depth) => {
+    sortNodes(node.children.values()).forEach(child => {
+      if (child.type === "folder") {
+        const isOpen = !collapsed.has(child.path);
+        rows.push(`<div class="code-tree-row code-tree-folder" data-tree-folder="${escapeHtml(child.path)}" data-depth="${depth}" role="treeitem" aria-expanded="${isOpen}"><span class="code-tree-twist">${isOpen ? "▾" : "▸"}</span><span class="code-tree-icon" aria-hidden="true"></span><span class="code-tree-name">${escapeHtml(child.name)}</span><span class="code-tree-actions"><button type="button" data-tree-rename="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Renommer le dossier", "Rename folder", "Renombrar la carpeta", "フォルダ名を変更"))}">✎</button><button type="button" data-tree-delete="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Supprimer le dossier", "Delete folder", "Eliminar la carpeta", "フォルダを削除"))}">✕</button></span></div>`);
+        if (isOpen) walk(child, depth + 1);
+        return;
+      }
+      const active = child.file.id === state.code.activeId;
+      const open = state.code.openIds.includes(child.file.id);
+      const binary = child.file.binary ? ' data-binary="1"' : "";
+      rows.push(`<div class="code-tree-row code-tree-file${active ? " is-active" : ""}${open ? " is-open" : ""}" data-tree-file="${escapeHtml(child.file.id)}" data-depth="${depth}" role="treeitem" aria-selected="${active}"${binary}><span class="code-tree-icon" aria-hidden="true">${codeLanguageBadge(child.path)}</span><span class="code-tree-name">${escapeHtml(child.name)}</span><span class="code-tree-actions"><button type="button" data-tree-rename="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Renommer", "Rename", "Renombrar", "名前を変更"))}">✎</button><button type="button" data-tree-delete="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Supprimer", "Delete", "Eliminar", "削除"))}">✕</button></span></div>`);
+    });
+  };
+  walk(codeTreeModel(), 0);
+  ui.codeTreeList.innerHTML = rows.length
+    ? rows.join("")
+    : `<p class="code-tree-empty">${escapeHtml(localizedText("Projet vide. Créez un fichier ou importez un dossier.", "Empty project. Create a file or import a folder.", "Proyecto vacío. Crea un archivo o importa una carpeta.", "プロジェクトは空です。ファイルを作成するかフォルダを読み込みます。"))}</p>`;
+  if (ui.codeTreeCount) ui.codeTreeCount.textContent = String(state.code.files.length);
+  renderCodeTabs();
+}
+
+function codeLanguageBadge(path) {
+  const extension = codeExtensionOf(path);
+  const label = extension ? extension.slice(0, 3) : "txt";
+  return `<span class="code-tree-ext">${escapeHtml(label)}</span>`;
+}
+
+/* --- Onglets et editeur -------------------------------------------------- */
+
+function renderCodeTabs() {
+  if (!ui.codeTabs) return;
+  const closeLabel = localizedText("Fermer le fichier", "Close file", "Cerrar archivo", "ファイルを閉じる");
+  const openFiles = state.code.openIds.map(codeFileById).filter(Boolean);
+  ui.codeTabs.innerHTML = openFiles.length
+    ? openFiles.map(file => {
+        const active = file.id === state.code.activeId;
+        const path = codePathOf(file);
+        return `<button type="button" class="code-tab${active ? " active" : ""}" role="tab" aria-selected="${active}" data-code-tab="${escapeHtml(file.id)}" title="${escapeHtml(path)}"><span class="code-tab-name">${escapeHtml(codeFileNameOf(path))}</span><span class="code-tab-close" role="button" tabindex="-1" data-code-close="${escapeHtml(file.id)}" title="${escapeHtml(closeLabel)}" aria-label="${escapeHtml(closeLabel)}">✕</span></button>`;
+      }).join("")
+    : `<span class="code-tab-empty">${escapeHtml(localizedText("Aucun fichier ouvert", "No file open", "Ningún archivo abierto", "ファイルなし"))}</span>`;
+  renderCodeTreeCount();
+}
+
+function renderCodeTreeCount() {
+  if (ui.codeTreeCount) ui.codeTreeCount.textContent = String(state.code.files.length);
+}
+
 const CODE_LANG_CHOICES = [
   "javascript", "typescript", "python", "html", "css", "scss", "json", "markdown",
-  "sql", "bash", "powershell", "yaml", "rust", "go", "java", "kotlin", "swift",
-  "dart", "c", "cpp", "csharp", "ruby", "php", "text"
+  "sql", "bash", "powershell", "yaml", "xml", "svg", "rust", "go", "java", "kotlin",
+  "swift", "dart", "c", "cpp", "csharp", "ruby", "php", "text"
 ];
 
 function fillCodeLangSelect() {
@@ -1251,10 +1642,12 @@ function fillCodeLangSelect() {
   }));
 }
 
-function renameCodeExtension(name, language) {
+function codeRenameExtension(path, language) {
   const extension = CODE_EXTENSIONS[language] || "txt";
-  const base = String(name || "snippet").replace(/\.[^.]+$/, "") || "snippet";
-  return `${base}.${extension}`;
+  const dir = codeDirOf(path);
+  const name = codeFileNameOf(path);
+  const base = name.includes(".") ? name.slice(0, name.lastIndexOf(".")) : name;
+  return `${dir ? `${dir}/` : ""}${base || "snippet"}.${extension}`;
 }
 
 function applyCodeLanguage(language) {
@@ -1263,95 +1656,69 @@ function applyCodeLanguage(language) {
   const next = normalizeCodeLanguage(language);
   if (next === file.language) return;
   file.language = next;
-  file.name = renameCodeExtension(file.name, next);
+  file.path = codeRenameExtension(codePathOf(file), next);
   file.updatedAt = Date.now();
   codeFileSave(file);
+  codeMarkSaved();
   renderCodeTabs();
+  renderCodeTree();
   renderCodeEditor();
-}
-
-function createCodeFile(seed = null) {
-  const language = normalizeCodeLanguage(seed?.language);
-  const file = {
-    id: globalThis.crypto?.randomUUID?.() || `f${Date.now()}${Math.random().toString(16).slice(2)}`,
-    name: seed?.name || suggestCodeName(language),
-    language,
-    content: seed?.code || "",
-    updatedAt: Date.now()
-  };
-  state.code.files.push(file);
-  state.code.activeId = file.id;
-  codeFileSave(file);
-  renderCodeTabs();
-  renderCodeEditor();
-  return file;
-}
-
-function closeCodeFile(id) {
-  const index = state.code.files.findIndex(file => file.id === id);
-  if (index < 0) return;
-  const [removed] = state.code.files.splice(index, 1);
-  codeFileDelete(removed.id);
-  if (state.code.activeId === id) {
-    state.code.activeId = state.code.files[Math.max(0, index - 1)]?.id || null;
-  }
-  renderCodeTabs();
-  renderCodeEditor();
-}
-
-function renderCodeTabs() {
-  if (!ui.codeTabs) return;
-  const closeLabel = localizedText("Fermer le fichier", "Close file", "Cerrar archivo", "ファイルを閉じる");
-  ui.codeTabs.innerHTML = state.code.files.length
-    ? state.code.files.map(file => {
-        const active = file.id === state.code.activeId;
-        return `<button type="button" class="code-tab${active ? " active" : ""}" role="tab" aria-selected="${active}" data-code-tab="${escapeHtml(file.id)}"><span class="code-tab-name">${escapeHtml(file.name)}</span><span class="code-tab-close" role="button" tabindex="-1" data-code-close="${escapeHtml(file.id)}" title="${escapeHtml(closeLabel)}" aria-label="${escapeHtml(closeLabel)}">✕</span></button>`;
-      }).join("")
-    : `<span class="code-tab-empty">${escapeHtml(localizedText("Aucun fichier ouvert", "No file open", "Ningún archivo abierto", "ファイルなし"))}</span>`;
 }
 
 function updateCodeMeta() {
   if (!ui.codeMeta) return;
-  const file = activeCodeFile();
   renderCodeModelHint();
+  const file = activeCodeFile();
   if (!file) { ui.codeMeta.textContent = ""; return; }
-  const lines = ui.codeInput.value.split("\n").length;
-  const chars = ui.codeInput.value.length;
+  const lines = file.binary ? 0 : ui.codeInput.value.split("\n").length;
+  const chars = file.binary ? 0 : ui.codeInput.value.length;
   ui.codeMeta.textContent = localizedText(
     `${lines} ligne(s) · ${chars} caractère(s) · ${file.language}`,
     `${lines} line(s) · ${chars} character(s) · ${file.language}`,
     `${lines} línea(s) · ${chars} carácter(es) · ${file.language}`,
     `${lines} 行 · ${chars} 文字 · ${file.language}`
   );
+  renderCodeSaveState();
 }
 
-/* L'atelier ne dit pas avec quel modele on code. Un generaliste y repond, mais
-   un modele de la categorie Code ecrit plus juste : on le signale ici, avec la
-   porte ouverte sur la bibliotheque deja filtree. */
+function renderCodeSaveState() {
+  if (!ui.codeSaveState) return;
+  const saving = Boolean(state.code.saving);
+  const pending = Boolean(state.code.dirty);
+  ui.codeSaveState.dataset.state = saving ? "saving" : pending ? "pending" : "saved";
+  ui.codeSaveState.textContent = saving
+    ? localizedText("Enregistrement…", "Saving…", "Guardando…", "保存中…")
+    : pending
+      ? state.codeAutosave
+        ? localizedText("Modifications…", "Unsaved changes…", "Cambios…", "未保存…")
+        : localizedText("Ctrl+S pour enregistrer", "Ctrl+S to save", "Ctrl+S para guardar", "Ctrl+S で保存")
+      : localizedText("Enregistré", "Saved", "Guardado", "保存済み");
+}
+
+/* L'atelier nomme toujours le modele avec lequel on code. Avant, il ne le
+   faisait que pour signaler un generaliste : on ne savait pas qui repondait. */
 function renderCodeModelHint() {
   if (!ui.codeModelHint) return;
   const model = MODELS.find(candidate => candidate.id === state.selectedModel);
+  ui.codeModelHint.hidden = !model;
+  if (!model) return;
+  const live = state.loadedModelId === model.id && (NATIVE || state.useWebLLM);
+  const profile = state.customModelActive && state.customModel ? state.customModel : null;
+  const name = profile ? profile.name : model.name;
   const isCodeModel = String(model?.category || "").toLowerCase() === "code";
-  const visible = Boolean(model && !isCodeModel && state.code.open);
-  ui.codeModelHint.hidden = !visible;
-  if (!visible) return;
   ui.codeModelHintText.textContent = localizedText(
-    `Atelier ouvert avec ${model.name}.`,
-    `Workspace open with ${model.name}.`,
-    `Taller abierto con ${model.name}.`,
-    `作業台は ${model.name} で開いています。`
+    `Modèle de l'atelier : ${name}${live ? " (actif)" : " (à charger)"}${isCodeModel ? "" : " · un modèle Code écrit plus juste"}.`,
+    `Workspace model: ${name}${live ? " (active)" : " (not loaded)"}${isCodeModel ? "" : " · a Code model writes more accurately"}.`,
+    `Modelo del taller: ${name}${live ? " (activo)" : " (sin cargar)"}${isCodeModel ? "" : " · un modelo de Código es más preciso"}.`,
+    `作業台のモデル：${name}${live ? "（有効）" : "（未読み込み）"}${isCodeModel ? "" : " · コード用モデルの方が正確です"}。`
   );
-  ui.codeModelHintAction.textContent = localizedText(
-    "Choisir un modèle de code",
-    "Pick a code model",
-    "Elegir un modelo de código",
-    "コード用モデルを選ぶ"
-  );
+  ui.codeModelHintAction.textContent = localizedText("Changer de modèle", "Change model", "Cambiar de modelo", "モデルを変更");
 }
 
 function updateCodeHighlight() {
   if (!ui.codeHighlight || !ui.codeInput) return;
   const file = activeCodeFile();
+  if (file?.binary) { ui.codeHighlight.innerHTML = ""; if (ui.codeGutter) ui.codeGutter.textContent = ""; return; }
   ui.codeHighlight.innerHTML = `${highlightCode(ui.codeInput.value, file?.language)}\n`;
   const lines = ui.codeInput.value.split("\n").length;
   let gutter = "";
@@ -1362,25 +1729,782 @@ function updateCodeHighlight() {
   if (ui.codeGutter) ui.codeGutter.scrollTop = ui.codeInput.scrollTop;
 }
 
-/* --------------------------------------------------------------------------
- * Execution du code : Worker isole (aucun acces au DOM), JavaScript natif et
- * Python via Pyodide charge a la demande. Le worker est termine au dela du delai.
- * ------------------------------------------------------------------------ */
+function codeBinaryPreviewMarkup(file) {
+  if (file?.dataUrl && attachmentKind({ type: "", name: file.path }) === "image") {
+    return `<img src="${escapeHtml(file.dataUrl)}" alt="${escapeHtml(codePathOf(file))}">`;
+  }
+  return `<span>${escapeHtml(localizedText("Fichier binaire", "Binary file", "Archivo binario", "バイナリファイル"))}</span>`;
+}
 
-const CODE_RUNNABLE = ["javascript", "python"];
+function renderCodeEditor() {
+  if (!ui.codeInput) return;
+  fillCodeLangSelect();
+  const file = activeCodeFile();
+  if (!file) {
+    ui.codeInput.value = "";
+    ui.codeInput.disabled = true;
+    ui.codeInput.placeholder = localizedText("Créez un fichier avec +", "Create a file with +", "Crea un archivo con +", "＋でファイルを作成");
+    ui.codeHighlight.innerHTML = "";
+    if (ui.codeGutter) ui.codeGutter.textContent = "";
+    if (ui.codeMeta) ui.codeMeta.textContent = "";
+    if (ui.codeLang) ui.codeLang.disabled = true;
+    if (ui.codeBinary) ui.codeBinary.hidden = true;
+    refreshCodeActions();
+    renderComposerCodeContext();
+    if (state.code.preview) setCodePreview(false);
+    return;
+  }
+  if (ui.codeLang) {
+    ui.codeLang.disabled = file.binary;
+    ui.codeLang.value = normalizeCodeLanguage(file.language);
+  }
+  if (file.binary) {
+    ui.codeInput.value = "";
+    ui.codeInput.disabled = true;
+    ui.codeInput.placeholder = "";
+    ui.codeHighlight.innerHTML = "";
+    if (ui.codeGutter) ui.codeGutter.textContent = "";
+    if (ui.codeBinary) {
+      ui.codeBinary.hidden = false;
+      ui.codeBinary.innerHTML = codeBinaryPreviewMarkup(file);
+    }
+  } else {
+    if (ui.codeBinary) ui.codeBinary.hidden = true;
+    ui.codeInput.disabled = false;
+    ui.codeInput.placeholder = "";
+    if (document.activeElement !== ui.codeInput || ui.codeInput.value !== file.content) ui.codeInput.value = file.content;
+    updateCodeHighlight();
+  }
+  updateCodeMeta();
+  refreshCodeActions();
+  renderComposerCodeContext();
+  syncCodeAutoPreview(file);
+  if (state.code.preview) refreshCodePreview();
+}
 
-/* Le moteur vit dans code-runner.js : un worker charge depuis un fichier a sa
- * propre politique de securite, alors que le document interdit 'unsafe-eval'.
- * Un worker Blob heriterait de la CSP de la page et refuserait le code colle. */
-const CODE_RUNNER_URL = "code-runner.js";
+/* Les fichiers non enregistres ne doivent pas disparaitre si l'onglet se ferme
+   ou si l'on quitte l'atelier : on ecrit une derniere fois, sans attendre. */
+function flushCodePersistence() {
+  clearTimeout(codeSaveTimer);
+  state.code.files.forEach(file => {
+    if (!file) return;
+    file.updatedAt = Date.now();
+    codeFileSave(file);
+  });
+  state.code.saving = false;
+  state.code.dirty = false;
+  renderCodeSaveState();
+}
 
-let codeWorker = null;
-let activeCodeRun = null;
+window.addEventListener("pagehide", flushCodePersistence);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushCodePersistence();
+});
 
-function codeRuntimeLabel(state) {
-  return state === "error"
+/* Reglage « Aperçu automatique » : ouvrir une page HTML, un CSS ou un Markdown
+   affiche son rendu sans clic. On ne le fait qu'au changement de fichier, pas
+   a chaque frappe, et on referme l'apercu en passant a un fichier qu'il ne sait
+   pas rendre (sinon la page precedente resterait affichee). */
+let codeAutoPreviewForId = null;
+
+function syncCodeAutoPreview(file) {
+  if (!ui.codePreview) return;
+  if (!file) { codeAutoPreviewForId = null; return; }
+  if (codeAutoPreviewForId === file.id) return;
+  codeAutoPreviewForId = file.id;
+  const extension = codeExtensionOf(codePathOf(file));
+  /* Le JavaScript se previsualise (console seule) mais n'a pas de rendu : on
+     ne l'ouvre pas tout seul, il n'apporte rien sans clic. */
+  const auto = ["html", "htm", "svg", "css", "scss", "md", "markdown"].includes(extension);
+  if (!auto) {
+    if (state.code.preview) setCodePreview(false);
+    return;
+  }
+  if (state.codeAutoPreview && !state.code.preview) setCodePreview(true);
+}
+
+function onCodeInput() {
+  const file = activeCodeFile();
+  if (!file || file.binary) return;
+  file.content = ui.codeInput.value;
+  file.updatedAt = Date.now();
+  state.code.dirty = true;
+  if (!state.codeAutosave) {
+    /* Reglage coupe : le fichier reste marque modifie, Ctrl+S enregistre.
+       On ne laisse pas la barre d'etat affirmer le contraire. */
+    state.code.saving = false;
+    renderCodeSaveState();
+    updateCodeHighlight();
+    updateCodeMeta();
+    return;
+  }
+  state.code.saving = true;
+  renderCodeSaveState();
+  updateCodeHighlight();
+  updateCodeMeta();
+  clearTimeout(codeSaveTimer);
+  codeSaveTimer = setTimeout(() => {
+    codeFileSave(file);
+    state.code.saving = false;
+    renderCodeSaveState();
+  }, 450);
+  /* L'aperçu suit la frappe : c'est ce qui rend l'atelier utilisable pour du
+     HTML ou du CSS, sans relancer ni recharger quoi que ce soit. */
+  if (state.code.preview) {
+    clearTimeout(codePreviewTimer);
+    codePreviewTimer = setTimeout(refreshCodePreview, 420);
+  }
+}
+
+/* Indentation conservee quand on appuie sur Entree, deux espaces pour Tab. */
+function onCodeKeydown(event) {
+  if (event.key === "Tab") {
+    event.preventDefault();
+    const start = ui.codeInput.selectionStart;
+    const end = ui.codeInput.selectionEnd;
+    ui.codeInput.setRangeText("  ", start, end, "end");
+    onCodeInput();
+    return;
+  }
+  if (event.key === "Enter" && !event.shiftKey) {
+    const position = ui.codeInput.selectionStart;
+    const before = ui.codeInput.value.slice(0, position);
+    const line = before.slice(before.lastIndexOf("\n") + 1);
+    const indent = (line.match(/^[ \t]*/) || [""])[0];
+    const extra = /[{([]\s*$/.test(line) ? "  " : "";
+    if (indent || extra) {
+      event.preventDefault();
+      const insert = `\n${indent}${extra}`;
+      ui.codeInput.setRangeText(insert, ui.codeInput.selectionStart, ui.codeInput.selectionEnd, "end");
+      onCodeInput();
+      return;
+    }
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    const file = activeCodeFile();
+    if (!file) return;
+    if (!file.binary) file.content = ui.codeInput.value;
+    codeFileSave(file);
+    state.code.dirty = false;
+    renderCodeSaveState();
+    toast(localizedText("Fichier enregistré.", "File saved.", "Archivo guardado.", "ファイルを保存しました。"));
+    return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    runCodeAction("run");
+  }
+}
+
+/* --- Recherche rapide (Ctrl/Cmd+P) --------------------------------------- */
+
+function setCodeQuickOpen(open) {
+  if (!ui.codeQuick) return;
+  state.code.quick = Boolean(open);
+  ui.codeQuick.hidden = !open;
+  if (!open) return;
+  ui.codeQuickInput.value = "";
+  codeQuickIndex = 0;
+  renderCodeQuickList("");
+  ui.codeQuickInput.focus();
+}
+
+function renderCodeQuickList(query) {
+  if (!ui.codeQuickList) return;
+  const needle = String(query || "").toLowerCase();
+  const files = state.code.files
+    .filter(file => !needle || codePathOf(file).toLowerCase().includes(needle))
+    .slice(0, 40);
+  codeQuickIndex = Math.min(codeQuickIndex, Math.max(0, files.length - 1));
+  ui.codeQuickList.innerHTML = files.length
+    ? files.map((file, index) => `<button type="button" class="code-quick-item${index === codeQuickIndex ? " is-active" : ""}" data-quick-file="${escapeHtml(file.id)}" role="option" aria-selected="${index === codeQuickIndex}"><span class="code-quick-name">${escapeHtml(codeFileNameOf(codePathOf(file)))}</span><span class="code-quick-dir">${escapeHtml(codeDirOf(codePathOf(file)) || ".")}</span></button>`).join("")
+    : `<p class="code-quick-empty">${escapeHtml(localizedText("Aucun fichier ne correspond.", "No file matches.", "Ningún archivo coincide.", "一致するファイルがありません。"))}</p>`;
+}
+
+function codeQuickChoose(id) {
+  const file = codeFileById(id);
+  if (!file) return;
+  state.code.activeId = file.id;
+  if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
+  setCodeQuickOpen(false);
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  saveState();
+  ui.codeInput?.focus();
+}
+
+/* --- Aperçu ------------------------------------------------------------- */
+
+function codePreviewTarget() {
+  return activeCodeFile();
+}
+
+function codeResolvePath(fromPath, reference) {
+  const clean = String(reference || "").split(/[?#]/)[0].trim();
+  if (!clean || /^(?:[a-z]+:|\/\/|#|data:)/i.test(clean)) return "";
+  const base = clean.startsWith("/") ? [] : codeDirOf(fromPath).split("/").filter(Boolean);
+  const segments = [...base, ...clean.replace(/^\/+/, "").split("/")];
+  const stack = [];
+  segments.forEach(segment => {
+    if (!segment || segment === ".") return;
+    if (segment === "..") stack.pop();
+    else stack.push(segment);
+  });
+  return stack.join("/");
+}
+
+function codeFileByPath(path) {
+  const clean = codeNormalizePath(path).toLowerCase();
+  return state.code.files.find(file => codePathOf(file).toLowerCase() === clean) || null;
+}
+
+function codeInlineCss(content, basePath) {
+  return String(content).replace(/url\((['"]?)([^)'"]+)\1\)/g, (match, quote, url) => {
+    const target = codeFileByPath(codeResolvePath(basePath, url));
+    return target?.dataUrl ? `url("${target.dataUrl}")` : match;
+  });
+}
+
+const CODE_PREVIEW_BOOTSTRAP = `<script nonce="${CODE_PREVIEW_NONCE}">(function(){var send=function(level,args){try{parent.postMessage({source:"${CODE_PREVIEW_EVENT}",level:level,text:Array.prototype.map.call(args,function(value){try{return typeof value==="object"?JSON.stringify(value):String(value)}catch(error){return String(value)}}).join(" ")}, "*")}catch(error){}};["log","info","warn","error"].forEach(function(key){var original=console[key]?console[key].bind(console):function(){};console[key]=function(){send(key,arguments);original.apply(console,arguments)}});window.addEventListener("error",function(event){send("error",[event.message+" ("+(event.filename||"apercu")+":"+event.lineno+")"])});window.addEventListener("unhandledrejection",function(event){send("error",["Promesse rejetee : "+event.reason])});})();</script>`;
+
+const CODE_PAGE_STYLE = `body{font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;margin:24px;color:#1d2522;background:#fffefa}code{background:#eef1ea;padding:1px 4px;border-radius:3px;font-family:"DM Mono",monospace;font-size:.9em}pre{background:#1b2320;color:#e6efe8;padding:12px;border-radius:8px;overflow:auto}pre code{background:transparent;color:inherit}blockquote{border-left:3px solid #cbd3c4;margin:0;padding-left:12px;color:#5b6b5f}table{border-collapse:collapse}td,th{border:1px solid #d8ded5;padding:5px 8px}img{max-width:100%}a{color:#2b6653}.code-actions{display:none}`;
+
+function codePreviewDocument(file) {
+  if (!file) return null;
+  const path = codePathOf(file);
+  const extension = codeExtensionOf(path);
+  if (extension === "html" || extension === "htm") {
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(file.content, "text/html");
+    } catch {
+      return null;
+    }
+    doc.querySelectorAll('meta[http-equiv]').forEach(meta => {
+      if (/content-security-policy/i.test(meta.getAttribute("http-equiv") || "")) meta.remove();
+    });
+    const inlineAsset = (element, attribute) => {
+      const reference = element.getAttribute(attribute);
+      if (!reference) return;
+      const target = codeFileByPath(codeResolvePath(path, reference));
+      if (!target) return;
+      element.setAttribute(attribute, target.dataUrl || "");
+    };
+    doc.querySelectorAll('link[rel~="stylesheet"][href]').forEach(link => {
+      const target = codeFileByPath(codeResolvePath(path, link.getAttribute("href")));
+      if (!target || target.binary) return;
+      const style = doc.createElement("style");
+      style.textContent = codeInlineCss(target.content, codePathOf(target));
+      link.replaceWith(style);
+    });
+    doc.querySelectorAll("script[src]").forEach(script => {
+      const target = codeFileByPath(codeResolvePath(path, script.getAttribute("src")));
+      if (!target || target.binary) return;
+      const inline = doc.createElement("script");
+      if (script.getAttribute("type")) inline.setAttribute("type", script.getAttribute("type"));
+      inline.setAttribute("nonce", CODE_PREVIEW_NONCE);
+      inline.textContent = target.content;
+      script.replaceWith(inline);
+    });
+    doc.querySelectorAll("script:not([src])").forEach(script => script.setAttribute("nonce", CODE_PREVIEW_NONCE));
+    doc.querySelectorAll("img[src], source[src], video[src], audio[src], iframe[src]").forEach(element => inlineAsset(element, "src"));
+    doc.querySelectorAll("link[rel~='icon'][href], image[href], use[href]").forEach(element => inlineAsset(element, "href"));
+    doc.querySelectorAll("[style]").forEach(element => {
+      const style = element.getAttribute("style");
+      if (style && style.includes("url(")) element.setAttribute("style", codeInlineCss(style, path));
+    });
+    if (!doc.querySelector("head")) doc.documentElement.insertBefore(doc.createElement("head"), doc.body || null);
+    const bootstrap = doc.createElement("script");
+    bootstrap.setAttribute("nonce", CODE_PREVIEW_NONCE);
+    bootstrap.textContent = CODE_PREVIEW_BOOTSTRAP.replace(/^<script[^>]*>|<\/script>$/g, "");
+    doc.head.insertBefore(bootstrap, doc.head.firstChild);
+    return {
+      html: `<!doctype html>\n${doc.documentElement.outerHTML}`,
+      note: localizedText(
+        "Aperçu live : le JavaScript du projet s'exécute, dans une iframe isolée de SIMIA.",
+        "Live preview: the project's JavaScript runs, in an iframe isolated from SIMIA.",
+        "Vista previa en vivo: el JavaScript del proyecto se ejecuta en un iframe aislado de SIMIA.",
+        "ライブプレビュー：プロジェクトの JavaScript が SIMIA から隔離された iframe で動作します。"
+      ),
+      log: true
+    };
+  }
+  if (extension === "css" || extension === "scss") {
+    return {
+      html: `<!doctype html><html lang="${state.language}"><head><meta charset="utf-8"><style>${CODE_PAGE_STYLE}</style><style>${codeInlineCss(file.content, path).replace(/<\/style/gi, "<\\/style")}</style></head><body><h1>Titre de la page</h1><p>Un paragraphe d'exemple avec un <a href="#">lien</a> et du <code>code</code>.</p><p><button>Bouton</button> <input placeholder="Champ"> </p><ul><li>Premier point</li><li>Deuxième point</li></ul><div class="card"><h2>Carte</h2><p>Un bloc pour juger les ombres, les bordures et les espacements.</p></div></body></html>`,
+      note: localizedText("Aperçu du CSS sur une page d'exemple.", "CSS preview on a sample page.", "Vista previa del CSS en una página de ejemplo.", "サンプルページでの CSS プレビュー。"),
+      log: false
+    };
+  }
+  if (extension === "md" || extension === "markdown") {
+    return {
+      html: `<!doctype html><html lang="${state.language}"><head><meta charset="utf-8"><style>${CODE_PAGE_STYLE}</style></head><body>${formatMessageContent(file.content, { apply: false })}</body></html>`,
+      note: "",
+      log: false
+    };
+  }
+  if (extension === "svg") {
+    return {
+      html: `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;display:grid;place-items:center;background:#fffefa}svg{max-width:100%;max-height:100%}</style></head><body>${file.content}</body></html>`,
+      note: "",
+      log: false
+    };
+  }
+  if (extension === "javascript" || extension === "mjs" || extension === "cjs") {
+    return {
+      html: `<!doctype html><html lang="${state.language}"><head><meta charset="utf-8"><style>${CODE_PAGE_STYLE}</style></head><body><p>${escapeHtml(localizedText("Le fichier s'exécute : sa sortie apparaît dans la console ci-dessous.", "The file runs: its output appears in the console below.", "El archivo se ejecuta: su salida aparece en la consola de abajo.", "ファイルを実行します。出力は下のコンソールに表示されます。"))}</p><script nonce="${CODE_PREVIEW_NONCE}">${file.content.replace(/<\/script>/gi, "<\\/script>")}</script></body></html>`,
+      note: "",
+      log: true
+    };
+  }
+  return null;
+}
+
+function codePreviewClearLog() {
+  if (ui.codePreviewLog) ui.codePreviewLog.textContent = "";
+  if (ui.codePreviewLogWrap) ui.codePreviewLogWrap.hidden = true;
+}
+
+function codePreviewAppendLog(level, text) {
+  if (!ui.codePreviewLog || !ui.codePreviewLogWrap) return;
+  ui.codePreviewLogWrap.hidden = false;
+  const line = document.createElement("span");
+  line.className = `code-log-line is-${level}`;
+  line.textContent = `${level === "error" ? "✕" : level === "warn" ? "!" : "›"} ${text}`;
+  ui.codePreviewLog.append(line, "\n");
+  ui.codePreviewLog.scrollTop = ui.codePreviewLog.scrollHeight;
+}
+
+function setCodePreview(open) {
+  if (!ui.codePreview) return;
+  const file = codePreviewTarget();
+  const built = open && file ? codePreviewDocument(file) : null;  if (open && !built) {
+    toast(localizedText(
+      "L'aperçu fonctionne avec les fichiers HTML, CSS, SVG, Markdown et JavaScript.",
+      "Preview works with HTML, CSS, SVG, Markdown, and JavaScript files.",
+      "La vista previa funciona con archivos HTML, CSS, SVG, Markdown y JavaScript.",
+      "プレビューは HTML・CSS・SVG・Markdown・JavaScript に対応しています。"
+    ));
+    return;
+  }
+  state.code.preview = Boolean(built);
+  ui.codePreview.hidden = !built;
+  ui.codePreviewToggle?.setAttribute("aria-pressed", String(Boolean(built)));
+  syncCodePreviewSplit();
+  if (!built) {
+    ui.codePreviewFrame.srcdoc = "";
+    codePreviewClearLog();
+    return;
+  }
+  refreshCodePreview();
+}
+
+/* Apercu cote a cote quand le panneau est large, en surimpression sinon. */
+function syncCodePreviewSplit() {
+  if (!ui.codeMain) return;
+  const wide = ui.codeMain.getBoundingClientRect().width >= 560;
+  ui.codeMain.dataset.split = state.code.preview && wide ? "yes" : "no";
+}
+
+function refreshCodePreview() {
+  if (!ui.codePreview || ui.codePreview.hidden) return;
+  const file = codePreviewTarget();
+  const built = codePreviewDocument(file);
+  if (!built) { setCodePreview(false); return; }
+  ui.codePreviewTitle.textContent = `${localizedText("Aperçu", "Preview", "Vista previa", "プレビュー")} · ${codePathOf(file)}`;
+  ui.codePreviewNote.textContent = built.note;
+  if (ui.codePreviewLogWrap) ui.codePreviewLogWrap.hidden = !built.log;
+  if (built.log) codePreviewClearLog();
+  ui.codePreviewFrame.srcdoc = built.html;
+}
+
+function openPreviewInTab() {
+  const built = codePreviewDocument(codePreviewTarget());
+  if (!built) return;
+  const url = URL.createObjectURL(new Blob([built.html], { type: "text/html" }));
+  const opened = window.open(url, "_blank");
+  if (opened) {
+    try { opened.opener = null; } catch { /* origine differente */ }
+  } else {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = codeFileNameOf(codePathOf(codePreviewTarget())) || "apercu.html";
+    link.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+function setCodePreviewWidth(width) {
+  state.code.previewWidth = width === "tablet" ? "tablet" : width === "phone" ? "phone" : "full";
+  if (ui.codePreviewStage) ui.codePreviewStage.dataset.width = state.code.previewWidth;
+  document.querySelectorAll("[data-preview-width]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.previewWidth === state.code.previewWidth));
+  });
+}
+
+window.addEventListener("message", event => {
+  if (event.data?.source !== CODE_PREVIEW_EVENT) return;
+  if (ui.codePreviewFrame && event.source !== ui.codePreviewFrame.contentWindow) return;
+  codePreviewAppendLog(event.data.level === "error" ? "error" : event.data.level === "warn" ? "warn" : "log", String(event.data.text || ""));
+});
+
+/* --- Import, export, disque ---------------------------------------------- */
+
+function codeImportable(file) {
+  if (!file) return false;
+  const extension = attachmentExtension(file);
+  if (CODE_BINARY_EXTENSIONS.has(extension)) return true;
+  return file.type.startsWith("text/") || file.type === "application/json" || Boolean(CODE_LANGUAGES[extension]);
+}
+
+function codeReadAsDataUrl(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
+/* Le dossier racine est retire : on veut src/app.js, pas
+   mon-projet/src/app.js, dans l'arborescence. */
+function codeStripRoot(path) {
+  const parts = codeNormalizePath(path).split("/").filter(Boolean);
+  if (parts.length > 1) parts.shift();
+  return parts.join("/") || "snippet.txt";
+}
+
+function codeEntriesFromFiles(files, { stripRoot = true } = {}) {
+  return files.map(file => ({
+    path: stripRoot ? codeStripRoot(file.webkitRelativePath || file.name) : codeNormalizePath(file.name),
+    file
+  }));
+}
+
+async function codeImportEntries(entries) {
+  if (!entries.length) return 0;
+  let imported = 0;
+  let skipped = 0;
+  let lastId = null;
+  for (const entry of entries) {
+    if (imported >= CODE_IMPORT_MAX_FILES || entry.file.size > CODE_IMPORT_MAX_BYTES || !codeImportable(entry.file)) {
+      skipped += 1;
+      continue;
+    }
+    const binary = CODE_BINARY_EXTENSIONS.has(attachmentExtension(entry.file));
+    let content = "";
+    let dataUrl = "";
+    try {
+      if (binary) dataUrl = await codeReadAsDataUrl(entry.file);
+      else content = await entry.file.text();
+    } catch {
+      skipped += 1;
+      continue;
+    }
+    if (binary && !dataUrl) { skipped += 1; continue; }
+    if (!binary && !content.trim() && entry.file.size > 0) { skipped += 1; continue; }
+    const target = codeFileByPath(entry.path);
+    if (target) {
+      if (!target.binary) target.content = content;
+      target.binary = binary;
+      target.dataUrl = dataUrl || target.dataUrl;
+      target.updatedAt = Date.now();
+      target.dirty = true;
+      codeFileSave(target);
+      lastId = target.id;
+    } else {
+      /* Import en masse : on n'ouvre pas un onglet par fichier, seul le
+         dernier arrive au premier plan. */
+      const file = {
+        id: globalThis.crypto?.randomUUID?.() || `f${Date.now()}${Math.random().toString(16).slice(2)}`,
+        path: uniqueCodePath(entry.path),
+        content,
+        binary,
+        dataUrl,
+        language: normalizeCodeLanguage(codeLanguageFor(entry.path)),
+        diskPath: "",
+        dirty: true,
+        updatedAt: Date.now()
+      };
+      state.code.files.push(file);
+      codeFileSave(file);
+      lastId = file.id;
+    }
+    imported += 1;
+  }
+  if (lastId) {
+    state.code.activeId = lastId;
+    if (!state.code.openIds.includes(lastId)) state.code.openIds.push(lastId);
+  }
+  codeMarkSaved();
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  if (!state.code.open) enterCodeMode("code");
+  if (imported) {
+    codeMarkSaved();
+    toast(localizedText(
+      `${imported} fichier(s) importé(s)${skipped ? ` · ${skipped} ignoré(s)` : ""}.`,
+      `${imported} file(s) imported${skipped ? ` · ${skipped} skipped` : ""}.`,
+      `${imported} archivo(s) importado(s)${skipped ? ` · ${skipped} omitido(s)` : ""}.`,
+      `${imported} ファイルを読み込みました${skipped ? `（${skipped} 件除外）` : ""}。`
+    ));
+  } else if (skipped) {
+    toast(localizedText(
+      "Aucun fichier texte importé : les binaires inconnus et les fichiers de plus de 2 Mo sont ignorés.",
+      "No text file imported: unknown binaries and files over 2 MB are skipped.",
+      "No se importó ningún archivo de texto: se omiten los binarios desconocidos y los archivos de más de 2 MB.",
+      "テキストファイルは取り込まれませんでした。不明なバイナリと 2MB を超えるファイルは除外されます。"
+    ), "error");
+  }
+  return imported;
+}
+
+async function codeImportInput(input) {
+  const files = Array.from(input?.files || []);
+  if (input) input.value = "";
+  if (!files.length) return;
+  const fromFolder = files.some(file => file.webkitRelativePath);
+  return codeImportEntries(codeEntriesFromFiles(files, { stripRoot: fromFolder }));
+}
+
+/* Glisser-deposer : les entrees sont saisies avant le premier await, sinon le
+   navigateur les invalide. */
+function codeDroppedEntries(dataTransfer) {
+  const entries = [];
+  for (const item of Array.from(dataTransfer?.items || [])) {
+    if (item.kind !== "file") continue;
+    const entry = typeof item.webkitGetAsEntry === "function" ? item.webkitGetAsEntry() : null;
+    if (entry) { entries.push({ entry }); continue; }
+    const file = item.getAsFile();
+    if (file) entries.push({ file });
+  }
+  if (!entries.length) for (const file of Array.from(dataTransfer?.files || [])) entries.push({ file });
+  return entries;
+}
+
+async function codeReadEntry(entry, out, depth = 0) {
+  if (!entry || depth > 12) return;
+  if (entry.isFile) {
+    const file = await new Promise(resolve => entry.file(resolve, () => resolve(null)));
+    if (file) out.push({ path: entry.fullPath || file.name, file });
+    return;
+  }
+  if (!entry.isDirectory) return;
+  const reader = entry.createReader();
+  while (true) {
+    const batch = await new Promise(resolve => reader.readEntries(resolve, () => resolve([])));
+    if (!batch.length) break;
+    for (const child of batch) await codeReadEntry(child, out, depth + 1);
+  }
+}
+
+async function codeImportDrop(dataTransfer) {
+  const roots = codeDroppedEntries(dataTransfer);
+  if (!roots.length) return 0;
+  const collected = [];
+  for (const root of roots) {
+    if (root.entry) await codeReadEntry(root.entry, collected);
+    else if (root.file) collected.push({ path: root.file.name, file: root.file });
+  }
+  if (!collected.length) return 0;
+  const single = collected.length === 1 && !roots[0].entry?.isDirectory;
+  return codeImportEntries(collected.map(item => ({
+    path: single ? codeNormalizePath(item.file.name) : codeStripRoot(item.path),
+    file: item.file
+  })));
+}
+
+/* Chrome, Edge et les navigateurs recents exposent le disque : on lit le
+   dossier puis on peut y reecrire. Ailleurs, l'import reste une copie. */
+async function codeOpenDiskFolder() {
+  if (typeof window.showDirectoryPicker !== "function") {
+    ui.codeFolderInput?.click();
+    return;
+  }
+  let handle;
+  try {
+    handle = await window.showDirectoryPicker({ mode: "readwrite", id: "simia-project" });
+  } catch {
+    return;
+  }
+  state.code.dirHandle = handle;
+  const entries = [];
+  const walk = async (directory, prefix) => {
+    for await (const [name, child] of directory.entries()) {
+      const path = prefix ? `${prefix}/${name}` : name;
+      if (child.kind === "directory") { await walk(child, path); continue; }
+      if (name.startsWith(".") || name === "node_modules") continue;
+      const file = await child.getFile();
+      entries.push({ path: codeStripRoot(path), file });
+    }
+  };
+  await walk(handle, "");
+  const imported = await codeImportEntries(entries);
+  if (imported) {
+    toast(localizedText(
+      `Dossier ${handle.name} ouvert : ${imported} fichier(s). « Enregistrer sur le disque » écrit vos modifications.`,
+      `Folder ${handle.name} opened: ${imported} file(s). “Save to disk” writes your changes.`,
+      `Carpeta ${handle.name} abierta: ${imported} archivo(s). «Guardar en el disco» escribe tus cambios.`,
+      `フォルダ ${handle.name} を開きました（${imported} ファイル）。「ディスクに保存」で変更を書き込みます。`
+    ));
+    if (ui.codeWriteBack) ui.codeWriteBack.hidden = false;
+  }
+}
+
+async function codeWriteBackToDisk() {
+  const handle = state.code.dirHandle;
+  if (!handle) return;
+  if (typeof handle.requestPermission === "function") {
+    const granted = await handle.requestPermission({ mode: "readwrite" });
+    if (granted !== "granted") {
+      toast(localizedText("Écriture refusée sur le disque.", "Write access to the disk was refused.", "Se denegó la escritura en el disco.", "ディスクへの書き込みが拒否されました。"), "error");
+      return;
+    }
+  }
+  const dirty = state.code.files.filter(file => file.dirty || !file.diskPath);
+  if (!dirty.length) {
+    toast(localizedText("Rien à enregistrer.", "Nothing to save.", "Nada que guardar.", "保存する変更はありません。"));
+    return;
+  }
+  let written = 0;
+  for (const file of dirty) {
+    try {
+      const parts = codePathOf(file).split("/");
+      let directory = handle;
+      for (const part of parts.slice(0, -1)) directory = await directory.getDirectoryHandle(part, { create: true });
+      const fileHandle = await directory.getFileHandle(parts[parts.length - 1], { create: true });
+      const writable = await fileHandle.createWritable();
+      if (file.binary && file.dataUrl) {
+        const response = await fetch(file.dataUrl);
+        await writable.write(await response.blob());
+      } else {
+        await writable.write(file.content);
+      }
+      await writable.close();
+      file.dirty = false;
+      file.diskPath = codePathOf(file);
+      codeFileSave(file);
+      written += 1;
+    } catch (error) {
+      console.warn("Écriture impossible", error);
+    }
+  }
+  state.code.dirty = false;
+  renderCodeSaveState();
+  toast(written
+    ? localizedText(`${written} fichier(s) écrit(s) sur le disque.`, `${written} file(s) written to disk.`, `${written} archivo(s) escritos en el disco.`, `${written} ファイルをディスクに保存しました。`)
+    : localizedText("Aucun fichier n'a pu être écrit.", "No file could be written.", "No se pudo escribir ningún archivo.", "書き込めたファイルはありません。"), written ? "info" : "error");
+}
+
+/* Archive ZIP « store » : aucun outil externe, et le projet cesse d'être
+   prisonnier du navigateur. */
+const codeCrcTable = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    table[index] = value >>> 0;
+  }
+  return table;
+})();
+
+function codeCrc32(bytes) {
+  let crc = 0xffffffff;
+  for (let index = 0; index < bytes.length; index += 1) crc = codeCrcTable[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function codeZip(entries) {
+  const encoder = new TextEncoder();
+  const now = new Date();
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+  entries.forEach(entry => {
+    const nameBytes = encoder.encode(entry.path.replace(/\\/g, "/"));
+    const data = entry.data;
+    const crc = codeCrc32(data);
+    const local = new Uint8Array(30 + nameBytes.length);
+    const localView = new DataView(local.buffer);
+    localView.setUint32(0, 0x04034b50, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint16(6, 0x0800, true);
+    localView.setUint16(8, 0, true);
+    localView.setUint16(10, time, true);
+    localView.setUint16(12, date, true);
+    localView.setUint32(14, crc, true);
+    localView.setUint32(18, data.length, true);
+    localView.setUint32(22, data.length, true);
+    localView.setUint16(26, nameBytes.length, true);
+    localView.setUint16(28, 0, true);
+    local.set(nameBytes, 30);
+    chunks.push(local, data);
+    const record = new Uint8Array(46 + nameBytes.length);
+    const recordView = new DataView(record.buffer);
+    recordView.setUint32(0, 0x02014b50, true);
+    recordView.setUint16(4, 20, true);
+    recordView.setUint16(6, 20, true);
+    recordView.setUint16(8, 0x0800, true);
+    recordView.setUint16(10, 0, true);
+    recordView.setUint16(12, time, true);
+    recordView.setUint16(14, date, true);
+    recordView.setUint32(16, crc, true);
+    recordView.setUint32(20, data.length, true);
+    recordView.setUint32(24, data.length, true);
+    recordView.setUint16(28, nameBytes.length, true);
+    recordView.setUint32(42, offset, true);
+    record.set(nameBytes, 46);
+    central.push(record);
+    offset += local.length + data.length;
+  });
+  const centralSize = central.reduce((total, record) => total + record.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(8, entries.length, true);
+  endView.setUint16(10, entries.length, true);
+  endView.setUint32(12, centralSize, true);
+  endView.setUint32(16, offset, true);
+  return new Blob([...chunks, ...central, end], { type: "application/zip" });
+}
+
+async function codeExportProject() {
+  if (!state.code.files.length) {
+    toast(localizedText("Le projet est vide.", "The project is empty.", "El proyecto está vacío.", "プロジェクトは空です。"), "error");
+    return;
+  }
+  const encoder = new TextEncoder();
+  const entries = [];
+  for (const file of state.code.files) {
+    const path = codePathOf(file);
+    if (file.binary && file.dataUrl) {
+      const response = await fetch(file.dataUrl);
+      entries.push({ path, data: new Uint8Array(await response.arrayBuffer()) });
+    } else {
+      entries.push({ path, data: encoder.encode(file.content) });
+    }
+  }
+  const blob = codeZip(entries);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `simia-projet-${new Date().toISOString().slice(0, 10)}.zip`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+  toast(localizedText(`${entries.length} fichier(s) exportés en archive.`, `${entries.length} file(s) exported as an archive.`, `${entries.length} archivo(s) exportados en un archivo comprimido.`, `${entries.length} ファイルを ZIP に書き出しました。`));
+}
+
+/* --- Execution ----------------------------------------------------------- */
+
+function codeRuntimeLabel(value) {
+  return value === "error"
     ? localizedText("Erreur", "Error", "Error", "エラー")
-    : state === "done"
+    : value === "done"
       ? localizedText("Terminé", "Finished", "Finalizado", "完了")
       : localizedText("En cours", "Running", "En curso", "実行中");
 }
@@ -1403,17 +2527,6 @@ function renderCodeOutput(run) {
   ui.codeOutputBody.scrollTop = ui.codeOutputBody.scrollHeight;
 }
 
-function stopCodeRun(run, reason) {
-  if (!run) return;
-  if (run.timer) clearTimeout(run.timer);
-  run.timer = 0;
-  try { codeWorker?.terminate(); } catch { /* deja termine */ }
-  codeWorker = null;
-  if (reason) run.lines.push({ kind: "error", text: reason });
-  renderCodeOutput(run);
-  finishCodeRun(run, false);
-}
-
 function finishCodeRun(run, ok) {
   if (run.timer) clearTimeout(run.timer);
   if (activeCodeRun === run) activeCodeRun = null;
@@ -1421,19 +2534,27 @@ function finishCodeRun(run, ok) {
     ui.codeOutputState.className = `code-output-state ${ok ? "" : "is-error"}`.trim();
     ui.codeOutputState.textContent = codeRuntimeLabel(ok ? "done" : "error");
   }
+  if (ui.codeOutputChat) ui.codeOutputChat.hidden = !(run.lines || []).length;
   refreshCodeActions();
 }
 
+function stopCodeRun(run, reason) {
+  if (!run) return;
+  if (run.timer) clearTimeout(run.timer);
+  run.timer = 0;
+  try { codeRunWorker?.terminate(); } catch { /* deja termine */ }
+  codeRunWorker = null;
+  if (reason) run.lines.push({ kind: "error", text: reason });
+  renderCodeOutput(run);
+  finishCodeRun(run, false);
+}
+
 function resetCodeOutput() {
-  if (activeCodeRun) {
-    if (activeCodeRun.timer) clearTimeout(activeCodeRun.timer);
-    try { codeWorker?.terminate(); } catch { /* deja termine */ }
-    codeWorker = null;
-    activeCodeRun = null;
-  }
+  if (activeCodeRun) stopCodeRun(activeCodeRun, "");
   if (!ui.codeOutput) return;
   ui.codeOutput.hidden = true;
   if (ui.codeOutputBody) ui.codeOutputBody.innerHTML = "";
+  if (ui.codeOutputChat) ui.codeOutputChat.hidden = true;
   if (ui.codeOutputState) {
     ui.codeOutputState.className = "code-output-state";
     ui.codeOutputState.textContent = "";
@@ -1441,9 +2562,9 @@ function resetCodeOutput() {
 }
 
 function ensureCodeWorker() {
-  if (codeWorker) return codeWorker;
-  codeWorker = new Worker(CODE_RUNNER_URL);
-  codeWorker.addEventListener("message", event => {
+  if (codeRunWorker) return codeRunWorker;
+  codeRunWorker = new Worker(CODE_RUNNER_URL);
+  codeRunWorker.addEventListener("message", event => {
     const run = activeCodeRun;
     if (!run) return;
     const data = event.data || {};
@@ -1459,27 +2580,25 @@ function ensureCodeWorker() {
     }
     finishCodeRun(run, Boolean(data.ok));
   });
-  codeWorker.addEventListener("error", event => {
+  codeRunWorker.addEventListener("error", event => {
     const run = activeCodeRun;
     if (!run) return;
     run.lines.push({ kind: "error", text: event.message || "Worker error" });
     renderCodeOutput(run);
     finishCodeRun(run, false);
   });
-  return codeWorker;
+  return codeRunWorker;
 }
 
 function refreshCodeActions() {
   const file = activeCodeFile();
   const busy = Boolean(activeCodeRun);
   if (ui.codeOutputStop) ui.codeOutputStop.hidden = !busy;
+  const runnable = Boolean(file && !file.binary && (CODE_RUNNABLE.includes(file.language) || CODE_PREVIEWABLE.has(codeExtensionOf(codePathOf(file)))));
   document.querySelectorAll("[data-code-action]").forEach(button => {
-    if (!file) { button.disabled = true; return; }
-    if (button.dataset.codeAction === "run") {
-      button.disabled = busy || !CODE_RUNNABLE.includes(file.language);
-    } else {
-      button.disabled = busy;
-    }
+    if (!file || file.binary) { button.disabled = true; return; }
+    if (button.dataset.codeAction === "run") button.disabled = busy || !runnable;
+    else button.disabled = busy;
   });
 }
 
@@ -1508,17 +2627,20 @@ function refusePythonRun() {
 
 async function executeActiveFile() {
   const file = activeCodeFile();
-  if (!file || activeCodeRun) return;
+  if (!file || activeCodeRun || file.binary) return;
+  /* « Exécuter » sur une page ou une feuille de style, c'est l'aperçu : c'est
+     ce que l'on veut voir, pas un message d'erreur. */
+  if (CODE_PREVIEWABLE.has(codeExtensionOf(codePathOf(file))) && !CODE_RUNNABLE.includes(file.language)) {
+    setCodePreview(true);
+    return;
+  }
   if (!CODE_RUNNABLE.includes(file.language)) {
-    toast(
-      localizedText(
-        "Exécution disponible pour JavaScript et Python.",
-        "Execution is available for JavaScript and Python.",
-        "La ejecución está disponible para JavaScript y Python.",
-        "実行できるのは JavaScript と Python です。"
-      ),
-      "error"
-    );
+    toast(localizedText(
+      "Exécution disponible pour JavaScript et Python. Les pages HTML, le CSS et le Markdown s'ouvrent dans l'aperçu.",
+      "Execution is available for JavaScript and Python. HTML pages, CSS, and Markdown open in the preview.",
+      "La ejecución está disponible para JavaScript y Python. Las páginas HTML, el CSS y Markdown se abren en la vista previa.",
+      "実行できるのは JavaScript と Python です。HTML・CSS・Markdown はプレビューで開きます。"
+    ), "error");
     return;
   }
   const code = file.content;
@@ -1561,188 +2683,7 @@ async function executeActiveFile() {
   worker.postMessage({ code, language: file.language });
 }
 
-function renderCodeEditor() {
-  if (!ui.codeInput) return;
-  fillCodeLangSelect();
-  const file = activeCodeFile();
-  if (!file) {
-    ui.codeInput.value = "";
-    ui.codeInput.disabled = true;
-    ui.codeInput.placeholder = localizedText("Créez un fichier avec +", "Create a file with +", "Crea un archivo con +", "＋でファイルを作成");
-    ui.codeHighlight.innerHTML = "";
-    if (ui.codeGutter) ui.codeGutter.textContent = "";
-    if (ui.codeMeta) ui.codeMeta.textContent = "";
-    if (ui.codeLang) ui.codeLang.disabled = true;
-    refreshCodeActions();
-    return;
-  }
-  ui.codeInput.disabled = false;
-  ui.codeInput.placeholder = "";
-  if (ui.codeLang) {
-    ui.codeLang.disabled = false;
-    ui.codeLang.value = file.language;
-  }
-  if (document.activeElement !== ui.codeInput || ui.codeInput.value !== file.content) ui.codeInput.value = file.content;
-  updateCodeHighlight();
-  updateCodeMeta();
-  refreshCodeActions();
-}
-
-function onCodeInput() {
-  const file = activeCodeFile();
-  if (!file) return;
-  file.content = ui.codeInput.value;
-  file.language = codeLanguageFor(file.name, file.language);
-  file.updatedAt = Date.now();
-  updateCodeHighlight();
-  updateCodeMeta();
-  clearTimeout(codeSaveTimer);
-  codeSaveTimer = setTimeout(() => codeFileSave(file), 450);
-}
-
-function onCodeKeydown(event) {
-  if (event.key === "Tab") {
-    event.preventDefault();
-    const start = ui.codeInput.selectionStart;
-    const end = ui.codeInput.selectionEnd;
-    ui.codeInput.setRangeText("  ", start, end, "end");
-    onCodeInput();
-    return;
-  }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-    event.preventDefault();
-    const file = activeCodeFile();
-    if (!file) return;
-    file.content = ui.codeInput.value;
-    codeFileSave(file);
-    toast(localizedText("Fichier enregistré.", "File saved.", "Archivo guardado.", "ファイルを保存しました。"));
-    return;
-  }
-  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-    event.preventDefault();
-    runCodeAction("explain");
-  }
-}
-
-/* Libelles statiques de l'atelier : retraduits quand la langue change. */
-function renderCodeWorkspaceText() {
-  if (!ui.codePane) return;
-  const actions = {
-    run: localizedText("▶ Exécuter", "▶ Run", "▶ Ejecutar", "▶ 実行"),
-    explain: localizedText("Expliquer", "Explain", "Explicar", "説明"),
-    fix: localizedText("Corriger", "Fix", "Corregir", "修正"),
-    improve: localizedText("Optimiser", "Optimize", "Optimizar", "最適化"),
-    tests: localizedText("Tests", "Tests", "Pruebas", "テスト")
-  };
-  document.querySelectorAll("[data-code-action]").forEach(button => {
-    const label = actions[button.dataset.codeAction];
-    if (label) button.textContent = label;
-  });
-  const outputTitle = document.querySelector("#code-output-title");
-  if (outputTitle) outputTitle.textContent = localizedText("Sortie", "Output", "Salida", "出力");
-  if (ui.codeOutputClear) {
-    const label = localizedText("Effacer", "Clear", "Borrar", "消去");
-    ui.codeOutputClear.textContent = label;
-    ui.codeOutputClear.setAttribute("aria-label", label);
-  }
-  if (ui.codeOutputStop) {
-    const label = localizedText("Arrêter", "Stop", "Detener", "停止");
-    ui.codeOutputStop.textContent = label;
-    ui.codeOutputStop.setAttribute("aria-label", label);
-  }
-  if (ui.codeNewMenu) {
-    ui.codeNewMenu.setAttribute("aria-label", localizedText("Type de fichier", "File type", "Tipo de archivo", "ファイルの種類"));
-    const textItem = ui.codeNewMenu.querySelector('[data-code-new="text"]');
-    if (textItem) textItem.textContent = localizedText("Texte", "Text", "Texto", "テキスト");
-  }
-  const newLabel = localizedText("Nouveau fichier", "New file", "Nuevo archivo", "新しいファイル");
-  if (ui.codeLang) ui.codeLang.setAttribute("aria-label", localizedText("Type de fichier", "File type", "Tipo de archivo", "ファイルの種類"));
-  const closeLabel = localizedText("Fermer l'atelier", "Close workspace", "Cerrar el taller", "作業台を閉じる");
-  if (ui.codeNew) {
-    ui.codeNew.setAttribute("aria-label", newLabel);
-    ui.codeNew.setAttribute("title", newLabel);
-  }
-  if (ui.codeClose) {
-    ui.codeClose.setAttribute("aria-label", closeLabel);
-    ui.codeClose.setAttribute("title", closeLabel);
-  }
-  ui.codeInput?.setAttribute("aria-label", localizedText("Éditeur de code", "Code editor", "Editor de código", "コードエディター"));
-  ui.codePane.setAttribute("aria-label", localizedText("Atelier code", "Code workspace", "Taller de código", "コード作業台"));
-  const switchLabel = localizedText("Atelier et conversation", "Workspace and chat", "Taller y conversación", "作業台とチャット");
-  ui.codeSwitch?.setAttribute("aria-label", switchLabel);
-  document.querySelector("#code-tabs")?.setAttribute("aria-label", localizedText("Fichiers de l'atelier", "Workspace files", "Archivos del taller", "作業台のファイル"));
-  document.querySelectorAll(".code-mode-switch [data-code-focus]").forEach(button => {
-    button.textContent = button.dataset.codeFocus === "chat"
-      ? localizedText("Chat", "Chat", "Chat", "チャット")
-      : localizedText("Code", "Code", "Código", "コード");
-  });
-  renderCodeTabs();
-  updateCodeMeta();
-}
-
-function setCodeFocus(focus) {
-  state.code.focus = focus === "chat" ? "chat" : "code";
-  if (ui.workspace) ui.workspace.dataset.codePane = state.code.focus;
-  if (ui.codeSwitch) {
-    ui.codeSwitch.querySelectorAll("[data-code-focus]").forEach(button => {
-      button.setAttribute("aria-selected", String(button.dataset.codeFocus === state.code.focus));
-    });
-  }
-  if (state.code.focus === "chat") ui.prompt.focus();
-  else ui.codeInput?.focus();
-}
-
-function enterCodeMode(focus) {
-  if (!ui.codePane) return;
-  state.code.open = true;
-  if (ui.workspace) ui.workspace.dataset.mode = "code";
-  if (ui.codeSwitch) ui.codeSwitch.hidden = false;
-  renderCodeTabs();
-  renderCodeEditor();
-  setCodeFocus(focus || state.code.focus || "code");
-  renderCodeModelHint();
-  saveState();
-}
-
-function exitCodeMode() {
-  state.code.open = false;
-  if (ui.workspace) {
-    delete ui.workspace.dataset.mode;
-    delete ui.workspace.dataset.codePane;
-  }
-  if (ui.codeSwitch) ui.codeSwitch.hidden = true;
-  renderCodeModelHint();
-  saveState();
-  ui.prompt.focus();
-}
-
-function openCodeWorkspace(seed) {
-  if (!ui.codePane || !seed?.code) return;
-  const language = normalizeCodeLanguage(seed.language);
-  const twin = state.code.files.find(file => file.content === seed.code && file.language === language);
-  if (twin) {
-    state.code.activeId = twin.id;
-    renderCodeTabs();
-    renderCodeEditor();
-  } else {
-    createCodeFile({ language, code: seed.code });
-  }
-  enterCodeMode("code");
-}
-
-/* Entree permanente dans l'atelier : sans elle, la seule porte etait un bloc
-   de code dans une reponse. Un visiteur qui voulait ecrire son propre script
-   n'avait aucun bouton a cliquer. */
-function openCodeWorkspaceEmpty() {
-  if (!ui.codePane) return;
-  closeAppMenu();
-  if (!state.code.files.length) createCodeFile({ language: "javascript" });
-  else {
-    renderCodeTabs();
-    renderCodeEditor();
-  }
-  enterCodeMode("code");
-}
+/* --- Actions de l'atelier et passerelles avec le chat --------------------- */
 
 function codeActionIntro(action, name) {
   switch (action) {
@@ -1779,14 +2720,14 @@ function codeActionIntro(action, name) {
 
 function codeActionPrompt(action) {
   const file = activeCodeFile();
-  if (!file) return "";
+  if (!file || file.binary) return "";
   const code = file.content.replace(/\s+$/, "");
   if (!code) return "";
   const trimmed = code.length > CODE_PROMPT_LIMIT
     ? `${code.slice(0, CODE_PROMPT_LIMIT)}\n// … code tronqué (${code.length} caractères au total)`
     : code;
   const fence = "```";
-  return `${codeActionIntro(action, file.name)}\n\n${fence}${file.language || ""}\n${trimmed}\n${fence}`;
+  return `${codeActionIntro(action, codePathOf(file))}\n\n${fence}${file.language || ""}\n${trimmed}\n${fence}`;
 }
 
 function runCodeAction(action) {
@@ -1794,25 +2735,499 @@ function runCodeAction(action) {
     executeActiveFile();
     return;
   }
+  const file = activeCodeFile();
   const prompt = codeActionPrompt(action);
   if (!prompt) {
     toast(localizedText("Le fichier est vide.", "The file is empty.", "El archivo está vacío.", "ファイルが空です。"), "error");
     return;
   }
+  /* La reponse saura dans quel fichier revenir : « Corriger » remplace le
+     fichier ouvert, « Tests » cree un fichier de test a cote. */
+  state.code.pendingApply = file ? { fileId: file.id, action, at: Date.now() } : null;
   if (window.matchMedia("(max-width: 900px)").matches) setCodeFocus("chat");
-  submitPrompt(prompt);
+  submitPrompt(prompt, { workspaceContext: false });
 }
+
+/* Un enregistrement explicite (creation, import, application d'un bloc) ne
+   laisse pas la barre d'etat sur « Modifications… ». */
+function codeMarkSaved() {
+  state.code.dirty = false;
+  state.code.saving = false;
+  renderCodeSaveState();
+}
+
+/* L'utilisateur dit souvent le nom du fichier dans sa question : « corrige mon
+   app.js ». Sans ce rapprochement, le bloc partait dans un fichier neuf et le
+   vrai fichier restait faux. */
+function codeFileFromConversation(language) {
+  const conversation = activeConversation();
+  if (!conversation) return null;
+  const text = conversation.messages
+    .slice(-4)
+    .filter(message => message.role === "user")
+    .map(message => message.content)
+    .join("\n");
+  if (!text) return null;
+  for (const file of state.code.files) {
+    const name = codeFileNameOf(codePathOf(file));
+    if (!name) continue;
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (!new RegExp(`(^|[^\\w./-])${escaped}([^\\w./-]|$)`, "i").test(text)) continue;
+    if (language && language !== "text" && file.language !== language) continue;
+    return file;
+  }
+  return null;
+}
+
+function codeDiffSummary(before, after) {
+  const countLines = value => String(value || "").split("\n").length;
+  const beforeLines = countLines(before);
+  const afterLines = countLines(after);
+  const delta = afterLines - beforeLines;
+  return { beforeLines, afterLines, delta };
+}
+
+/* Applique un bloc de code de la conversation dans l'atelier : c'est la moitie
+   manquante du parcours. La reponse du modele restait dans le chat, il fallait
+   la copier puis la recoller a la main dans l'editeur. */
+function applyCodeBlock(button) {
+  const block = button.closest(".code-block");
+  if (!block) return;
+  const language = normalizeCodeLanguage(block.querySelector(".code-language")?.textContent || "text");
+  const code = (block.querySelector("code")?.textContent || "").replace(/\s+$/, "");
+  if (!code) return;
+  const pending = state.code.pendingApply;
+  const pendingFile = pending ? codeFileById(pending.fileId) : null;
+  const active = activeCodeFile();
+  let file = null;
+
+  if (pending?.action === "tests") {
+    /* « Tests » ne doit jamais ecraser le fichier teste : le bloc part dans un
+       fichier voisin, nomme d'apres celui d'origine. */
+    const baseFile = pendingFile || active;
+    const baseLanguage = baseFile?.language || language;
+    const extension = CODE_EXTENSIONS[baseLanguage] || "txt";
+    const baseName = codeFileNameOf(baseFile ? codePathOf(baseFile) : "snippet").replace(/\.[^.]+$/, "") || "snippet";
+    const dir = baseFile ? codeDirOf(codePathOf(baseFile)) : "";
+    const isTest = /\.test\.|\.spec\./.test(baseFile ? codePathOf(baseFile) : "");
+    const name = `${dir ? `${dir}/` : ""}${isTest ? `${baseName}-2` : `${baseName}.test`}.${extension}`;
+    state.code.pendingApply = null;
+    file = codeFileCreate({ path: name, language: baseLanguage, content: code });
+    codeMarkSaved();
+    toast(localizedText(`Fichier de test ${codePathOf(file)}.`, `Test file ${codePathOf(file)}.`, `Archivo de prueba ${codePathOf(file)}.`, `テストファイル ${codePathOf(file)}。`));
+    state.code.activeId = file.id;
+    renderCodeTabs();
+    renderCodeTree();
+    renderCodeEditor();
+    enterCodeMode("code");
+    return;
+  }
+
+  if (pendingFile && !pendingFile.binary && (!language || language === pendingFile.language || language === "text")) {
+    file = pendingFile;
+  } else if (active && !active.binary && (!language || language === active.language || language === "text")) {
+    file = active;
+  } else {
+    const named = codeFileFromConversation(language);
+    if (named) file = named;
+  }
+
+  state.code.pendingApply = null;
+  if (!file) {
+    file = codeFileCreate({ language, content: code });
+    codeMarkSaved();
+    toast(localizedText(`Nouveau fichier ${codePathOf(file)}.`, `New file ${codePathOf(file)}.`, `Nuevo archivo ${codePathOf(file)}.`, `新しいファイル ${codePathOf(file)}。`));
+  } else {
+    const previous = file.content;
+    file.content = code;
+    file.language = normalizeCodeLanguage(language || file.language);
+    file.updatedAt = Date.now();
+    file.dirty = true;
+    codeFileSave(file);
+    codeMarkSaved();
+    const diff = codeDiffSummary(previous, code);
+    const deltaLabel = diff.delta === 0
+      ? localizedText("contenu remplacé", "content replaced", "contenido reemplazado", "内容を置き換え")
+      : diff.delta > 0
+        ? localizedText(`+${diff.delta} ligne(s)`, `+${diff.delta} line(s)`, `+${diff.delta} línea(s)`, `+${diff.delta} 行`)
+        : localizedText(`${diff.delta} ligne(s)`, `${diff.delta} line(s)`, `${diff.delta} línea(s)`, `${diff.delta} 行`);
+    toast(
+      localizedText(`Appliqué dans ${codePathOf(file)} (${deltaLabel}).`, `Applied to ${codePathOf(file)} (${deltaLabel}).`, `Aplicado en ${codePathOf(file)} (${deltaLabel}).`, `${codePathOf(file)} に適用しました（${deltaLabel}）。`),
+      "info",
+      {
+        label: localizedText("Annuler", "Undo", "Deshacer", "元に戻す"),
+        run: () => {
+          file.content = previous;
+          file.updatedAt = Date.now();
+          file.dirty = true;
+          codeFileSave(file);
+          renderCodeTabs();
+          renderCodeTree();
+          renderCodeEditor();
+          toast(localizedText("Modification annulée.", "Change undone.", "Cambio deshecho.", "変更を元に戻しました。"));
+        }
+      }
+    );
+  }
+  state.code.activeId = file.id;
+  if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  enterCodeMode("code");
+  if (state.code.preview) refreshCodePreview();
+}
+
+/* Une reponse qui contient plusieurs blocs (HTML + CSS + JS) forme un projet :
+   tout ouvrir d'un coup evite de cliquer bloc par bloc. */
+function codeSegmentsOf(content) {
+  return splitFences(content).filter(segment => segment.type === "code" && segment.value.trim());
+}
+
+function codeFileNameFromMeta(meta) {
+  const match = String(meta || "").match(/([\w][\w./-]*\.(?:html?|css|scss|js|mjs|cjs|jsx|ts|tsx|py|json|md|txt|svg|yml|yaml))/i);
+  return match ? match[1] : "";
+}
+
+function openAllCodeBlocks(button) {
+  const message = button.closest(".message");
+  const content = message ? messageRawContent.get(message) : "";
+  const segments = codeSegmentsOf(content || "");
+  if (!segments.length) return;
+  segments.forEach(segment => {
+    const language = normalizeCodeLanguage(segment.language);
+    const name = codeFileNameFromMeta(segment.meta);
+    const target = name
+      ? codeFileByPath(name)
+      : state.code.files.find(file => !file.binary && file.content === segment.value && file.language === language);
+    if (target) {
+      target.content = segment.value;
+      target.binary = false;
+      target.updatedAt = Date.now();
+      target.dirty = true;
+      codeFileSave(target);
+      state.code.activeId = target.id;
+      if (!state.code.openIds.includes(target.id)) state.code.openIds.push(target.id);
+      return;
+    }
+    codeFileCreate({ path: name || suggestCodePath(language), language, content: segment.value });
+  });
+  codeMarkSaved();
+  enterCodeMode("code");
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  toast(localizedText(`${segments.length} bloc(s) ouvert(s) dans l'atelier.`, `${segments.length} block(s) opened in the workspace.`, `${segments.length} bloque(s) abierto(s) en el taller.`, `作業台で ${segments.length} 個のブロックを開きました。`));
+}
+
+function findAttachmentById(id) {
+  if (!id) return null;
+  const pending = state.pendingAttachments.find(attachment => attachment.id === id);
+  if (pending) return pending;
+  for (const conversation of state.conversations) {
+    for (const message of conversation.messages) {
+      const found = (message.attachments || []).find(attachment => attachment.id === id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function openAttachmentInWorkspace(attachment) {
+  const text = attachment?.text;
+  if (!text || !String(text).trim()) {
+    toast(localizedText(
+      "Le contenu de ce fichier n'est plus disponible : joignez-le de nouveau pour l'ouvrir dans l'atelier.",
+      "This file's content is no longer available: attach it again to open it in the workspace.",
+      "El contenido de este archivo ya no está disponible: vuelve a adjuntarlo para abrirlo en el taller.",
+      "このファイルの内容は保持されていません。もう一度添付すると作業台で開けます。"
+    ), "error");
+    return;
+  }
+  const name = /\.[^.]+$/.test(attachment.name || "") ? attachment.name : `${attachment.name || "fichier"}.txt`;
+  openCodeWorkspace({ language: codeLanguageFor(name), code: text, name });
+}
+
+/* La sortie d'execution revient dans la conversation toute prete, plutot que
+   d'etre recopiee a la main pour demander une correction. */
+function sendCodeOutputToChat() {
+  const file = activeCodeFile();
+  const text = (ui.codeOutputBody?.textContent || "").trim();
+  if (!text) {
+    toast(localizedText("Aucune sortie à envoyer.", "Nothing to send yet.", "No hay salida que enviar.", "送信できる出力がありません。"), "error");
+    return;
+  }
+  const promise = localizedText(
+    `Voici la sortie de l'exécution de ${file ? codePathOf(file) : "mon fichier"} :\n\n\`\`\`\n${text.slice(0, 3000)}\n\`\`\`\n\nExplique ce qui se passe et corrige le code si nécessaire.`,
+    `Here is the output from running ${file ? codePathOf(file) : "my file"}:\n\n\`\`\`\n${text.slice(0, 3000)}\n\`\`\`\n\nExplain what is happening and fix the code if needed.`,
+    `Esta es la salida de la ejecución de ${file ? codePathOf(file) : "mi archivo"}:\n\n\`\`\`\n${text.slice(0, 3000)}\n\`\`\`\n\nExplica qué ocurre y corrige el código si hace falta.`,
+    `${file ? codePathOf(file) : "ファイル"} の実行結果です：\n\n\`\`\`\n${text.slice(0, 3000)}\n\`\`\`\n\n何が起きているか説明し、必要ならコードを修正してください。`
+  );
+  submitPrompt(promise);
+}
+
+/* --- Entree dans l'atelier, focus, libelles ------------------------------ */
+
+function createCodeFile(seed = {}) {
+  return codeFileCreate(seed);
+}
+
+function closeCodeFile(id) {
+  codeFileRemove(id);
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  saveState();
+}
+
+function openCodeWorkspace(seed) {
+  if (!ui.codePane || !seed?.code) return;
+  const language = normalizeCodeLanguage(seed.language);
+  const wantedName = codeNormalizePath(seed.name || "");
+  const twin = (wantedName && codeFileByPath(wantedName))
+    || state.code.files.find(file => !file.binary && file.content === seed.code && file.language === language);
+  if (twin) {
+    if (!twin.binary && twin.content !== seed.code) {
+      twin.content = seed.code;
+      twin.language = language;
+      twin.updatedAt = Date.now();
+      twin.dirty = true;
+      codeFileSave(twin);
+    }
+    state.code.activeId = twin.id;
+    if (!state.code.openIds.includes(twin.id)) state.code.openIds.push(twin.id);
+    renderCodeTabs();
+    renderCodeTree();
+    renderCodeEditor();
+  } else {
+    codeFileCreate({ language, content: seed.code, path: wantedName || suggestCodePath(language) });
+  }
+  enterCodeMode("code");
+}
+
+/* Entree permanente dans l'atelier : sans elle, la seule porte etait un bloc
+   de code dans une reponse. Un visiteur qui voulait ecrire son propre script
+   n'avait aucun bouton a cliquer. */
+function openCodeWorkspaceEmpty() {
+  if (!ui.codePane) return;
+  closeAppMenu();
+  if (!state.code.files.length) codeFileCreate({ language: "javascript" });
+  else {
+    const active = activeCodeFile();
+    if (active && !state.code.openIds.includes(active.id)) state.code.openIds.push(active.id);
+    renderCodeTabs();
+    renderCodeTree();
+    renderCodeEditor();
+  }
+  enterCodeMode("code");
+}
+
+function setCodeFocus(focus) {
+  state.code.focus = focus === "chat" ? "chat" : "code";
+  if (ui.workspace) ui.workspace.dataset.codePane = state.code.focus;
+  if (ui.codeSwitch) {
+    ui.codeSwitch.querySelectorAll("[data-code-focus]").forEach(button => {
+      button.setAttribute("aria-selected", String(button.dataset.codeFocus === state.code.focus));
+    });
+  }
+  renderComposerCodeContext();
+  if (state.code.focus === "chat") ui.prompt.focus();
+  else ui.codeInput?.focus();
+}
+
+function enterCodeMode(focus) {
+  if (!ui.codePane) return;
+  state.code.open = true;
+  if (ui.workspace) ui.workspace.dataset.mode = "code";
+  if (ui.codeSwitch) ui.codeSwitch.hidden = false;
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  setCodeFocus(focus || state.code.focus || "code");
+  renderCodeModelHint();
+  renderComposerCodeContext();
+  saveState();
+}
+
+function exitCodeMode() {
+  state.code.open = false;
+  setCodePreview(false);
+  setCodeTreeVisible(true);
+  if (ui.workspace) {
+    delete ui.workspace.dataset.mode;
+    delete ui.workspace.dataset.codePane;
+  }
+  if (ui.codeSwitch) ui.codeSwitch.hidden = true;
+  renderCodeModelHint();
+  renderComposerCodeContext();
+  saveState();
+  ui.prompt.focus();
+}
+
+function setCodeTreeVisible(visible) {
+  state.code.treeTouched = true;
+  state.code.treeVisible = Boolean(visible);
+  if (ui.codeBody) ui.codeBody.dataset.tree = state.code.treeVisible ? "shown" : "hidden";
+  ui.codeTreeToggle?.setAttribute("aria-pressed", String(state.code.treeVisible));
+}
+
+/* Libelles statiques de l'atelier : retraduits quand la langue change. */
+function renderCodeWorkspaceText() {
+  if (!ui.codePane) return;
+  const actions = {
+    run: localizedText("▶ Exécuter", "▶ Run", "▶ Ejecutar", "▶ 実行"),
+    explain: localizedText("Expliquer", "Explain", "Explicar", "説明"),
+    fix: localizedText("Corriger", "Fix", "Corregir", "修正"),
+    improve: localizedText("Optimiser", "Optimize", "Optimizar", "最適化"),
+    tests: localizedText("Tests", "Tests", "Pruebas", "テスト")
+  };
+  document.querySelectorAll("[data-code-action]").forEach(button => {
+    const label = actions[button.dataset.codeAction];
+    if (label) button.textContent = label;
+  });
+  const outputTitle = document.querySelector("#code-output-title");
+  if (outputTitle) outputTitle.textContent = localizedText("Sortie", "Output", "Salida", "出力");
+  if (ui.codeOutputClear) {
+    const label = localizedText("Effacer", "Clear", "Borrar", "消去");
+    ui.codeOutputClear.textContent = label;
+    ui.codeOutputClear.setAttribute("aria-label", label);
+  }
+  if (ui.codeOutputStop) {
+    const label = localizedText("Arrêter", "Stop", "Detener", "停止");
+    ui.codeOutputStop.textContent = label;
+    ui.codeOutputStop.setAttribute("aria-label", label);
+  }
+  if (ui.codeOutputChat) {
+    const label = localizedText("Envoyer au chat", "Send to chat", "Enviar al chat", "チャットへ送る");
+    ui.codeOutputChat.textContent = label;
+    ui.codeOutputChat.setAttribute("aria-label", label);
+  }
+  if (ui.codeTree) {
+    ui.codeTree.setAttribute("aria-label", localizedText("Fichiers du projet", "Project files", "Archivos del proyecto", "プロジェクトのファイル"));
+    if (ui.codeTreeTitle) ui.codeTreeTitle.textContent = localizedText("PROJET", "PROJECT", "PROYECTO", "プロジェクト");
+  }
+  const quickLabel = localizedText("Rechercher un fichier", "Find a file", "Buscar un archivo", "ファイルを検索");
+  if (ui.codeQuickOpen) {
+    ui.codeQuickOpen.setAttribute("aria-label", quickLabel);
+    ui.codeQuickOpen.setAttribute("title", `${quickLabel} (${NATIVE ? "Ctrl" : "Ctrl/⌘"}+P)`);
+  }
+  if (ui.codeQuickInput) ui.codeQuickInput.placeholder = `${quickLabel}…`;
+  const treeLabel = localizedText("Arborescence du projet", "Project tree", "Árbol del proyecto", "プロジェクトツリー");
+  if (ui.codeTreeToggle) {
+    ui.codeTreeToggle.setAttribute("aria-label", treeLabel);
+    ui.codeTreeToggle.setAttribute("title", treeLabel);
+  }
+  const importFilesLabel = localizedText("Importer des fichiers", "Import files", "Importar archivos", "ファイルを読み込む");
+  if (ui.codeImportFiles) {
+    ui.codeImportFiles.setAttribute("aria-label", importFilesLabel);
+    ui.codeImportFiles.setAttribute("title", importFilesLabel);
+  }
+  const importFolderLabel = localizedText("Importer un dossier complet", "Import a whole folder", "Importar una carpeta completa", "フォルダ全体を読み込む");
+  if (ui.codeOpenFolder) {
+    ui.codeOpenFolder.setAttribute("aria-label", importFolderLabel);
+    ui.codeOpenFolder.setAttribute("title", importFolderLabel);
+  }
+  if (ui.codeWriteBack) {
+    const label = localizedText("Enregistrer sur le disque", "Save to disk", "Guardar en el disco", "ディスクに保存");
+    ui.codeWriteBack.textContent = label;
+    ui.codeWriteBack.setAttribute("aria-label", label);
+  }
+  const exportLabel = localizedText("Exporter le projet (ZIP)", "Export the project (ZIP)", "Exportar el proyecto (ZIP)", "プロジェクトを書き出す（ZIP）");
+  if (ui.codeExport) {
+    ui.codeExport.setAttribute("aria-label", exportLabel);
+    ui.codeExport.setAttribute("title", exportLabel);
+  }
+  const previewLabel = localizedText("Aperçu du fichier", "File preview", "Vista previa del archivo", "ファイルのプレビュー");
+  if (ui.codePreviewToggle) {
+    ui.codePreviewToggle.setAttribute("aria-label", previewLabel);
+    ui.codePreviewToggle.setAttribute("title", previewLabel);
+  }
+  if (ui.codePreviewClose) ui.codePreviewClose.setAttribute("aria-label", localizedText("Fermer l'aperçu", "Close preview", "Cerrar la vista previa", "プレビューを閉じる"));
+  if (ui.codePreviewRefresh) ui.codePreviewRefresh.setAttribute("aria-label", localizedText("Recharger l'aperçu", "Reload the preview", "Recargar la vista previa", "プレビューを再読み込み"));
+  if (ui.codePreviewOpen) ui.codePreviewOpen.setAttribute("aria-label", localizedText("Ouvrir dans un onglet", "Open in a tab", "Abrir en una pestaña", "タブで開く"));
+  if (ui.codePreviewLogClear) ui.codePreviewLogClear.textContent = localizedText("Effacer", "Clear", "Borrar", "消去");
+  document.querySelectorAll("[data-preview-width]").forEach(button => {
+    const width = button.dataset.previewWidth;
+    button.setAttribute("aria-label", width === "full"
+      ? localizedText("Pleine largeur", "Full width", "Ancho completo", "全幅")
+      : width === "tablet"
+        ? localizedText("Largeur tablette", "Tablet width", "Ancho tableta", "タブレット幅")
+        : localizedText("Largeur téléphone", "Phone width", "Ancho teléfono", "スマートフォン幅"));
+  });
+  if (ui.codeLang) ui.codeLang.setAttribute("aria-label", localizedText("Type de fichier", "File type", "Tipo de archivo", "ファイルの種類"));
+  if (ui.codeNewMenu) {
+    ui.codeNewMenu.setAttribute("aria-label", localizedText("Type de fichier", "File type", "Tipo de archivo", "ファイルの種類"));
+    const textItem = ui.codeNewMenu.querySelector('[data-code-new="text"]');
+    if (textItem) textItem.textContent = localizedText("Texte", "Text", "Texto", "テキスト");
+  }
+  const newLabel = localizedText("Nouveau fichier", "New file", "Nuevo archivo", "新しいファイル");
+  if (ui.codeNew) {
+    ui.codeNew.setAttribute("aria-label", newLabel);
+    ui.codeNew.setAttribute("title", newLabel);
+  }
+  if (ui.codeTreeNewFile) {
+    ui.codeTreeNewFile.setAttribute("aria-label", newLabel);
+    ui.codeTreeNewFile.setAttribute("title", newLabel);
+  }
+  const newFolderLabel = localizedText("Nouveau dossier", "New folder", "Nueva carpeta", "新しいフォルダ");
+  if (ui.codeTreeNewFolder) {
+    ui.codeTreeNewFolder.setAttribute("aria-label", newFolderLabel);
+    ui.codeTreeNewFolder.setAttribute("title", newFolderLabel);
+  }
+  const closeLabel = localizedText("Fermer l'atelier", "Close workspace", "Cerrar el taller", "作業台を閉じる");
+  if (ui.codeClose) {
+    ui.codeClose.setAttribute("aria-label", closeLabel);
+    ui.codeClose.setAttribute("title", closeLabel);
+  }
+  ui.codeInput?.setAttribute("aria-label", localizedText("Éditeur de code", "Code editor", "Editor de código", "コードエディター"));
+  ui.codePane.setAttribute("aria-label", localizedText("Atelier code", "Code workspace", "Taller de código", "コード作業台"));
+  ui.codeSwitch?.setAttribute("aria-label", localizedText("Atelier et conversation", "Workspace and chat", "Taller y conversación", "作業台とチャット"));
+  document.querySelector("#code-tabs")?.setAttribute("aria-label", localizedText("Fichiers ouverts", "Open files", "Archivos abiertos", "開いているファイル"));
+  document.querySelectorAll(".code-mode-switch [data-code-focus]").forEach(button => {
+    button.textContent = button.dataset.codeFocus === "chat"
+      ? localizedText("Chat", "Chat", "Chat", "チャット")
+      : localizedText("Code", "Code", "Código", "コード");
+  });
+  renderCodeTabs();
+  renderCodeTree();
+  updateCodeMeta();
+  renderCodeSaveState();
+  if (state.code.preview) refreshCodePreview();
+}
+
+/* --- Initialisation ------------------------------------------------------ */
 
 async function initCodeWorkspace() {
   if (!ui.codePane) return;
   state.code.files = await codeFilesLoad();
-  if (!state.code.files.some(file => file.id === state.code.activeId)) {
-    state.code.activeId = state.code.files[0]?.id || null;
-  }
+  if (!state.code.files.length) await codeMigrateLegacyFiles();
+  if (!state.code.files.length) state.code.files = await codeFilesLoad();
+  state.code.files = state.code.files.map(file => ({
+    ...file,
+    path: codeNormalizePath(file.path || file.name || "snippet.txt"),
+    content: String(file.content ?? ""),
+    binary: Boolean(file.binary),
+    language: normalizeCodeLanguage(file.language || codeLanguageFor(file.path || file.name))
+  }));
+  const known = new Set(state.code.files.map(file => file.id));
+  state.code.openIds = state.code.openIds.filter(id => known.has(id));
+  if (!state.code.openIds.length && state.code.files.length) state.code.openIds.push(state.code.files[0].id);
+  if (!known.has(state.code.activeId)) state.code.activeId = state.code.openIds[0] || state.code.files[0]?.id || null;
+  /* Sur un telephone, l'arborescence ouverte mange l'editeur : elle demarre
+     fermee, et le bouton de la barre la fait apparaitre. */
+  if (window.matchMedia("(max-width: 900px)").matches) state.code.treeVisible = false;
+  setCodeTreeVisible(state.code.treeVisible !== false);
+  setCodePreviewWidth(state.code.previewWidth);
+  applyCodeTypography();
+  state.code.dirty = false;
+  state.code.saving = false;
   renderCodeTabs();
+  renderCodeTree();
   renderCodeEditor();
+  renderCodeSaveState();
   if (state.code.open) enterCodeMode(state.code.focus);
 }
+
 
 /* --------------------------------------------------------------------------
  * Generation d'images (application de bureau uniquement).
@@ -2435,8 +3850,10 @@ function renderImageEngineUi() {
   }
 }
 
-/* Notification non bloquante : remplace window.alert. */
-function toast(message, kind = "info") {
+/* Notification non bloquante : remplace window.alert.
+   `action` ajoute un bouton (par exemple « Annuler ») : une action destructrice
+   doit pouvoir se defaire sans passer par une boite de dialogue. */
+function toast(message, kind = "info", action = null) {
   if (!message) return;
   let stack = document.querySelector(".toast-stack");
   if (!stack) {
@@ -2449,11 +3866,22 @@ function toast(message, kind = "info") {
   const node = document.createElement("p");
   node.className = kind === "error" ? "toast toast-error" : "toast";
   node.textContent = message;
+  if (action?.label && typeof action.run === "function") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toast-action";
+    button.textContent = action.label;
+    button.addEventListener("click", () => {
+      node.remove();
+      action.run();
+    });
+    node.append(" ", button);
+  }
   stack.append(node);
   setTimeout(() => {
     node.classList.add("toast-leaving");
     setTimeout(() => node.remove(), 220);
-  }, kind === "error" ? 7000 : 4200);
+  }, kind === "error" ? 7000 : action ? 9000 : 4200);
 }
 
 function setStatus(label, kind = "ready") {
@@ -2471,6 +3899,7 @@ function customModelLabel() {
 }
 
 function renderModeLabel() {
+  renderComposerModel();
   const conversationModel = MODELS.find(model => model.id === activeConversation()?.modelId);
   const profile = state.customModelActive ? state.customModel : null;
   if (conversationModel && state.useWebLLM && state.loadedModelId === conversationModel.id) {
@@ -2635,6 +4064,13 @@ function attachmentKind(file) {
 
 function isTextAttachment(file) {
   return file.type.startsWith("text/") || file.type === "application/json" || TEXT_EXTENSIONS.has(attachmentExtension(file));
+}
+
+/* Un fichier de code ou de texte peut s'ouvrir dans l'atelier ; un PDF, un
+   classeur ou une image, non. */
+function isCodeAttachment(attachment) {
+  const extension = attachmentExtension({ name: attachment?.name || "" });
+  return TEXT_EXTENSIONS.has(extension) || Boolean(CODE_LANGUAGES[extension]);
 }
 
 /* Les fichiers du catalogue expriment leurs poids en GB/MB. En francais on
@@ -3503,8 +4939,7 @@ async function prepareAttachment(file) {
 }
 
 function attachmentCard(attachment, pending = false) {
-  const preview = attachment.kind === "image" && attachment.previewUrl ? `<img src="${escapeHtml(attachment.previewUrl)}" alt="">` : attachment.kind === "video" ? "VID" : attachment.kind === "3d" ? "3D" : attachment.document ? escapeHtml(attachment.document.format || "DOC") : "DOC";
-  const remove = pending
+  const preview = attachment.kind === "image" && attachment.previewUrl ? `<img src="${escapeHtml(attachment.previewUrl)}" alt="">` : attachment.kind === "video" ? "VID" : attachment.kind === "3d" ? "3D" : attachment.document ? escapeHtml(attachment.document.format || "DOC") : "DOC";  const remove = pending
     ? `<button type="button" data-remove-attachment="${attachment.id}" aria-label="${escapeHtml(localizedText(`Retirer ${attachment.name}`, `Remove ${attachment.name}`, `Quitar ${attachment.name}`, `${attachment.name} を外す`))}">x</button>`
     : "";
   /* Une image jointe a un modele qui ne voit pas : on le dit sur la vignette
@@ -3514,6 +4949,12 @@ function attachmentCard(attachment, pending = false) {
      le dire laissait croire qu'elles etaient lues. */
   const blind = attachment.kind === "image" && pending && !activeModelIsVision();
   const inert = (attachment.kind === "video" || attachment.kind === "3d") && pending;
+  /* Un fichier texte ou de code se rouvre dans l'atelier d'un clic : c'etait
+     le maillon manquant entre la piece jointe et l'editeur. Un PDF ou un Word
+     n'y a pas sa place : son texte extrait n'est pas un fichier source. */
+  const openWorkspace = isCodeAttachment(attachment) && attachment.text && String(attachment.text).trim()
+    ? `<button type="button" class="attachment-open" data-open-attachment-code="${escapeHtml(attachment.id)}" title="${escapeHtml(localizedText("Ouvrir dans l'atelier", "Open in the workspace", "Abrir en el taller", "作業台で開く"))}" aria-label="${escapeHtml(localizedText("Ouvrir dans l'atelier", "Open in the workspace", "Abrir en el taller", "作業台で開く"))}">${ICON_CODE}</button>`
+    : "";
   const mediaNote = blind
     ? copy[state.language].imageNeedsVision
     : inert
@@ -3534,9 +4975,9 @@ function attachmentCard(attachment, pending = false) {
           document_.outline?.length > 1 ? localizedText(`${document_.outline.length} chapitres`, `${document_.outline.length} chapters`, `${document_.outline.length} capítulos`) : "",
           document_.restored ? localizedText("rechargé depuis cet appareil", "reloaded from this device", "recargado desde este dispositivo", "このデバイスから再読み込み") : ""
         ].filter(Boolean).join(" · "));
-    return `<div class="attachment-card attachment-${attachment.kind} attachment-document${status}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span><small class="attachment-detail">${escapeHtml(information)}</small></span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
+    return `<div class="attachment-card attachment-${attachment.kind} attachment-document${status}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span><small class="attachment-detail">${escapeHtml(information)}</small></span><small>${formatFileSize(attachment.size)}</small>${openWorkspace}${remove}</div>`;
   }
-  return `<div class="attachment-card attachment-${attachment.kind}${blind ? " needs-vision" : ""}${inert ? " inert-media" : ""}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span>${mediaNote || attachment.preparing ? `<small class="attachment-detail">${escapeHtml(attachment.preparing ? localizedText("Préparation…", "Preparing…", "Preparando…", "準備中…") : mediaNote)}</small>` : ""}</span><small>${formatFileSize(attachment.size)}</small>${remove}</div>`;
+  return `<div class="attachment-card attachment-${attachment.kind}${blind ? " needs-vision" : ""}${inert ? " inert-media" : ""}" data-attachment-id="${attachment.id}"><span class="attachment-preview">${preview}</span><span class="attachment-name"><span class="attachment-label">${escapeHtml(attachment.name)}</span>${mediaNote || attachment.preparing ? `<small class="attachment-detail">${escapeHtml(attachment.preparing ? localizedText("Préparation…", "Preparing…", "Preparando…", "準備中…") : mediaNote)}</small>` : ""}</span><small>${formatFileSize(attachment.size)}</small>${openWorkspace}${remove}</div>`;
 }
 
 function renderPendingAttachments() {
@@ -3580,10 +5021,10 @@ async function addAttachments(files) {
   const usable = selected.filter(file => !looksLikeFolder(file));
   if (folders.length) {
     toast(localizedText(
-      "Un dossier ne peut pas être joint. Ouvrez-le et déposez les fichiers qu'il contient.",
-      "A folder cannot be attached. Open it and drop the files inside.",
-      "No se puede adjuntar una carpeta. Ábrela y suelta los archivos que contiene.",
-      "フォルダは添付できません。フォルダを開いて中のファイルをドロップしてください。"
+      "Un dossier ne peut pas être joint à la conversation. Déposez-le sur l'atelier de code pour l'ouvrir.",
+      "A folder cannot be attached to the conversation. Drop it on the code workspace to open it.",
+      "No se puede adjuntar una carpeta a la conversación. Suéltala en el taller de código para abrirla.",
+      "フォルダは会話に添付できません。コード作業台にドロップすると開けます。"
     ));
   }
   if (!usable.length) return;
@@ -4062,19 +5503,37 @@ function saveState() {
     selectedModel: state.selectedModel,
     cachedModelId: state.cachedModelId,
     autoLoadModel: state.autoLoadModel,
+    autoSaveDraft: state.autoSaveDraft,
+    rememberHistory: state.rememberHistory,
+    enterToSend: state.enterToSend,
+    streaming: state.streaming,
+    replyLength: state.replyLength,
+    temperature: state.temperature,
+    codeAutosave: state.codeAutosave,
+    codeWrap: state.codeWrap,
+    codeFontSize: state.codeFontSize,
+    codeAutoPreview: state.codeAutoPreview,
     customModel: state.customModel,
     customModelActive: state.customModelActive,
     codeOpen: state.code.open,
     codeFocus: state.code.focus,
+    codeAttachFile: state.code.attachFile,
+    codeOpenIds: state.code.openIds.slice(0, 40),
+    codeActiveId: state.code.activeId,
     profile: state.profile,
     activeConversationId: state.activeConversationId,
-    conversations: state.conversations.map(conversation => ({
-      ...conversation,
-      messages: conversation.messages.map(message => ({
-        ...message,
-        attachments: message.attachments?.map(storedAttachment) || []
-      }))
-    }))
+    /* Mode prive : les reglages restent, l'historique ne quitte pas la memoire
+       vive. Le vidage effectif est fait ici, sinon la sauvegarde precedente
+       suffirait a le faire reapparaitre au prochain demarrage. */
+    conversations: state.rememberHistory
+      ? state.conversations.map(conversation => ({
+          ...conversation,
+          messages: conversation.messages.map(message => ({
+            ...message,
+            attachments: message.attachments?.map(storedAttachment) || []
+          }))
+        }))
+      : []
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(backup));
@@ -4092,11 +5551,24 @@ function loadState() {
     state.selectedModel = MODELS.some(model => model.id === backup.selectedModel) ? backup.selectedModel : DEFAULT_MODEL_ID;
     state.cachedModelId = MODELS.some(model => model.id === backup.cachedModelId) ? backup.cachedModelId : null;
     state.autoLoadModel = Boolean(backup.autoLoadModel);
+    state.autoSaveDraft = backup.autoSaveDraft !== false;
+    state.rememberHistory = backup.rememberHistory !== false;
+    state.enterToSend = backup.enterToSend !== false;
+    state.streaming = backup.streaming !== false;
+    state.replyLength = ["short", "normal", "long"].includes(backup.replyLength) ? backup.replyLength : "normal";
+    state.temperature = Number.isFinite(Number(backup.temperature)) ? Math.min(1.2, Math.max(0.1, Number(backup.temperature))) : 0.7;
+    state.codeAutosave = backup.codeAutosave !== false;
+    state.codeWrap = Boolean(backup.codeWrap);
+    state.codeFontSize = [12, 13, 15, 17].includes(Number(backup.codeFontSize)) ? Number(backup.codeFontSize) : 13;
+    state.codeAutoPreview = backup.codeAutoPreview !== false;
     state.customModel = normalizedCustomModel(backup.customModel);
     state.customModelActive = Boolean(state.customModel) && Boolean(backup.customModelActive);
     state.profile = typeof backup.profile === "string" ? backup.profile.slice(0, 600) : "";
     state.code.open = Boolean(backup.codeOpen);
     state.code.focus = backup.codeFocus === "chat" ? "chat" : "code";
+    state.code.attachFile = backup.codeAttachFile !== false;
+    state.code.openIds = Array.isArray(backup.codeOpenIds) ? backup.codeOpenIds.filter(id => typeof id === "string") : [];
+    state.code.activeId = typeof backup.codeActiveId === "string" ? backup.codeActiveId : null;
     state.conversations = backup.conversations.filter(conversation => conversation && typeof conversation.id === "string" && Array.isArray(conversation.messages)).map(conversation => ({
       ...conversation,
       modelId: MODELS.some(model => model.id === conversation.modelId) ? conversation.modelId : state.selectedModel
@@ -4190,7 +5662,7 @@ function renderMessage(role, content, scroll = true, attachments = [], sources =
   const attachmentMarkup = attachments.length ? `<div class="message-attachments">${attachments.map(attachment => attachmentCard(attachment)).join("")}</div>` : "";
   const sourcesMarkup = role === "assistant" && sources?.length ? documentSourcesMarkup(sources) : "";
   const imageMarkup = options.image ? imageFigureMarkup(options.image) : "";
-  const modelGuidance = role === "assistant" && content === MODEL_REQUIRED ? modelRequiredMarkup() : `<div class="message-text">${formatMessageContent(content)}</div>`;
+  const modelGuidance = role === "assistant" && content === MODEL_REQUIRED ? modelRequiredMarkup() : `<div class="message-text">${formatMessageContent(content, { apply: role === "assistant" })}</div>`;
   const showTools = role === "assistant" && content !== MODEL_REQUIRED && (options.tools ?? scroll) && !options.image;
   const allowTurn = options.last ?? true;
   const toolbar = showTools ? messageToolbarMarkup(content, allowTurn) : "";
@@ -4215,10 +5687,17 @@ function messageToolbarMarkup(content, allowTurn = true) {
     localizedText("Résume en 3 points", "Summarize in 3 points", "Resume en 3 puntos", "3点に要約して")
   ];
   const chips = suggestions.map(suggestion => `<button type="button" class="message-suggestion" data-suggestion="${escapeHtml(suggestion)}">${escapeHtml(suggestion)}</button>`).join("");
+  /* Une reponse qui contient plusieurs blocs forme un projet : on propose de
+     tout ouvrir d'un coup dans l'atelier, sinon il fallait cliquer bloc par
+     bloc pour retrouver les fichiers. */
+  const blocks = splitFences(content).filter(segment => segment.type === "code" && segment.value.trim()).length;
+  const workspaceAction = blocks >= 2
+    ? `<button type="button" class="message-action" data-action="open-all-code" title="${escapeHtml(localizedText(`Ouvrir les ${blocks} blocs dans l'atelier`, `Open all ${blocks} blocks in the workspace`, `Abrir los ${blocks} bloques en el taller`, `${blocks} 個のブロックを作業台で開く`))}">${ICON_CODE}<span>${escapeHtml(localizedText("Projet → atelier", "Project → workspace", "Proyecto → taller", "プロジェクト → 作業台"))}</span></button>`
+    : "";
   const turnActions = allowTurn
     ? `<button type="button" class="message-action" data-action="regenerate" title="${escapeHtml(labels.regenerate)}">${ICON_REGENERATE}<span>${escapeHtml(labels.regenerate)}</span></button><button type="button" class="message-action" data-action="continue" title="${escapeHtml(labels.continue)}">${ICON_CONTINUE}<span>${escapeHtml(labels.continue)}</span></button>`
     : "";
-  return `<div class="message-actions"><button type="button" class="message-action" data-action="copy" data-label-copied="${escapeHtml(labels.copied)}" title="${escapeHtml(labels.copy)}">${ICON_COPY}<span>${escapeHtml(labels.copy)}</span></button>${turnActions}</div>${allowTurn ? `<div class="message-suggestions">${chips}</div>` : ""}`;
+  return `<div class="message-actions">${workspaceAction}<button type="button" class="message-action" data-action="copy" data-label-copied="${escapeHtml(labels.copied)}" title="${escapeHtml(labels.copy)}">${ICON_COPY}<span>${escapeHtml(labels.copy)}</span></button>${turnActions}</div>${allowTurn ? `<div class="message-suggestions">${chips}</div>` : ""}`;
 }
 
 function lastUserPrompt() {
@@ -4250,7 +5729,7 @@ function beginStreamingMessage(typing) {
     scheduled = 0;
     lastPaint = performance.now();
     const stick = chatNearBottom();
-    textNode.innerHTML = `${formatMessageContent(pending)}<span class="stream-caret" aria-hidden="true"></span>`;
+    textNode.innerHTML = `${formatMessageContent(pending, { apply: true })}<span class="stream-caret" aria-hidden="true"></span>`;
     if (stick) scrollChatToLatest();
   };
   const update = partial => {
@@ -4275,8 +5754,11 @@ async function runAssistantTurn(prompt) {
     const textActive = textModelActive();
     state.lastDocumentSources = [];
     const answering = visionActive || textActive;
-    const stream = answering ? beginStreamingMessage(typing) : null;
-    const answer = answering ? await respond(prompt, [], delta => stream.update(delta)) : MODEL_REQUIRED;
+    /* « Écrire au fil de l'eau » coupe : on n'installe pas le bloc de
+       streaming, la reponse arrive d'un coup. Le delai est identique, seule
+       l'animation disparait. */
+    const stream = answering && state.streaming ? beginStreamingMessage(typing) : null;
+    const answer = answering ? await respond(prompt, [], stream ? delta => stream.update(delta) : null) : MODEL_REQUIRED;
     if (stream) stream.finish(answer, state.lastDocumentSources);
     else { typing.remove(); renderMessage("assistant", answer); }
     addMessage("assistant", answer);
@@ -4319,6 +5801,14 @@ function handleMessageAction(button) {
     const language = block.querySelector(".code-language")?.textContent || "code";
     const code = block.querySelector("code")?.textContent || "";
     openCodeWorkspace({ language, code });
+    return;
+  }
+  if (action === "open-all-code") {
+    openAllCodeBlocks(button);
+    return;
+  }
+  if (action === "apply-code") {
+    applyCodeBlock(button);
     return;
   }
   if (action === "copy" || action === "copy-code") {
@@ -4712,7 +6202,7 @@ async function loadWebLLM() {
     renderModeLabel();
     updateModelActivityUi();
     ui.downloadInfo.textContent = localizedText("Modèle prêt. Il reste en cache dans ce navigateur pour les prochaines visites.", "Model ready. It stays cached in this browser for future visits.", "Modelo listo. Queda guardado en la caché de este navegador para las próximas aperturas.");
-    ui.settings.hidden = true;
+    closeSettings();
   } catch (error) {
     console.error(error);
     await clearModelResources(model?.id);
@@ -4780,7 +6270,7 @@ async function loadVisionModel(model) {
     renderModeLabel();
     updateModelActivityUi();
     ui.downloadInfo.textContent = localizedText("Modèle vision prêt. Il reste en cache pour les prochaines visites.", "Vision model ready. It stays cached for future visits.", "Modelo de visión listo. Queda en caché para futuras visitas.");
-    ui.settings.hidden = true;
+    closeSettings();
   } catch (error) {
     console.error(error);
     state.visionPipeline = null;
@@ -4835,7 +6325,7 @@ function trimMessagesToContext(messages) {
   return kept;
 }
 
-async function respond(prompt, currentAttachments = [], onDelta = null) {
+async function respond(prompt, currentAttachments = [], onDelta = null, extraContext = "") {
   const conversation = activeConversation();
   if (!conversation) return MODEL_REQUIRED;
   const model = MODELS.find(candidate => candidate.id === conversation?.modelId);
@@ -4859,7 +6349,7 @@ async function respond(prompt, currentAttachments = [], onDelta = null) {
     const images = isVisionModel() ? (message.attachments || []).filter(attachment => attachment.kind === "image" && attachment.dataUrl) : [];
     if (message.role === "user" && images.length) return { role: "user", content: [{ type: "text", text: content }, ...images.map(image => ({ type: "image_url", image_url: { url: image.dataUrl } }))] };
     return { role: message.role, content };
-  }), currentUserMessage(prompt, currentAttachments, excerpts)];
+  }), currentUserMessage(prompt, currentAttachments, excerpts, extraContext)];
   const prepared = trimMessagesToContext(messages);
   if (NATIVE) return nativeChat(prepared, onDelta);
   return webllmChat(prepared, onDelta);
@@ -4868,8 +6358,8 @@ async function respond(prompt, currentAttachments = [], onDelta = null) {
 /* Le tour courant porte aussi ses images. Sans cela, la premiere question
    accompagnée d'une capture partait en texte seul : le modele multimodal
    repondait « je ne vois pas d'image » alors qu'elle etait jointe. */
-function currentUserMessage(prompt, attachments, excerpts) {
-  const text = `${prompt}${attachmentContext(attachments)}${excerpts ? `\n\n[EXTRAITS DES DOCUMENTS]\n${excerpts.text}\n[FIN DES EXTRAITS]` : ""}`;
+function currentUserMessage(prompt, attachments, excerpts, extraContext = "") {
+  const text = `${extraContext ? `${extraContext}\n` : ""}${prompt}${attachmentContext(attachments)}${excerpts ? `\n\n[EXTRAITS DES DOCUMENTS]\n${excerpts.text}\n[FIN DES EXTRAITS]` : ""}`;
   const images = isVisionModel() ? (attachments || []).filter(attachment => attachment.kind === "image" && attachment.dataUrl) : [];
   if (!images.length) return { role: "user", content: text };
   return { role: "user", content: [{ type: "text", text }, ...images.map(image => ({ type: "image_url", image_url: { url: image.dataUrl } }))] };
@@ -4877,10 +6367,10 @@ function currentUserMessage(prompt, attachments, excerpts) {
 
 async function webllmChat(messages, onDelta) {
   if (!onDelta) {
-    const response = await state.engine.chat.completions.create({ messages, temperature: 0.7, max_tokens: CHAT_REPLY_TOKENS });
+    const response = await state.engine.chat.completions.create({ messages, temperature: chatTemperature(), max_tokens: chatReplyTokens() });
     return response.choices[0].message.content;
   }
-  const stream = await state.engine.chat.completions.create({ messages, temperature: 0.7, max_tokens: CHAT_REPLY_TOKENS, stream: true });
+  const stream = await state.engine.chat.completions.create({ messages, temperature: chatTemperature(), max_tokens: chatReplyTokens(), stream: true });
   let text = "";
   for await (const chunk of stream) {
     const delta = chunk.choices?.[0]?.delta?.content || "";
@@ -4899,8 +6389,8 @@ async function nativeChat(messages, onDelta) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       messages,
-      temperature: 0.7,
-      max_tokens: CHAT_REPLY_TOKENS,
+      temperature: chatTemperature(),
+      max_tokens: chatReplyTokens(),
       stream: Boolean(onDelta),
       chat_template_kwargs: { enable_thinking: false }
     })
@@ -5029,7 +6519,27 @@ async function respondWithTransformersVision(prompt, model) {
   return answer.trim() || decoded.trim();
 }
 
-async function submitPrompt(rawPrompt) {
+/* Le fichier ouvert dans l'atelier accompagne la question, sans polluer le
+   message affiche : le modele le voit, la conversation reste lisible. */
+function codeContextForPrompt() {
+  if (!state.code.open || !state.code.attachFile) return "";
+  const file = activeCodeFile();
+  if (!file || file.binary || !file.content.trim()) return "";
+  const content = file.content.replace(/\s+$/, "");
+  const trimmed = content.length > CODE_PROMPT_LIMIT
+    ? `${content.slice(0, CODE_PROMPT_LIMIT)}\n// … code tronqué (${content.length} caractères au total)`
+    : content;
+  const path = codePathOf(file);
+  const header = localizedText(
+    `[ATELIER — fichier actif ${path}]`,
+    `[WORKSPACE — active file ${path}]`,
+    `[TALLER — archivo activo ${path}]`,
+    `[作業台 — アクティブファイル ${path}]`
+  );
+  return `${header}\n\`\`\`${file.language || ""}\n${trimmed}\n\`\`\`\n`;
+}
+
+async function submitPrompt(rawPrompt, options = {}) {
   let prompt = rawPrompt.trim();
   /* Une piece jointe encore en preparation n'a pas de contenu : partir
      maintenant ferait repondre au modele qu'il ne peut pas lire le fichier.
@@ -5076,9 +6586,10 @@ async function submitPrompt(rawPrompt) {
     const textActive = textModelActive();
     state.lastDocumentSources = [];
     const answering = visionActive || textActive;
-    const stream = answering ? beginStreamingMessage(typing) : null;
+    const stream = answering && state.streaming ? beginStreamingMessage(typing) : null;
+    const workspaceContext = options.workspaceContext === false ? "" : codeContextForPrompt();
     const answer = answering
-      ? await respond(messageContent, attachments, delta => stream.update(delta))
+      ? await respond(messageContent, attachments, stream ? delta => stream.update(delta) : null, workspaceContext)
       : MODEL_REQUIRED;
     if (stream) stream.finish(answer, state.lastDocumentSources);
     else { typing.remove(); renderMessage("assistant", answer); }
@@ -5362,15 +6873,19 @@ function autoResize() {
   ui.charCount.textContent = `${ui.prompt.value.length} / 4000`;
 }
 
-/* Brouillon : le texte en cours d'écriture survit à un rechargement (mise à jour, fermeture). */
+/* Brouillon : le texte en cours d'écriture survit à un rechargement (mise à jour, fermeture).
+   Le réglage « Enregistrer le brouillon » coupe cette écriture : rien n'est
+   alors déposé dans le stockage de session. */
 const DRAFT_KEY = "simia.draft";
 let draftTimer = null;
 
 function saveDraft() {
+  if (!state.autoSaveDraft) return;
   try { sessionStorage.setItem(DRAFT_KEY, ui.prompt.value); } catch { /* stockage indisponible */ }
 }
 
 function scheduleDraftSave() {
+  if (!state.autoSaveDraft) return;
   if (draftTimer) window.clearTimeout(draftTimer);
   draftTimer = window.setTimeout(saveDraft, 400);
 }
@@ -5378,8 +6893,8 @@ function scheduleDraftSave() {
 function restoreDraft() {
   try {
     const draft = sessionStorage.getItem(DRAFT_KEY);
-    if (!draft) return;
     sessionStorage.removeItem(DRAFT_KEY);
+    if (!draft || !state.autoSaveDraft) return;
     ui.prompt.value = draft;
   } catch { /* stockage indisponible */ }
 }
@@ -5500,7 +7015,6 @@ function applyLanguage() {
   document.querySelector("#home-model-button").textContent = text.welcomeModel;
   document.querySelector("#welcome-setup").textContent = text.welcomeSetup;
   ui.autoLoadModel.checked = state.autoLoadModel;
-  document.querySelector("#auto-load-model-label").textContent = text.autoLoadModel;
   document.querySelector("#disclaimer").textContent = text.disclaimer;
   document.querySelector("#new-chat").textContent = text.newChat;
   document.querySelector(".section-label").textContent = text.today;
@@ -5513,7 +7027,6 @@ function applyLanguage() {
     ? localizedText("Vos données restent sur cet ordinateur.", "Your data stays on this computer.", "Tus datos se quedan en este ordenador.", "データはこのPCに残ります。")
     : text.localNote;
   document.querySelector("[data-i18n='personalAssistant']").textContent = text.personalAssistant;
-  document.querySelector("[data-i18n='localModel']").textContent = text.localModel;
   document.querySelector("[data-i18n='chooseModel']").textContent = text.chooseModel;
   ui.webllm.textContent = NATIVE
     ? localizedText("Modèle natif actif", "Native model active", "Modelo nativo activo", "ネイティブモデル有効")
@@ -5560,8 +7073,8 @@ function applyLanguage() {
   ui.legalContent.innerHTML = text.legalContent;
   ui.model.setAttribute("aria-label", text.chooseModel);
   document.querySelector("#custom-model-close").setAttribute("aria-label", localizedText("Fermer", "Close", "Cerrar"));
-  ui.customModelToggle.textContent = localizedText("Mon modèle", "My model", "Mi modelo");
-  ui.customModelSettingsToggle.textContent = localizedText("Mon modèle", "My model", "Mi modelo");
+  ui.customModelToggle.textContent = localizedText("Mon assistant", "My assistant", "Mi asistente");
+  ui.customModelSettingsToggle.textContent = localizedText("Configurer", "Configure", "Configurar", "設定");
   ui.modelFilters.setAttribute("aria-label", localizedText("Filtrer les modèles", "Filter models", "Filtrar modelos"));
   document.querySelector("#settings-close").setAttribute("aria-label", localizedText("Fermer les paramètres", "Close settings", "Cerrar los ajustes"));
   document.querySelector("#settings-close").setAttribute("title", localizedText("Fermer les paramètres", "Close settings", "Cerrar los ajustes"));
@@ -5627,6 +7140,10 @@ function applyLanguage() {
   /* Les messages portent des libelles traduits : on les redessine, sauf pendant le streaming. */
   if (!document.querySelector(".is-streaming")) renderActiveConversation();
   renderCodeWorkspaceText();
+  renderSettingsText();
+  renderSettingsControls();
+  renderComposerModel();
+  renderComposerCodeContext();
   setStatus(text.ready);
 }
 
@@ -5650,7 +7167,7 @@ function updateModelInfo() {
   const downloadLabel = localizedText("Téléchargement", "Download", "Descarga");
   const profile = state.customModelActive ? state.customModel : null;
   ui.modelInfo.textContent = profile
-    ? localizedText(`« ${profile.name} » : vos consignes permanentes sont ajoutées à ${model.name} (${displaySize(model.size)}). Retrouvez-les avec le bouton « Mon modèle ».`, `“${profile.name}”: your permanent instructions are added to ${model.name} (${displaySize(model.size)}). Edit them with the “My model” button.`, `«${profile.name}»: tus instrucciones permanentes se añaden a ${model.name} (${displaySize(model.size)}). Edítalas con el botón «Mi modelo».`)
+    ? localizedText(`« ${profile.name} » : vos consignes permanentes sont ajoutées à ${model.name} (${displaySize(model.size)}). Retrouvez-les avec le bouton « Mon assistant ».`, `“${profile.name}”: your permanent instructions are added to ${model.name} (${displaySize(model.size)}). Edit them with the “My assistant” button.`, `«${profile.name}»: tus instrucciones permanentes se añaden a ${model.name} (${displaySize(model.size)}). Edítalas con el botón «Mi asistente».`)
     : `${details[0]} — ${details[1]} ${downloadLabel} : ${displaySize(model.size)}.`;
   ui.modelPicker.querySelector("#model-picker-name").textContent = profile ? profile.name : model.name;
   ui.modelPicker.querySelector("#model-picker-meta").textContent = profile
@@ -5693,7 +7210,7 @@ async function releaseActiveEngine() {
   }
 }
 
-async function selectModelById(modelId, customModel = false) {
+async function selectModelById(modelId, customModel = false, options = {}) {
   const nextModel = MODELS.find(model => model.id === modelId);
   if (!nextModel || !modelIsCompatible(nextModel)) return;
   if (modelId === state.selectedModel && state.customModelActive === customModel) return;
@@ -5703,12 +7220,18 @@ async function selectModelById(modelId, customModel = false) {
   state.selectedModel = modelId;
   state.customModelActive = customModel;
   const conversation = activeConversation();
-  if (conversation?.messages.length) newConversation();
+  /* Changement a la volee depuis le composeur : la conversation continue avec
+     le nouveau modele au lieu de repartir de zero. La bibliotheque, elle,
+     garde l'ancien comportement (nouvelle conversation). */
+  if (options.keepConversation) {
+    if (conversation) conversation.modelId = modelId;
+  } else if (conversation?.messages.length) newConversation();
   else if (conversation) conversation.modelId = modelId;
   ui.model.value = modelId;
   ui.webllm.disabled = false;
   ui.webllm.textContent = copy[state.language].activate;
   renderModeLabel();
+  renderComposerModel();
   if (NATIVE) {
     ui.model.value = modelId;
     ui.webllm.disabled = false;
@@ -5731,6 +7254,215 @@ async function selectModelById(modelId, customModel = false) {
   if (NATIVE) activateNativeModel();
   renderActiveConversation();
   saveState();
+}
+
+/* --------------------------------------------------------------------------
+ * Modele visible et changeable depuis le composeur, en conversation comme
+ * dans l'atelier. Deux questions revenaient sans reponse : quel modele va
+ * repondre, et comment en changer sans rouvrir les parametres.
+ * ------------------------------------------------------------------------ */
+
+const QUICK_MODEL_LIMIT = 14;
+
+function modelQuickStateLabel(model) {
+  const live = state.loadedModelId === model.id && (NATIVE || state.useWebLLM);
+  if (live) return localizedText("actif", "active", "activo", "有効");
+  if (NATIVE) {
+    return model.nativeLocal
+      ? localizedText("sur le disque", "on disk", "en el disco", "ディスク上")
+      : localizedText("à télécharger", "to download", "para descargar", "要ダウンロード");
+  }
+  return state.cachedModelId === model.id
+    ? localizedText("en cache", "cached", "en caché", "キャッシュ済み")
+    : localizedText("à télécharger", "to download", "para descargar", "要ダウンロード");
+}
+
+function renderComposerModel() {
+  if (!ui.composerModel) return;
+  const model = MODELS.find(candidate => candidate.id === state.selectedModel);
+  if (!model) { ui.composerModel.hidden = true; return; }
+  ui.composerModel.hidden = false;
+  const live = state.loadedModelId === model.id && (NATIVE || state.useWebLLM);
+  const profile = state.customModelActive && state.customModel ? state.customModel : null;
+  const name = profile ? profile.name : model.name;
+  const stateLabel = modelQuickStateLabel(model);
+  ui.composerModelName.textContent = name;
+  ui.composerModelState.textContent = stateLabel;
+  ui.composerModel.classList.toggle("is-live", live);
+  ui.composerModel.classList.toggle("is-pending", !live);
+  const label = localizedText(
+    `Modèle qui répondra : ${name} (${stateLabel}). Cliquez pour changer.`,
+    `Model that will answer: ${name} (${stateLabel}). Click to change.`,
+    `Modelo que responderá: ${name} (${stateLabel}). Haz clic para cambiar.`,
+    `応答するモデル：${name}（${stateLabel}）。クリックで変更。`
+  );
+  ui.composerModel.title = label;
+  ui.composerModel.setAttribute("aria-label", label);
+  if (ui.composerModelMenu && !ui.composerModelMenu.hidden) renderComposerModelMenu();
+}
+
+function renderComposerModelMenu() {
+  if (!ui.composerModelMenu) return;
+  const ordered = MODELS
+    .filter(model => modelIsCompatible(model))
+    .sort((first, second) => {
+      const rank = model => (state.loadedModelId === model.id ? 0 : state.cachedModelId === model.id ? 1 : 2);
+      return rank(first) - rank(second) || Number(Boolean(second.recommended)) - Number(Boolean(first.recommended));
+    })
+    .slice(0, QUICK_MODEL_LIMIT);
+  const rows = ordered.map(model => {
+    const checked = model.id === state.selectedModel && !state.customModelActive;
+    return `<button type="button" role="menuitemradio" aria-checked="${checked}" data-quick-model="${escapeHtml(model.id)}"><span aria-hidden="true">${checked ? "✓" : ""}</span><span class="menu-name">${escapeHtml(model.name)}</span><span class="menu-state">${escapeHtml(modelQuickStateLabel(model))}</span></button>`;
+  }).join("");
+  ui.composerModelMenu.innerHTML = `${rows}<span class="menu-sep" role="separator"></span><button type="button" role="menuitem" class="menu-all" data-quick-all="1"><span aria-hidden="true">≡</span><span>${escapeHtml(localizedText("Toute la bibliothèque", "Full library", "Toda la biblioteca", "ライブラリ全体"))}</span></button>`;
+}
+
+function setCodeNewMenu(open) {
+  if (!ui.codeNewMenu || !ui.codeNew) return;
+  ui.codeNewMenu.hidden = !open;
+  ui.codeNew.setAttribute("aria-expanded", String(Boolean(open)));
+}
+
+function setComposerModelMenu(open) {
+  if (!ui.composerModelMenu || !ui.composerModel) return;
+  if (open) renderComposerModelMenu();
+  ui.composerModelMenu.hidden = !open;
+  ui.composerModel.setAttribute("aria-expanded", String(Boolean(open)));
+}
+
+function switchModelQuickly(modelId) {
+  setComposerModelMenu(false);
+  const model = MODELS.find(candidate => candidate.id === modelId);
+  if (!model || !modelIsCompatible(model)) return;
+  if (modelId === state.selectedModel) {
+    /* Deja choisi mais pas charge : on propose directement l'etape suivante. */
+    if (!NATIVE && state.loadedModelId !== modelId && model.engine !== "transformers") {
+      if (state.cachedModelId === modelId) loadWebLLM();
+      else openModelLibrary();
+    }
+    return;
+  }
+  selectModelById(modelId, false, { keepConversation: true }).then(() => {
+    if (NATIVE || model.engine === "transformers") {
+      if (model.engine === "transformers") openModelLibrary();
+      return;
+    }
+    if (state.cachedModelId === modelId) {
+      loadWebLLM();
+      return;
+    }
+    toast(localizedText(
+      `${model.name} doit être téléchargé une fois (${displaySize(model.size)}).`,
+      `${model.name} must be downloaded once (${displaySize(model.size)}).`,
+      `${model.name} debe descargarse una vez (${displaySize(model.size)}).`,
+      `${model.name} は一度だけダウンロードが必要です（${displaySize(model.size)}）。`
+    ));
+    openModelLibrary();
+  });
+}
+
+function renderComposerCodeContext() {
+  if (!ui.composerCodeContext) return;
+  const file = activeCodeFile();
+  const visible = Boolean(state.code.open && file && !file.binary);
+  ui.composerCodeContext.hidden = !visible;
+  if (!visible) return;
+  const path = codePathOf(file);
+  ui.composerCodeContextName.textContent = path;
+  ui.composerCodeContext.setAttribute("aria-pressed", String(state.code.attachFile));
+  const label = state.code.attachFile
+    ? localizedText(
+      `${path} accompagne vos questions. Cliquez pour l'exclure.`,
+      `${path} is sent with your questions. Click to exclude it.`,
+      `${path} acompaña tus preguntas. Haz clic para excluirlo.`,
+      `${path} は質問と一緒に送信されます。クリックで除外。`
+    )
+    : localizedText(
+      `${path} n'est pas envoyé. Cliquez pour le joindre de nouveau.`,
+      `${path} is not sent. Click to attach it again.`,
+      `${path} no se envía. Haz clic para volver a adjuntarlo.`,
+      `${path} は送信されません。クリックで再び添付。`
+    );
+  ui.composerCodeContext.title = label;
+  ui.composerCodeContext.setAttribute("aria-label", label);
+}
+
+/* Libelles de la carte Parametres, dans les quatre langues. Les controles sont
+   dans index.html en francais : ce passage evite qu'une carte bilingue
+   apparaisse quand l'interface est en anglais, en espagnol ou en japonais. */
+function renderSettingsText() {
+  const set = (selector, value) => {
+    const node = document.querySelector(selector);
+    if (node && value !== undefined) node.textContent = value;
+  };
+  const hint = (selector, value) => set(selector, value);
+  set("#settings-sub", localizedText("Réglages conservés sur cet appareil.", "Settings kept on this device.", "Ajustes guardados en este dispositivo.", "設定はこのデバイスに保存されます。"));
+  set("#settings-sec-model", localizedText("Modèle", "Model", "Modelo", "モデル"));
+  set("#settings-sec-reply", localizedText("Réponses", "Answers", "Respuestas", "回答"));
+  set("#settings-sec-composer", localizedText("Saisie", "Input", "Entrada", "入力"));
+  set("#settings-sec-code", localizedText("Atelier de code", "Code workspace", "Taller de código", "コード作業台"));
+  set("#settings-sec-data", localizedText("Historique et données", "History and data", "Historial y datos", "履歴とデータ"));
+  set("#settings-model-hint", localizedText("Celui qui répond dans cette conversation.", "The one that answers in this conversation.", "El que responde en esta conversación.", "この会話で応答するモデル。"));
+  set("#auto-load-model-label", localizedText("Charger le modèle au lancement", "Load the model on start", "Cargar el modelo al iniciar", "起動時にモデルを読み込む"));
+  set("#settings-autoload-hint", localizedText("Le modèle en cache est chargé dès l'ouverture, sans clic.", "The cached model loads as soon as SIMIA opens, without a click.", "El modelo en caché se carga al abrir, sin hacer clic.", "キャッシュ済みモデルを起動時に自動で読み込みます。"));
+  set("#webllm-toggle-label", localizedText("État du modèle", "Model state", "Estado del modelo", "モデルの状態"));
+  set("#settings-webllm-hint", localizedText("Télécharge ou active le modèle sélectionné.", "Downloads or activates the selected model.", "Descarga o activa el modelo seleccionado.", "選択したモデルをダウンロードまたは有効化します。"));
+  set("#assistant-name", localizedText("Mon assistant", "My assistant", "Mi asistente", "マイアシスタント"));
+  set("#settings-assistant-hint", localizedText(
+    "Un nom et des consignes permanentes ajoutés à un modèle existant. Aucun entraînement, aucun téléchargement : vos consignes partent devant chaque conversation.",
+    "A name and permanent instructions added to an existing model. No training, no download: your instructions go in front of every conversation.",
+    "Un nombre y unas instrucciones permanentes añadidas a un modelo existente. Sin entrenamiento ni descarga: tus instrucciones van delante de cada conversación.",
+    "既存モデルに名前と永続的な指示を加えるものです。学習もダウンロードもありません。指示は各会話の冒頭に付きます。"
+  ));
+  set("#setting-image-label", localizedText("Modèle d'image", "Image model", "Modelo de imagen", "画像モデル"));
+  set("#settings-stream-name", localizedText("Écrire au fil de l'eau", "Stream the answer", "Escribir sobre la marcha", "逐次表示"));
+  set("#settings-stream-hint", localizedText("Le texte apparaît pendant la génération. Coupé, la réponse arrive d'un bloc à la fin.", "Text appears while generating. Off, the answer arrives in one block at the end.", "El texto aparece durante la generación. Desactivado, la respuesta llega de golpe al final.", "生成中に文字が表示されます。オフだと最後にまとめて表示されます。"));
+  set("#settings-length-name", localizedText("Longueur des réponses", "Answer length", "Longitud de las respuestas", "回答の長さ"));
+  set("#settings-length-hint", localizedText("Une réponse courte évite les développements inutiles.", "Short answers avoid unnecessary padding.", "Una respuesta corta evita desarrollos inútiles.", "短い回答は余計な説明を省きます。"));
+  const lengthOptions = {
+    short: localizedText("Courte", "Short", "Corta", "短い"),
+    normal: localizedText("Normale", "Normal", "Normal", "標準"),
+    long: localizedText("Longue", "Long", "Larga", "長い")
+  };
+  ui.settingLength?.querySelectorAll("option").forEach(option => {
+    if (lengthOptions[option.value]) option.textContent = lengthOptions[option.value];
+  });
+  const tempName = document.querySelector("#settings-temp-name");
+  if (tempName) {
+    const value = tempName.querySelector("#setting-temp-value");
+    tempName.textContent = localizedText("Créativité ", "Creativity ", "Creatividad ", "創造性 ");
+    if (value) tempName.append(value);
+  }
+  hint("#settings-temp-hint", localizedText("Basse, les réponses restent factuelles ; haute, elles sont plus variées.", "Low keeps answers factual; high makes them more varied.", "Baja mantiene respuestas factuales; alta las hace más variadas.", "低いと事実的、高いと多様になります。"));
+  set("#profile-label", localizedText("À propos de moi (optionnel)", "About me (optional)", "Sobre mí (opcional)", "私について（任意）"));
+  set("#settings-profile-hint", localizedText("Prénom, langue, ton préféré : ajouté en discret au contexte de vos questions.", "Name, language, preferred tone: quietly added to your questions' context.", "Nombre, idioma, tono preferido: añadido con discreción al contexto.", "名前・言語・好みの口調などを、質問の文脈に静かに添えます。"));
+  set("#settings-draft-name", localizedText("Enregistrer le brouillon", "Save the draft", "Guardar el borrador", "下書きを保存"));
+  set("#settings-draft-hint", localizedText("Le texte en cours d'écriture revient après un rechargement accidentel.", "Unsent text comes back after an accidental reload.", "El texto sin enviar vuelve tras una recarga accidental.", "書きかけの文が再読み込み後に戻ります。"));
+  set("#settings-enter-name", localizedText("Entrée envoie le message", "Enter sends the message", "Intro envía el mensaje", "Enter で送信"));
+  set("#settings-enter-hint", localizedText("Coupé, Entrée ajoute une ligne et Ctrl+Entrée envoie.", "Off, Enter adds a line and Ctrl+Enter sends.", "Desactivado, Intro añade una línea y Ctrl+Intro envía.", "オフだと Enter は改行、Ctrl+Enter で送信します。"));
+  set("#settings-code-save-name", localizedText("Enregistrer automatiquement", "Save automatically", "Guardar automáticamente", "自動保存"));
+  set("#settings-code-save-hint", localizedText("Une demi-seconde après la dernière frappe. Coupé, Ctrl+S enregistre.", "Half a second after the last keystroke. Off, Ctrl+S saves.", "Medio segundo después de la última pulsación. Desactivado, Ctrl+S guarda.", "最後の入力から0.5秒後。オフなら Ctrl+S で保存します。"));
+  set("#settings-code-wrap-name", localizedText("Retour à la ligne", "Word wrap", "Ajuste de línea", "折り返し"));
+  set("#settings-code-wrap-hint", localizedText("Les longues lignes reviennent à la ligne au lieu de défiler horizontalement.", "Long lines wrap instead of scrolling sideways.", "Las líneas largas se ajustan en vez de desplazarse.", "長い行は横スクロールせず折り返します。"));
+  set("#settings-code-font-name", localizedText("Taille du texte", "Text size", "Tamaño del texto", "文字サイズ"));
+  set("#settings-code-font-hint", localizedText("Éditeur de l'atelier uniquement.", "Workspace editor only.", "Solo el editor del taller.", "作業台のエディターのみ。"));
+  set("#settings-code-preview-name", localizedText("Aperçu automatique", "Automatic preview", "Vista previa automática", "自動プレビュー"));
+  set("#settings-code-preview-hint", localizedText("Ouvre l'aperçu dès qu'un fichier HTML, CSS ou Markdown est ouvert.", "Opens the preview as soon as an HTML, CSS, or Markdown file is opened.", "Abre la vista previa al abrir un archivo HTML, CSS o Markdown.", "HTML・CSS・Markdown を開くとプレビューを表示します。"));
+  set("#settings-history-name", localizedText("Mémoriser l'historique", "Remember the history", "Recordar el historial", "履歴を保存"));
+  set("#settings-history-hint", localizedText("Les conversations restent sur cet appareil. Coupé, seuls les réglages sont conservés.", "Conversations stay on this device. Off, only settings are kept.", "Las conversaciones se quedan aquí. Desactivado, solo se guardan los ajustes.", "会話はこのデバイスに残ります。オフだと設定のみ保存されます。"));
+  set("#settings-clearchat-name", localizedText("Effacer cette conversation", "Clear this conversation", "Borrar esta conversación", "この会話を消去"));
+  set("#settings-clearchat-hint", localizedText("Vide les messages de la conversation ouverte, sans toucher aux autres.", "Empties the open conversation, leaving the others alone.", "Vacía la conversación abierta sin tocar las demás.", "開いている会話だけを空にします。"));
+  if (ui.settingsClearChat) ui.settingsClearChat.textContent = localizedText("Effacer", "Clear", "Borrar", "消去");
+  set("#settings-export-name", localizedText("Sauvegarde", "Backup", "Copia de seguridad", "バックアップ"));
+  set("#settings-export-hint", localizedText("Exporter ou recharger réglages, conversations et documents indexés.", "Export or reload settings, conversations, and indexed documents.", "Exportar o recargar ajustes, conversaciones y documentos indexados.", "設定・会話・索引済み文書を書き出し／読み込みます。"));
+  if (ui.settingsExport) ui.settingsExport.textContent = localizedText("Exporter", "Export", "Exportar", "書き出す");
+  set("#settings-purge-name", localizedText("Tout purger", "Purge everything", "Purgar todo", "すべて削除"));
+  set("#settings-purge-hint", localizedText("Supprime conversations, réglages, caches de modèles et documents.", "Deletes conversations, settings, model caches, and documents.", "Elimina conversaciones, ajustes, cachés de modelos y documentos.", "会話・設定・モデルキャッシュ・文書を削除します。"));
+  if (ui.settingsPurge) ui.settingsPurge.textContent = localizedText("Purger", "Purge", "Purgar", "削除");
+  if (ui.settingsDone) ui.settingsDone.textContent = localizedText("Terminé", "Done", "Hecho", "完了");
+  if (ui.customModelSettingsToggle) ui.customModelSettingsToggle.textContent = localizedText("Configurer", "Configure", "Configurar", "設定");
+  if (ui.customModelDelete) ui.customModelDelete.textContent = localizedText("Supprimer", "Delete", "Eliminar", "削除");
+  document.querySelector("#settings-close")?.setAttribute("aria-label", localizedText("Fermer les paramètres", "Close settings", "Cerrar los ajustes", "設定を閉じる"));
 }
 
 function renderModelLibrary() {
@@ -5911,9 +7643,9 @@ function openModelLibrary(filter = "all") {
 
 function customModelText() {
   return state.language === "fr" ? {
-    eyebrow: "MON MODÈLE",
-    title: "Créer mon modèle",
-    intro: "Un modèle personnel, c'est un nom et des consignes permanentes ajoutés à un modèle de base. Aucun poids d'IA n'est téléchargé ni entraîné : SIMIA ajoute simplement vos consignes au début de chaque conversation qui utilise ce modèle.",
+    eyebrow: "MON ASSISTANT",
+    title: "Mon assistant personnalisé",
+    intro: "Ce n'est pas un nouveau modèle d'IA : c'est un nom et des consignes permanentes posés devant un modèle existant. Aucun poids n'est téléchargé ni entraîné. Vos consignes sont ajoutées au début de chaque nouvelle conversation, et le modèle choisi ci-dessous reste celui qui réfléchit.",
     stepName: "ÉTAPE 1 · NOM",
     nameHint: "Le nom qui s'affichera dans SIMIA pour reconnaître ce modèle.",
     namePlaceholder: "Mon assistant juridique",
@@ -5948,14 +7680,14 @@ function customModelText() {
     exported: "Modèle exporté dans un fichier JSON.",
     imported: name => `Modèle « ${name} » importé et activé.`,
     invalid: "Ce fichier de modèle est invalide.",
-    libraryCategory: "MON MODÈLE",
+    libraryCategory: "MON ASSISTANT",
     librarySelected: "Actif",
     libraryChoose: "Utiliser",
     libraryDescription: (base, characters) => `Consignes permanentes appliquées à ${base} (${characters} caractères).`
   } : state.language === "ja" ? {
-    eyebrow: "マイモデル",
-    title: "マイモデルを作る",
-    intro: "マイモデルとは、既存のベースモデルに名前と永続的な指示を加えたものです。AIの重みをダウンロードしたり学習させたりはしません。SIMIAは、このモデルを使う会話の冒頭にあなたの指示を追加するだけです。",
+    eyebrow: "マイアシスタント",
+    title: "マイアシスタント",
+    intro: "新しいAIモデルではありません。既存のモデルの前に、名前と永続的な指示を置くものです。重みのダウンロードも学習も行いません。指示は新しい会話の冒頭に追加され、下で選ぶモデルが実際に考えます。",
     stepName: "ステップ1 · 名前",
     nameHint: "SIMIAでこのモデルを見分けるために表示される名前です。",
     namePlaceholder: "私の法務アシスタント",
@@ -5990,14 +7722,14 @@ function customModelText() {
     exported: "モデルをJSONファイルに書き出しました。",
     imported: name => `モデル「${name}」を読み込み、有効にしました。`,
     invalid: "このモデルファイルは無効です。",
-    libraryCategory: "マイモデル",
+    libraryCategory: "マイアシスタント",
     librarySelected: "使用中",
     libraryChoose: "使う",
     libraryDescription: (base, characters) => `${base} に適用される永続的な指示（${characters}文字）。`
   } : state.language === "es" ? {
-    eyebrow: "MI MODELO",
-    title: "Crear mi modelo",
-    intro: "Un modelo personal es un nombre y unas instrucciones permanentes añadidas a un modelo base. No se descarga ni se entrena ningún peso de IA: SIMIA añade tus instrucciones al principio de cada conversación que usa este modelo.",
+    eyebrow: "MI ASISTENTE",
+    title: "Mi asistente personalizado",
+    intro: "No es un modelo de IA nuevo: es un nombre y unas instrucciones permanentes puestas delante de un modelo existente. No se descarga ni se entrena ningún peso. Tus instrucciones se añaden al principio de cada conversación nueva, y el modelo elegido abajo sigue siendo el que razona.",
     stepName: "PASO 1 · NOMBRE",
     nameHint: "El nombre que se mostrará en SIMIA para reconocer este modelo.",
     namePlaceholder: "Mi asistente jurídico",
@@ -6032,14 +7764,14 @@ function customModelText() {
     exported: "Modelo exportado a un archivo JSON.",
     imported: name => `Modelo «${name}» importado y activado.`,
     invalid: "Este archivo de modelo no es válido.",
-    libraryCategory: "MI MODELO",
+    libraryCategory: "MI ASISTENTE",
     librarySelected: "Activo",
     libraryChoose: "Usar",
     libraryDescription: (base, characters) => `Instrucciones permanentes aplicadas a ${base} (${characters} caracteres).`
   } : {
-    eyebrow: "MY MODEL",
-    title: "Create my model",
-    intro: "A personal model is a name and permanent instructions added to a base model. No AI weights are downloaded or trained: SIMIA simply adds your instructions at the start of every conversation that uses this model.",
+    eyebrow: "MY ASSISTANT",
+    title: "My personalized assistant",
+    intro: "This is not a new AI model: it is a name and permanent instructions placed in front of an existing model. No weights are downloaded or trained. Your instructions are added at the start of every new conversation, and the model chosen below is still the one that thinks.",
     stepName: "STEP 1 · NAME",
     nameHint: "The name shown in SIMIA to recognise this model.",
     namePlaceholder: "My legal assistant",
@@ -6074,7 +7806,7 @@ function customModelText() {
     exported: "Model exported to a JSON file.",
     imported: name => `Model “${name}” imported and activated.`,
     invalid: "This model file is invalid.",
-    libraryCategory: "MY MODEL",
+    libraryCategory: "MY ASSISTANT",
     librarySelected: "Active",
     libraryChoose: "Use",
     libraryDescription: (base, characters) => `Permanent instructions applied to ${base} (${characters} characters).`
@@ -6209,7 +7941,7 @@ async function saveCustomModel() {
   renderCustomModelStatus();
   ui.customModelDialog.close();
   ui.modelLibrary.close();
-  ui.settings.hidden = false;
+  openSettings();
   ui.downloadInfo.textContent = state.customModelStatus;
   setStatus(state.customModelStatus);
 }
@@ -6221,7 +7953,7 @@ function exportCustomModel() {
     renderCustomModelStatus();
     return;
   }
-  downloadJson({ format: "SIMIA custom model", version: 1, exportedAt: new Date().toISOString(), profile: state.customModel }, "simia-mon-modele.json");
+  downloadJson({ format: "SIMIA custom model", version: 1, exportedAt: new Date().toISOString(), profile: state.customModel }, "simia-mon-assistant.json");
   state.customModelStatus = text.exported;
   renderCustomModelStatus();
 }
@@ -6546,7 +8278,19 @@ ui.prompt.addEventListener("keydown", event => {
   /* Une composition IME (japonais, chinois, coreen) utilise Entree pour valider
      le candidat : envoyer a cet instant couperait le mot en deux. */
   if (event.isComposing || event.keyCode === 229) return;
-  if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ui.form.requestSubmit(); }
+  if (event.key !== "Enter") return;
+  /* Reglage « Entree envoie le message ». Coupe, Entree passe a la ligne et
+     Ctrl/Command+Entree envoie ; Maj+Entree garde son role dans les deux cas. */
+  if (state.enterToSend) {
+    if (event.shiftKey) return;
+    event.preventDefault();
+    ui.form.requestSubmit();
+    return;
+  }
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault();
+    ui.form.requestSubmit();
+  }
 });
 ui.attach.addEventListener("click", () => ui.attachmentInput.click());
 ui.attachmentInput.addEventListener("change", event => addAttachments(event.target.files));
@@ -6569,6 +8313,13 @@ ui.attachmentTray.addEventListener("click", event => {
 function carriesFiles(event) {
   const types = event.dataTransfer?.types;
   return Boolean(types && Array.from(types).includes("Files"));
+}
+/* Un dialogue modal occupe tout l'ecran : un fichier depose ou colle a cet
+   instant s'attacherait derriere lui, sans aucune trace visible, et partirait
+   avec le message suivant. On l'ignore franchement plutot que de le garder en
+   embuscade. */
+function modalOpen() {
+  return Boolean(document.querySelector("dialog[open]"));
 }
 let dragDepth = 0;
 const dropVeil = document.querySelector("#drop-veil");
@@ -6596,24 +8347,33 @@ document.addEventListener("dragleave", event => {
 });
 document.addEventListener("drop", event => {
   if (!carriesFiles(event)) return;
+  // On empeche toujours la navigation : perdre la page en cours serait pire.
   event.preventDefault();
   dragDepth = 0;
   ui.form.classList.remove("is-dropping");
   showDropVeil(false);
+  if (modalOpen()) return;
   const { files, folders } = droppedEntries(event.dataTransfer);
   if (folders) {
-    toast(localizedText(
-      "Un dossier ne peut pas être joint. Ouvrez-le et déposez les fichiers qu'il contient.",
-      "A folder cannot be attached. Open it and drop the files inside.",
-      "No se puede adjuntar una carpeta. Ábrela y suelta los archivos que contiene.",
-      "フォルダは添付できません。フォルダを開いて中のファイルをドロップしてください。"
-    ));
+    /* Un dossier n'a pas sa place en piece jointe, mais il a la sienne dans
+       l'atelier : on l'y ouvre au lieu de le refuser. */
+    codeImportDrop(event.dataTransfer).then(imported => {
+      if (!imported) return;
+      toast(localizedText(
+        "Dossier ouvert dans l'atelier de code.",
+        "Folder opened in the code workspace.",
+        "Carpeta abierta en el taller de código.",
+        "フォルダをコード作業台で開きました。"
+      ));
+    });
+    return;
   }
   if (files.length) addAttachments(files);
 });
 /* Coller une capture d'ecran (Ctrl+V / Cmd+V) est le geste le plus courant
    apres le glisser-deposer. Le texte colle, lui, garde son comportement natif. */
 document.addEventListener("paste", event => {
+  if (modalOpen()) return;
   const files = [...(event.clipboardData?.items || [])]
     .filter(item => item.kind === "file")
     .map(item => item.getAsFile())
@@ -6700,9 +8460,170 @@ ui.chat.addEventListener("click", async event => {
   }
 });
 ui.home.addEventListener("click", showHome);
-document.querySelector("#settings-toggle").addEventListener("click", () => { ui.settings.hidden = !ui.settings.hidden; });
-document.querySelector("#settings-close").addEventListener("click", () => { ui.settings.hidden = true; });
-document.addEventListener("keydown", event => { if (event.key === "Escape") ui.settings.hidden = true; });
+document.querySelector("#settings-toggle").addEventListener("click", () => toggleSettings());
+document.querySelector("#settings-close").addEventListener("click", () => closeSettings());
+ui.settingsDone?.addEventListener("click", () => closeSettings());
+ui.settingsBackdrop?.addEventListener("click", () => closeSettings());
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeSettings(); });
+
+/* --- Parametres : ouverture, application, effets -------------------------
+   Chaque controle ecrit un champ de `state`, applique son effet tout de
+   suite, puis sauvegarde. Aucun reglage n'est decoratif. */
+
+function openSettings() {
+  if (!ui.settings) return;
+  dismissCookieBanner();
+  renderSettingsControls();
+  ui.settings.hidden = false;
+  if (ui.settingsBackdrop) ui.settingsBackdrop.hidden = false;
+  ui.settings.querySelector(".settings-body")?.scrollTo({ top: 0 });
+  document.querySelector("#settings-close")?.focus({ preventScroll: true });
+}
+
+function closeSettings() {
+  if (!ui.settings || ui.settings.hidden) return;
+  ui.settings.hidden = true;
+  if (ui.settingsBackdrop) ui.settingsBackdrop.hidden = true;
+}
+
+function toggleSettings() {
+  if (ui.settings.hidden) openSettings();
+  else closeSettings();
+}
+
+function chatReplyTokens() {
+  return state.replyLength === "short" ? 320 : state.replyLength === "long" ? 1024 : CHAT_REPLY_TOKENS;
+}
+
+function chatTemperature() {
+  return Number.isFinite(state.temperature) ? state.temperature : 0.7;
+}
+
+/* Les controles reflechissent l'etat : ouvrir la carte apres un changement
+   fait ailleurs (modele, langue, assistant) ne doit jamais montrer une valeur
+   perimee. */
+function renderSettingsControls() {
+  if (!ui.settings) return;
+  if (ui.settingStream) ui.settingStream.checked = state.streaming;
+  if (ui.settingLength) ui.settingLength.value = state.replyLength;
+  if (ui.settingTemperature) ui.settingTemperature.value = String(chatTemperature());
+  if (ui.settingTempValue) ui.settingTempValue.textContent = chatTemperature().toFixed(1).replace(".", ",");
+  if (ui.settingDraft) ui.settingDraft.checked = state.autoSaveDraft;
+  if (ui.settingEnter) ui.settingEnter.checked = state.enterToSend;
+  if (ui.settingCodeSave) ui.settingCodeSave.checked = state.codeAutosave;
+  if (ui.settingCodeWrap) ui.settingCodeWrap.checked = state.codeWrap;
+  if (ui.settingCodeFont) ui.settingCodeFont.value = String(state.codeFontSize);
+  if (ui.settingCodePreview) ui.settingCodePreview.checked = state.codeAutoPreview;
+  if (ui.settingHistory) ui.settingHistory.checked = state.rememberHistory;
+  if (ui.autoLoadModel) ui.autoLoadModel.checked = state.autoLoadModel;
+  if (ui.settingsAssistantState) {
+    const active = Boolean(state.customModelActive && state.customModel);
+    ui.settingsAssistantState.hidden = !active;
+    ui.settingsAssistantState.textContent = active
+      ? localizedText(`Actif : ${state.customModel.name}`, `Active: ${state.customModel.name}`, `Activo: ${state.customModel.name}`, `有効：${state.customModel.name}`)
+      : "";
+  }
+  if (ui.settingsAssistantState && !ui.settingsAssistantState.hidden) {
+    ui.settingsAssistantState.title = localizedText(
+      "Ses consignes sont ajoutées devant chaque nouvelle conversation.",
+      "Its instructions are added in front of every new conversation.",
+      "Sus instrucciones se añaden delante de cada conversación nueva.",
+      "この指示は新しい会話の冒頭に追加されます。"
+    );
+  }
+  if (ui.settingsModelHint) {
+    const model = MODELS.find(candidate => candidate.id === state.selectedModel);
+    ui.settingsModelHint.textContent = model
+      ? localizedText(
+        `${model.name} · ${displaySize(model.size)} · ${modelQuickStateLabel(model)}.`,
+        `${model.name} · ${displaySize(model.size)} · ${modelQuickStateLabel(model)}.`,
+        `${model.name} · ${displaySize(model.size)} · ${modelQuickStateLabel(model)}.`,
+        `${model.name} · ${displaySize(model.size)} · ${modelQuickStateLabel(model)}。`
+      )
+      : "";
+  }
+  if (ui.settingsDevice) {
+    ui.settingsDevice.textContent = NATIVE
+      ? localizedText("Application de bureau · réglages sur ce disque", "Desktop app · settings on this disk", "Aplicación de escritorio · ajustes en este disco", "デスクトップ版 · 設定はこのディスクに保存")
+      : localizedText("Navigateur · réglages dans ce profil", "Browser · settings in this profile", "Navegador · ajustes en este perfil", "ブラウザ · このプロファイルに保存");
+  }
+}
+
+/* Applique ce qui depend du CSS (atelier) : taille, retour a la ligne. */
+function applyCodeTypography() {
+  const editor = document.querySelector(".code-editor");
+  if (!editor) return;
+  editor.dataset.wrap = state.codeWrap ? "on" : "off";
+  const pane = document.querySelector("#code-pane");
+  pane?.style.setProperty("--code-font-size", `${state.codeFontSize}px`);
+  if (ui.codeInput) ui.codeInput.setAttribute("wrap", state.codeWrap ? "soft" : "off");
+  updateCodeHighlight();
+}
+
+function bindSettingToggle(element, key, onChange) {
+  element?.addEventListener("change", () => {
+    state[key] = element.checked;
+    if (onChange) onChange(element.checked);
+    saveState();
+    renderSettingsControls();
+  });
+}
+
+bindSettingToggle(ui.settingStream, "streaming");
+bindSettingToggle(ui.settingDraft, "autoSaveDraft", enabled => {
+  if (!enabled) {
+    try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* stockage indisponible */ }
+  }
+});
+bindSettingToggle(ui.settingEnter, "enterToSend");
+bindSettingToggle(ui.settingCodeSave, "codeAutosave", () => renderCodeSaveState());
+bindSettingToggle(ui.settingCodeWrap, "codeWrap", () => applyCodeTypography());
+bindSettingToggle(ui.settingCodePreview, "codeAutoPreview");
+bindSettingToggle(ui.settingHistory, "rememberHistory", enabled => {
+  saveState();
+  toast(enabled
+    ? localizedText("Historique mémorisé sur cet appareil.", "History is saved on this device.", "Historial guardado en este dispositivo.", "履歴をこのデバイスに保存します。")
+    : localizedText("Historique non conservé : les conversations disparaîtront au prochain démarrage.", "History is not saved: conversations will be gone on next start.", "Historial no guardado: las conversaciones desaparecerán al reiniciar.", "履歴は保存されません。次回起動時に会話は消えます。"));
+});
+
+ui.settingLength?.addEventListener("change", () => {
+  state.replyLength = ["short", "normal", "long"].includes(ui.settingLength.value) ? ui.settingLength.value : "normal";
+  saveState();
+  const labels = {
+    short: localizedText("Réponses courtes.", "Short answers.", "Respuestas cortas.", "短い回答。"),
+    normal: localizedText("Réponses de longueur normale.", "Normal-length answers.", "Respuestas de longitud normal.", "標準の長さ。"),
+    long: localizedText("Réponses longues et détaillées.", "Long, detailed answers.", "Respuestas largas y detalladas.", "長く詳しい回答。")
+  };
+  toast(labels[state.replyLength]);
+});
+
+ui.settingTemperature?.addEventListener("input", () => {
+  state.temperature = Math.min(1.2, Math.max(0.1, Number(ui.settingTemperature.value) || 0.7));
+  if (ui.settingTempValue) ui.settingTempValue.textContent = state.temperature.toFixed(1).replace(".", ",");
+});
+ui.settingTemperature?.addEventListener("change", () => saveState());
+
+ui.settingCodeFont?.addEventListener("change", () => {
+  const value = Number(ui.settingCodeFont.value);
+  state.codeFontSize = [12, 13, 15, 17].includes(value) ? value : 13;
+  applyCodeTypography();
+  saveState();
+});
+
+ui.settingsClearChat?.addEventListener("click", () => {
+  clearChat();
+  toast(localizedText("Conversation effacée.", "Conversation cleared.", "Conversación borrada.", "会話を消去しました。"));
+  closeSettings();
+});
+ui.settingsExport?.addEventListener("click", () => {
+  closeSettings();
+  ui.exportDialog.showModal();
+});
+ui.settingsPurge?.addEventListener("click", () => {
+  closeSettings();
+  purgeModelCaches();
+});
+
 ui.webllm.addEventListener("click", loadWebLLM);
 ui.autoLoadModel.addEventListener("change", () => { state.autoLoadModel = ui.autoLoadModel.checked; saveState(); });
 ui.language.addEventListener("click", event => { event.stopPropagation(); toggleLanguageMenu(); });
@@ -6736,7 +8657,7 @@ if (ui.appMenuToggle) {
     const choice = event.target.closest("[role='menuitem']");
     if (!choice) return;
     closeAppMenu();
-    if (choice === ui.appMenuSettings) ui.settings.hidden = false;
+    if (choice === ui.appMenuSettings) openSettings();
     else if (choice === ui.appMenuInfo) { renderInfoContent(); ui.infoDialog.showModal(); }
     else if (choice === ui.appMenuExport) ui.exportDialog.showModal();
     else if (choice === ui.appMenuLegal) ui.legal.showModal();
@@ -6762,6 +8683,34 @@ document.querySelector("#custom-model-save").addEventListener("click", saveCusto
 document.querySelector("#custom-model-export").addEventListener("click", exportCustomModel);
 document.querySelector("#custom-model-import").addEventListener("click", () => ui.customModelImportFile.click());
 ui.customModelDisable.addEventListener("click", disableCustomModel);
+/* « Supprimer » efface le profil lui-meme : sans cela, la seule sortie etait
+   « Revenir au standard », qui le gardait en memoire sans le dire. */
+ui.customModelDelete?.addEventListener("click", () => {
+  const message = localizedText(
+    "Supprimer cet assistant et ses consignes ? Le modèle de base reste installé.",
+    "Delete this assistant and its instructions? The base model stays installed.",
+    "¿Eliminar este asistente y sus instrucciones? El modelo base sigue instalado.",
+    "このアシスタントと指示を削除しますか？ベースモデルは残ります。"
+  );
+  if (!window.confirm(message)) return;
+  state.customModel = null;
+  state.customModelActive = false;
+  const conversation = activeConversation();
+  if (conversation) conversation.customModel = null;
+  state.customModelStatus = "";
+  saveState();
+  renderCustomModelStatus();
+  renderCustomModelText();
+  renderModeLabel();
+  updateModelInfo();
+  updateModelActivityUi();
+  renderModelLibrary();
+  /* La pastille « Actif : … » des reglages venait d'un rendu precedent :
+     sans ce rappel, elle restait affichee apres la suppression. */
+  renderSettingsControls();
+  ui.customModelDialog.close();
+  toast(localizedText("Assistant supprimé.", "Assistant deleted.", "Asistente eliminado.", "アシスタントを削除しました。"));
+});
 ui.customModelInstructions.addEventListener("input", renderCustomModelPreview);
 ui.customModelBase.addEventListener("change", renderCustomModelSaveLabel);
 ui.customModelName.addEventListener("input", () => {
@@ -6796,7 +8745,7 @@ ui.modelLibrary.addEventListener("click", event => {
   if (customChoice) {
     if (customChoice.dataset.customModel === "edit") return openCustomModelDialog();
     applyCustomModel(state.customModel);
-    ui.settings.hidden = false;
+    openSettings();
     ui.modelLibrary.close();
     return;
   }
@@ -6837,13 +8786,13 @@ ui.modelLibrary.addEventListener("click", event => {
   if (pending) {
     beginDownload(choice.dataset.modelId, target.nativeLocal === false ? "download" : "loading");
   } else {
-    ui.settings.hidden = false;
+    openSettings();
     ui.modelLibrary.close();
   }
   selectModelById(choice.dataset.modelId).finally(() => {
     if (!pending) return;
     endDownload();
-    ui.settings.hidden = false;
+    openSettings();
     ui.modelLibrary.close();
   });
 });
@@ -6857,6 +8806,15 @@ ui.chat.addEventListener("click", event => {
     autoResize();
     ui.prompt.focus();
   }
+});
+
+/* Piece jointe -> atelier : un fichier HTML, CSS, JS ou Python joint se rouvre
+   dans l'editeur sans etre recopie. */
+document.addEventListener("click", event => {
+  const open = event.target.closest("[data-open-attachment-code]");
+  if (!open) return;
+  const attachment = findAttachmentById(open.dataset.openAttachmentCode);
+  if (attachment) openAttachmentInWorkspace(attachment);
 });
 
 /* Atelier code */
@@ -6879,6 +8837,9 @@ ui.codeTabs?.addEventListener("click", event => {
     state.code.activeId = tab.dataset.codeTab;
     renderCodeTabs();
     renderCodeEditor();
+    /* L'arborescence garde la surbrillance du fichier ouvert : sans ce rendu,
+       elle continuait de designer le fichier precedent. */
+    renderCodeTree();
   }
 });
 ui.codeNew?.addEventListener("click", () => {
@@ -6889,15 +8850,18 @@ ui.codeNewMenu?.addEventListener("click", event => {
   if (!item) return;
   setCodeNewMenu(false);
   createCodeFile({ language: item.dataset.codeNew });
+  renderCodeTree();
   ui.codeInput?.focus();
 });
 document.addEventListener("click", event => {
-  if (ui.codeNewMenu?.hidden !== false) return;
-  if (ui.codeNewWrap?.contains(event.target)) return;
-  setCodeNewMenu(false);
+  if (ui.codeNewMenu?.hidden === false && !ui.codeNewWrap?.contains(event.target)) setCodeNewMenu(false);
+  if (ui.composerModelMenu?.hidden === false && !ui.composerModelWrap?.contains(event.target)) setComposerModelMenu(false);
 });
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && ui.codeNewMenu?.hidden === false) setCodeNewMenu(false);
+  if (event.key !== "Escape") return;
+  if (ui.codeNewMenu?.hidden === false) setCodeNewMenu(false);
+  if (state.code.quick) setCodeQuickOpen(false);
+  if (ui.composerModelMenu?.hidden === false) setComposerModelMenu(false);
 });
 ui.codeClose?.addEventListener("click", exitCodeMode);
 ui.codeSwitch?.addEventListener("click", event => {
@@ -6920,6 +8884,176 @@ ui.codeOutputStop?.addEventListener("click", () => {
   );
 });
 ui.codeLang?.addEventListener("change", () => applyCodeLanguage(ui.codeLang.value));
+
+/* --- Projet : arborescence, import, export, disque ---------------------- */
+ui.codeTreeToggle?.addEventListener("click", () => setCodeTreeVisible(!state.code.treeVisible));
+ui.codeTreeList?.addEventListener("click", event => {
+  const toggle = event.target.closest("[data-tree-folder]");
+  if (toggle && !event.target.closest("[data-tree-rename],[data-tree-delete]")) {
+    const path = toggle.dataset.treeFolder;
+    if (state.code.collapsed.has(path)) state.code.collapsed.delete(path);
+    else state.code.collapsed.add(path);
+    renderCodeTree();
+    return;
+  }
+  const rename = event.target.closest("[data-tree-rename]");
+  if (rename) {
+    const path = rename.dataset.treeRename;
+    const file = codeFileByPath(path);
+    const next = window.prompt(
+      localizedText("Nouveau nom ou chemin :", "New name or path:", "Nuevo nombre o ruta:", "新しい名前またはパス："),
+      path
+    );
+    if (next) {
+      if (file) codeRenameFile(file.id, next);
+      else codeRenameFolder(path, next);
+    }
+    return;
+  }
+  const remove = event.target.closest("[data-tree-delete]");
+  if (remove) {
+    const path = remove.dataset.treeDelete;
+    const file = codeFileByPath(path);
+    const message = file
+      ? localizedText(`Supprimer ${path} ?`, `Delete ${path}?`, `¿Eliminar ${path}?`, `${path} を削除しますか？`)
+      : localizedText(`Supprimer le dossier ${path} et tout son contenu ?`, `Delete the folder ${path} and everything in it?`, `¿Eliminar la carpeta ${path} y todo su contenido?`, `フォルダ ${path} とその中身を削除しますか？`);
+    if (!window.confirm(message)) return;
+    if (file) codeFileRemove(file.id);
+    else codeDeleteFolder(path);
+    renderCodeTabs();
+    renderCodeTree();
+    renderCodeEditor();
+    return;
+  }
+  const row = event.target.closest("[data-tree-file]");
+  if (!row) return;
+  state.code.activeId = row.dataset.treeFile;
+  if (!state.code.openIds.includes(state.code.activeId)) state.code.openIds.push(state.code.activeId);
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  saveState();
+  ui.codeInput?.focus();
+});
+ui.codeTreeNewFile?.addEventListener("click", () => {
+  const active = activeCodeFile();
+  const dir = active ? codeDirOf(codePathOf(active)) : "";
+  const name = window.prompt(
+    localizedText("Nom du fichier (chemin accepté) :", "File name (path allowed):", "Nombre del archivo (ruta permitida):", "ファイル名（パス可）："),
+    `${dir ? `${dir}/` : ""}nouveau.js`
+  );
+  if (!name) return;
+  const file = codeFileCreate({ path: name, language: codeLanguageFor(name) });
+  renderCodeTree();
+  renderCodeTabs();
+  renderCodeEditor();
+  ui.codeInput?.focus();
+  void file;
+});
+ui.codeTreeNewFolder?.addEventListener("click", () => {
+  const active = activeCodeFile();
+  const dir = active ? codeDirOf(codePathOf(active)) : "";
+  const name = window.prompt(
+    localizedText("Nom du dossier :", "Folder name:", "Nombre de la carpeta:", "フォルダ名："),
+    `${dir ? `${dir}/` : ""}src`
+  );
+  if (!name) return;
+  codeFolderCreate(name);
+  renderCodeTree();
+});
+ui.codeImportFiles?.addEventListener("click", () => ui.codeFileInput?.click());
+ui.codeOpenFolder?.addEventListener("click", codeOpenDiskFolder);
+ui.codeFileInput?.addEventListener("change", () => codeImportInput(ui.codeFileInput));
+ui.codeFolderInput?.addEventListener("change", () => codeImportInput(ui.codeFolderInput));
+ui.codeExport?.addEventListener("click", codeExportProject);
+ui.codeWriteBack?.addEventListener("click", codeWriteBackToDisk);
+
+/* Recherche rapide : Ctrl/Cmd+P, comme dans un éditeur. */
+ui.codeQuickOpen?.addEventListener("click", () => setCodeQuickOpen(true));
+ui.codeQuickInput?.addEventListener("input", () => {
+  codeQuickIndex = 0;
+  renderCodeQuickList(ui.codeQuickInput.value);
+});
+ui.codeQuickInput?.addEventListener("keydown", event => {
+  const items = [...(ui.codeQuickList?.querySelectorAll("[data-quick-file]") || [])];
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (!items.length) return;
+    codeQuickIndex = event.key === "ArrowDown"
+      ? Math.min(items.length - 1, codeQuickIndex + 1)
+      : Math.max(0, codeQuickIndex - 1);
+    renderCodeQuickList(ui.codeQuickInput.value);
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const target = items[codeQuickIndex];
+    if (target) codeQuickChoose(target.dataset.quickFile);
+    return;
+  }
+  if (event.key === "Escape") {
+    event.preventDefault();
+    setCodeQuickOpen(false);
+    ui.codeInput?.focus();
+  }
+});
+ui.codeQuickList?.addEventListener("click", event => {
+  const item = event.target.closest("[data-quick-file]");
+  if (item) codeQuickChoose(item.dataset.quickFile);
+});
+ui.codeQuick?.addEventListener("click", event => {
+  if (event.target === ui.codeQuick) setCodeQuickOpen(false);
+});
+if (typeof ResizeObserver === "function" && ui.codeMain) {
+  new ResizeObserver(() => syncCodePreviewSplit()).observe(ui.codeMain);
+}
+
+/* Aperçu du rendu HTML / CSS / SVG / Markdown / JS, mis à jour pendant la frappe. */
+ui.codePreviewToggle?.addEventListener("click", () => setCodePreview(ui.codePreview?.hidden !== false));
+ui.codePreviewClose?.addEventListener("click", () => setCodePreview(false));
+ui.codePreviewRefresh?.addEventListener("click", refreshCodePreview);
+ui.codePreviewOpen?.addEventListener("click", openPreviewInTab);
+ui.codePreviewLogClear?.addEventListener("click", codePreviewClearLog);
+document.addEventListener("click", event => {
+  const width = event.target.closest("[data-preview-width]");
+  if (width) setCodePreviewWidth(width.dataset.previewWidth);
+});
+ui.codeOutputChat?.addEventListener("click", sendCodeOutputToChat);
+
+/* Deposer un dossier sur l'atelier l'importe tel quel : c'est le geste naturel
+   pour un projet, et le depot global le refusait jusque-la. */
+ui.codePane?.addEventListener("dragover", event => {
+  if (!carriesFiles(event)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = "copy";
+});
+ui.codePane?.addEventListener("drop", event => {
+  if (!carriesFiles(event)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  dragDepth = 0;
+  ui.form.classList.remove("is-dropping");
+  showDropVeil(false);
+  codeImportDrop(event.dataTransfer);
+});
+
+/* Modele : changement a la volee depuis le composeur. */
+ui.composerModel?.addEventListener("click", () => setComposerModelMenu(ui.composerModelMenu?.hidden !== false));
+ui.composerModelMenu?.addEventListener("click", event => {
+  if (event.target.closest("[data-quick-all]")) {
+    setComposerModelMenu(false);
+    openModelLibrary();
+    return;
+  }
+  const choice = event.target.closest("[data-quick-model]");
+  if (choice) switchModelQuickly(choice.dataset.quickModel);
+});
+ui.composerCodeContext?.addEventListener("click", () => {
+  state.code.attachFile = !state.code.attachFile;
+  renderComposerCodeContext();
+  saveState();
+});
 ui.exportToggle.addEventListener("click", () => ui.exportDialog.showModal());
 ui.purgeToggle.addEventListener("click", purgeModelCaches);
 document.querySelector("#export-close").addEventListener("click", () => ui.exportDialog.close());
@@ -6936,6 +9070,13 @@ ui.importFile.addEventListener("change", event => {
 ui.profileInput.addEventListener("input", () => { state.profile = ui.profileInput.value; saveState(); });
 document.addEventListener("keydown", event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openModelLibrary(); return; }
+  /* Ctrl/Cmd+P : recherche de fichier, comme dans un editeur. On ne l'active
+     que dans l'atelier, ou il a un sens. */
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p" && state.code.open) {
+    event.preventDefault();
+    setCodeQuickOpen(!state.code.quick);
+    return;
+  }
   const typing = /^(input|textarea|select)$/i.test(event.target.tagName) || event.target.isContentEditable;
   if (event.key === "/" && !typing) { event.preventDefault(); ui.prompt.focus(); }
 });
