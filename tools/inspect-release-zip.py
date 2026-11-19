@@ -47,6 +47,12 @@ MARKERS = {
         "codeTurnInstruction",
         "codeWantsPage",
         "refreshContinueLabels",
+        "state.code.focus === \"chat\"",
+        "Conversation seule, pleine largeur",
+    ],
+    "web/styles.css": [
+        '[data-code-pane="chat"] .code-pane',
+        "width:min(850px, 100%); margin:0 auto; padding:34px 32px 24px",
     ],
     "web/index.html": [
         "M3.4 3.4l17.2 17.2",
