@@ -44,6 +44,9 @@ MARKERS = {
         "settleCodeDrafts",
         "continueInVibe",
         "markReplyTruncated",
+        "codeTurnInstruction",
+        "codeWantsPage",
+        "refreshContinueLabels",
     ],
     "web/index.html": [
         "M3.4 3.4l17.2 17.2",
