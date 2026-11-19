@@ -1288,7 +1288,7 @@
           <div class="files">
             <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
-          <p class="dl-note">Au premier lancement, Windows demande une confirmation : le programme n'est pas signé. Pour l'éviter, avant de décompresser, clic droit sur le <b>.zip</b> → <b>Propriétés</b> → <b>Débloquer</b>.</p>
+          <p class="dl-note"><b>Avant de décompresser</b> : clic droit sur le <b>.zip</b> → <b>Propriétés</b> → <b>Débloquer</b>. Windows oublie ainsi que le fichier vient d'Internet, et l'application démarre sans demande. Fait après extraction, cela ne sert à rien.</p>
         </article>
 
         <article class="dl reveal">
@@ -1551,7 +1551,7 @@
         <details>
           <summary>Windows affiche un avertissement au premier lancement, est-ce normal ?</summary>
           <p>Oui, et ce n'est pas un virus. Le filtre SmartScreen de Windows prévient pour tout exécutable qui n'est pas signé par un certificat de signature de code, ce qui est le cas de SIMIA : un certificat coûte plusieurs centaines d'euros par an et sert à identifier une société. Le programme est compilé par GitHub Actions à partir du code source public, et son empreinte SHA-256 est publiée dans chaque note de version pour que vous puissiez vérifier le fichier reçu.</p>
-          <p><b>Pour éviter l'avertissement</b> : avant de décompresser l'archive, faites un clic droit sur le <code class="mono">.zip</code> → <b>Propriétés</b> → cochez <b>Débloquer</b> → <b>OK</b>. Windows oublie alors que le fichier vient d'Internet, et l'exécutable extrait démarre sans rien demander.</p>
+          <p><b>Pour éviter l'avertissement</b> : avant de décompresser l'archive, faites un clic droit sur le <code class="mono">.zip</code> → <b>Propriétés</b> → cochez <b>Débloquer</b> → <b>OK</b>. Windows oublie alors que le fichier vient d'Internet, et l'exécutable extrait démarre sans rien demander. En PowerShell, sans passer par les Propriétés : <code class="mono">Unblock-File .\simia-windows-x64.zip</code>. Fait <i>après</i> extraction, ce réglage ne sert à rien : la marque est déjà recopiée sur l'exécutable.</p>
           <p><b>S'il apparaît quand même</b> : cliquez sur <b>Informations complémentaires</b>, puis sur <b>Exécuter quand même</b>. Aucun droit administrateur n'est nécessaire, ni pour cette étape ni pour l'installation.</p>
         </details>
         <details>

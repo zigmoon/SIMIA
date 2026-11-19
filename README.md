@@ -164,10 +164,19 @@ aucun droit administrateur.
 > exécutable non signé par un certificat de signature de code, et SIMIA ne l'est
 > pas. Pour ne pas le voir : **avant de décompresser**, clic droit sur le `.zip`
 > → *Propriétés* → cocher *Débloquer* → *OK*. Windows oublie alors que le fichier
-> vient d'Internet et `simia-desktop.exe` démarre directement. S'il apparaît
-> malgré tout : *Informations complémentaires* puis *Exécuter quand même*. Le
-> programme est compilé par GitHub Actions depuis ce dépôt, et l'empreinte
-> SHA-256 de chaque archive est publiée dans la note de version.
+> vient d'Internet et `simia-desktop.exe` démarre directement. En PowerShell :
+> `Unblock-File .\simia-windows-x64.zip`. Fait **après** extraction, ce réglage
+> ne sert à rien : la marque est déjà recopiée sur l'exécutable, et c'est elle
+> que SmartScreen lit. S'il apparaît malgré tout : *Informations
+> complémentaires* puis *Exécuter quand même*. Le programme est compilé par
+> GitHub Actions depuis ce dépôt, et l'empreinte SHA-256 de chaque archive est
+> publiée dans la note de version.
+>
+> La CI sait signer via **Azure Trusted Signing** : l'étape existe dans
+> `build.yml`, entre la compilation et l'assemblage, et ne s'active qu'une fois
+> les variables de dépôt renseignées ([docs/PUBLICATION.md](docs/PUBLICATION.md),
+> section « Brancher Azure Trusted Signing »). Tant qu'elles sont vides, les
+> archives partent non signées, comme aujourd'hui.
 >
 > **macOS** : le binaire n'est pas signé non plus, Gatekeeper le met en
 > quarantaine. `xattr -dr com.apple.quarantine simia-macos-arm64/` puis relancez.
@@ -635,6 +644,8 @@ Pour entraîner votre propre style, voir [tools/lora/README.md](tools/lora/READM
 - Empaqueter le lanceur + `llama-server` + DLL dans un installeur (MSI/NSIS).
 - Publier `vendor/llama/macos/` (Metal) et `vendor/llama/ubuntu/` (Vulkan) via CI.
 - Signer le binaire Windows (SmartScreen) et le `.dmg` macOS (notarisation Apple).
+  L'étape Windows est prête dans `build.yml` (Azure Trusted Signing) : il reste à
+  créer le compte de signature et à renseigner les variables de dépôt.
 - Remplacer le mode `--app` par une WebView embarquée si l'on veut un exécutable
   unique sans dépendre de Chrome/Edge installé.
 

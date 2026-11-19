@@ -119,6 +119,58 @@ jobs:
         working-directory: launcher
         run: cargo build --release --locked
 
+      # Signature Azure Trusted Signing, avant l'assemblage : le fichier copie
+      # dans le paquet conserve sa signature, il n'y a donc rien a signer plus
+      # tard ni a re-zipper. L'etape est sautee quand les variables de depot sont
+      # vides, pour qu'un fork ou une pull request compilent sans compte Azure.
+      #
+      # Mise en place, une seule fois :
+      #   1. compte Azure + « Trusted Signing » + verification d'identite de
+      #      l'editeur (Zigmoon) chez Microsoft ;
+      #   2. un « certificate profile » de type PublicTrust dans ce compte ;
+      #   3. une application Entra avec le role « Trusted Signing Certificate
+      #      Profile Reader » sur le compte de signature ;
+      #   4. variables de depot AZURE_TS_ENDPOINT, AZURE_TS_ACCOUNT,
+      #      AZURE_TS_PROFILE ; secrets AZURE_TENANT_ID, AZURE_CLIENT_ID,
+      #      AZURE_CLIENT_SECRET.
+      # Sans tout cela, l'archive part non signee, comme avant.
+      #
+      # Quand la signature devient active, trois textes doivent changer, sinon
+      # l'archive annonce un avertissement qui n'existe plus : le haut de
+      # packaging/LISEZ-MOI.txt, la section « Installer » de
+      # tools/release-body.mjs, et la carte Windows de deploy/index.html.
+      - name: Signer le lanceur (Windows)
+        if: matrix.target == 'windows-x64' && vars.AZURE_TS_ACCOUNT != ''
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ vars.AZURE_TS_ENDPOINT }}
+          trusted-signing-account-name: ${{ vars.AZURE_TS_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_TS_PROFILE }}
+          files-folder: ${{ github.workspace }}/launcher/target/release
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      # Une signature annoncee mais absente serait pire que pas de signature :
+      # l'utilisateur croirait l'avertissement supprime alors qu'il reste. On
+      # verifie donc le fichier lui-meme, pas le journal de l'etape precedente.
+      - name: Verifier la signature Windows
+        if: matrix.target == 'windows-x64' && vars.AZURE_TS_ACCOUNT != ''
+        shell: pwsh
+        run: |
+          $exe = "launcher/target/release/simia-desktop.exe"
+          if (-not (Test-Path $exe)) { throw "$exe introuvable" }
+          $sig = Get-AuthenticodeSignature $exe
+          if ($sig.Status -ne "Valid") {
+            throw "signature $($sig.Status) sur $exe : l'archive ne doit pas partir ainsi"
+          }
+          "signe par : $($sig.SignerCertificate.Subject)"
+          "horodatage : $($sig.TimeStamperCertificate.Subject)"
+
       - name: Recuperer les moteurs
         shell: bash
         env:

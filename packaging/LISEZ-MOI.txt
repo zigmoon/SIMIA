@@ -3,25 +3,41 @@ SIMIA Desktop
 
 Archive : {{TARGET}}
 
+AVANT DE LANCER : une seule commande evite l'avertissement
+  Le programme n'est pas signe par un certificat de signature de code. Le
+  systeme previent donc au premier lancement. Ce n'est pas un virus : le
+  programme est compile par GitHub Actions a partir du code source publie sur
+  GitHub, et l'empreinte SHA-256 de chaque archive est publiee dans la note de
+  version.
+
+  Sur Windows, cette etape se fait AVANT de decompresser : posee apres, elle ne
+  sert a rien pour l'executable deja extrait, et l'avertissement reste.
+
+  Windows  clic droit sur le .zip, Proprietes, cocher "Debloquer", puis OK.
+           Windows oublie ainsi que le fichier vient d'Internet, et
+           simia-desktop.exe demarre directement, sans aucune demande.
+
+           En PowerShell, sans passer par les Proprietes :
+             Unblock-File .\simia-windows-x64.zip
+
+  macOS    ce reglage se fait APRES decompression, dans le dossier obtenu :
+             xattr -dr com.apple.quarantine .
+           puis lancez l'application. Sans cela, macOS refuse le binaire.
+
+  Linux    rien a faire de ce cote : le fichier reste executable tant que
+           l'archive est decompressee normalement.
+
 Lancement
   1. Decompressez l'archive ou vous voulez (aucun droit administrateur).
+     Sur Windows, seulement apres le "Debloquer" ci-dessus.
   2. Lancez simia-desktop (double-clic, ou ./simia-desktop dans un terminal).
   3. L'interface s'ouvre sur http://127.0.0.1:8170. Au premier message,
      SIMIA telecharge le modele choisi (une seule fois), puis tout se passe
      sur la machine : le reseau peut etre coupe.
 
 Selon votre systeme
-  Windows  Windows affiche un avertissement au premier lancement : le programme
-           n'est pas signe par un certificat de signature de code. Ce n'est pas
-           un virus, le programme est compile par GitHub Actions a partir du
-           code source publie sur GitHub.
-
-           Pour ne PAS voir l'avertissement : avant de decompresser l'archive,
-           clic droit sur le .zip, Proprietes, cocher "Debloquer", puis OK.
-           Windows oublie ainsi que le fichier vient d'Internet, et
-           simia-desktop.exe demarre directement.
-
-           Si l'avertissement apparait quand meme : "Informations
+  Windows  Si l'avertissement apparait malgre le "Debloquer", c'est que le
+           fichier a ete retelecharge depuis. Cliquez sur "Informations
            complementaires", puis "Executer quand meme".
 
            Le runtime Visual C++ dont l'application a besoin est inclus dans
@@ -30,9 +46,9 @@ Selon votre systeme
   macOS    macOS 13.3 (Ventura) ou plus recent est necessaire : le moteur de
            conversation est compile pour cette version et macOS refuse de
            charger un binaire plus recent que le systeme.
-           Le binaire n'est pas signe. Au premier lancement, macOS le bloque :
-             xattr -dr com.apple.quarantine .
-           puis relancez.
+           Si macOS refuse quand meme d'ouvrir l'application apres la commande
+           xattr : Reglages Systeme > Confidentialite et securite, puis
+           "Ouvrir quand meme" en bas de la page.
            La generation d'images demande en plus macOS 26, et il n'existe de
            moteur d'images que pour Apple Silicon. Sur Mac Intel le bouton
            Image est donc masque : la conversation, les documents et l'atelier
@@ -62,7 +78,7 @@ Ce que contient cette archive
 Modeles
   Le catalogue pointe vers un CDN : les poids se telechargent au premier choix
   et restent dans models/. Ils peuvent etre supprimes pour liberer de l'espace.
-  Un modele de conversation (Qwen 2.5 Coder 0.5B, 469 Mo) est telecharge au
+  Un modele de conversation (Qwen 3.5 0.8B, 508 Mo) est telecharge au
   tout premier lancement, avant que la fenetre ne s'ouvre : le pourcentage
   defile dans la fenetre noire, c'est normal. Ensuite, chaque modele choisi se
   telecharge depuis la bibliotheque, avec sa barre de progression.

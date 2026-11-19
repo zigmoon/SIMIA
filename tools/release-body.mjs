@@ -137,8 +137,9 @@ Chaque archive contient le lanceur, les moteurs d'inférence
 (llama.cpp et stable-diffusion.cpp), l'interface complète, le style
 « Gravure SIMIA » et un modèle d'image déjà prêt (SD 1.5, 1,46 Go) : le bouton
 **Image** fonctionne dès le premier lancement. C'est aussi pourquoi les archives
-pèsent environ 1,5 Go. Les poids des modèles de conversation, eux, se
-téléchargent depuis l'application, au moment où vous en choisissez un.
+pèsent environ 1,5 Go — sauf celle de macOS Intel, qui n'a pas de moteur
+d'images. Les poids des modèles de conversation, eux, se téléchargent depuis
+l'application, au moment où vous en choisissez un.
 
 ${changes}## Télécharger
 
@@ -146,8 +147,44 @@ ${table}
 
 ## Installer
 
+### Avant tout : éviter l'avertissement du système
+
+Le programme n'est pas signé par un certificat de signature de code : le système
+prévient donc au premier lancement. Ce n'est pas un virus — l'archive est
+compilée par GitHub Actions à partir du code source de ce dépôt, et son
+empreinte SHA-256 est publiée plus bas. Une seule commande supprime
+l'avertissement, mais **l'ordre compte**.
+
+**Windows — AVANT de décompresser.** Clic droit sur le \`.zip\` → *Propriétés* →
+cocher ***Débloquer*** → *OK*. Windows oublie alors que le fichier vient
+d'Internet, et \`simia-desktop.exe\` démarre sans rien demander. En PowerShell,
+sans passer par les Propriétés :
+
+\`\`\`powershell
+Unblock-File .\\simia-windows-x64.zip
+\`\`\`
+
+Fait après extraction, ce réglage ne sert à rien : la marque « vient
+d'Internet » est déjà recopiée sur l'exécutable, et c'est elle que SmartScreen
+lit.
+
+**macOS — APRÈS décompression, avant de lancer.** Gatekeeper met le binaire non
+signé en quarantaine :
+
+\`\`\`bash
+xattr -dr com.apple.quarantine simia-desktop
+chmod +x simia-desktop
+\`\`\`
+
+Fait avant, il ne trouve aucun fichier à traiter.
+
+**Linux — rien à faire de ce côté.** L'archive conserve le droit d'exécution ;
+si l'extracteur ou le client FTP l'a perdu : \`chmod +x simia-desktop\`.
+
+### Étapes
+
 1. Décompressez l'archive où vous voulez : aucun droit administrateur n'est
-   nécessaire.
+   nécessaire. Sur Windows, seulement après le *Débloquer* ci-dessus.
 2. Lancez \`simia-desktop\` (\`simia-desktop.exe\` sur Windows).
 3. **Premier lancement** : SIMIA télécharge un modèle de conversation
    (Qwen 3.5 0.8B, 508 Mo) avant d'ouvrir la fenêtre. Le pourcentage
@@ -155,26 +192,10 @@ ${table}
 4. Ensuite, chaque modèle choisi dans la bibliothèque se télécharge avec sa
    propre barre de progression, sur sa carte.
 
-**macOS** — le binaire n'est pas signé, Gatekeeper le met en quarantaine :
-
-\`\`\`bash
-xattr -dr com.apple.quarantine simia-desktop
-chmod +x simia-desktop
-\`\`\`
-
-**Windows** — Un avertissement apparaît au premier lancement, faute de
-signature de code. Pour l'éviter, **avant de décompresser** : clic droit sur le
-\`.zip\` → *Propriétés* → cocher *Débloquer* → *OK*. Windows oublie alors que le
-fichier vient d'Internet et \`simia-desktop.exe\` démarre sans rien demander. Si
-l'avertissement apparaît malgré tout : *Informations complémentaires* puis
-*Exécuter quand même*. Ce n'est pas un virus — le programme est compilé par
-GitHub Actions à partir du code source de ce dépôt.
-
-**Linux** — rendez le fichier exécutable si l'archive a perdu le droit :
-
-\`\`\`bash
-chmod +x simia-desktop
-\`\`\`
+**Si l'avertissement apparaît malgré tout** : Windows → *Informations
+complémentaires* puis *Exécuter quand même* ; macOS → *Réglages Système* →
+*Confidentialité et sécurité* → *Ouvrir quand même*. Le premier cas veut
+souvent dire que l'archive a été retéléchargée après le *Débloquer*.
 
 ${notes ? `## À savoir\n\n${notes}\n` : ""}
 ## Vérifier l'intégrité

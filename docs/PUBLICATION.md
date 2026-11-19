@@ -460,7 +460,9 @@ Le mécanisme exact, mesuré : le navigateur pose une marque de l'Internet
 `simia-desktop.exe` ; SmartScreen refuse alors d'ouvrir un exécutable venu
 d'Internet, non signé et sans réputation. Débloquer l'archive **avant** de la
 décompresser supprime le marqueur, et l'avertissement disparaît — c'est ce qui
-est écrit dans le `LISEZ-MOI`, la note de version et la FAQ.
+est écrit dans le `LISEZ-MOI`, la note de version et la FAQ, en tête de fichier
+et non au milieu, parce qu'un lecteur qui décompresse d'abord ne lit plus le
+conseil.
 
 C'est un contournement, pas une solution. La solution est un certificat de
 signature de code :
@@ -488,3 +490,55 @@ Tant que ce n'est pas fait, les trois contreparties à tenir :
    n'importe qui puisse vérifier l'archive reçue.
 3. Le code source reste public, et les paquets sont produits par GitHub Actions :
    l'avertissement porte sur l'identité de l'éditeur, pas sur le contenu.
+
+## Brancher Azure Trusted Signing
+
+L'étape est déjà dans `.github/workflows/build.yml`, entre la compilation du
+lanceur et l'assemblage du paquet : le fichier signé est celui qui part dans
+l'archive, il n'y a donc rien à re-zipper ni à signer après coup. Elle est
+**sautée** tant que les variables de dépôt sont vides — un fork, une pull request
+ou un dépôt sans compte Azure continuent de compiler, l'archive part simplement
+non signée, exactement comme aujourd'hui.
+
+Ce qu'il faut créer une seule fois, côté Azure :
+
+| Élément | Où | Sert à |
+|---|---|---|
+| compte **Trusted Signing** + vérification d'identité de l'éditeur | portail Azure, abonnement Microsoft Identity Verification | héberger le profil de signature |
+| *certificate profile* de type **PublicTrust** | dans ce compte | le certificat présenté à Windows |
+| application **Entra** (client ID + secret) | Entra ID | authentifier la CI sans mot de passe |
+| rôle *Trusted Signing Certificate Profile Reader* | sur le compte de signature, pour cette application | autoriser la lecture du profil |
+
+Puis, dans **Settings → Secrets and variables → Actions** du dépôt :
+
+| Nom | Type | Valeur |
+|---|---|---|
+| `AZURE_TS_ENDPOINT` | variable | `https://<région>.codesigning.azure.net/` |
+| `AZURE_TS_ACCOUNT` | variable | nom du compte Trusted Signing |
+| `AZURE_TS_PROFILE` | variable | nom du profil de certificat |
+| `AZURE_TENANT_ID` | secret | identifiant du locataire Entra |
+| `AZURE_CLIENT_ID` | secret | identifiant de l'application Entra |
+| `AZURE_CLIENT_SECRET` | secret | secret de cette application |
+
+La condition des étapes teste `vars.AZURE_TS_ACCOUNT` et non les secrets : le
+contexte `secrets` n'est pas disponible dans un `if`, et faire transiter le
+secret par une variable d'environnement l'exposerait à **toutes** les étapes,
+y compris celles des runners macOS et Linux. Les secrets restent donc confinés
+aux entrées de l'étape de signature.
+
+Une étape de contrôle relit le fichier signé (`Get-AuthenticodeSignature`) et
+fait échouer la compilation si le statut n'est pas `Valid` : une signature
+annoncée mais absente serait pire que pas de signature, puisque l'archive
+laisserait croire que l'avertissement a disparu.
+
+**Quand la signature devient active, trois textes doivent être mis à jour**,
+sinon l'archive annonce un avertissement qui n'existe plus :
+
+- le haut de `packaging/LISEZ-MOI.txt` (section « Avant de lancer ») ;
+- la section « Installer » de `tools/release-body.mjs` ;
+- la carte Windows et la FAQ de `deploy/index.html`.
+
+À noter, pour ne rien promettre de faux : Trusted Signing supprime le blocage
+lié à l'absence de signature et affiche un éditeur vérifié, mais la réputation
+SmartScreen se construit avec les téléchargements. Seul un certificat **EV**
+donne une réputation immédiate.
