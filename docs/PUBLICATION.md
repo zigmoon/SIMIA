@@ -394,11 +394,11 @@ curl.exe -sI https://app.zigmoon.com/SIMIA/    # la landing, en 200
 curl.exe -sI https://app.zigmoon.com/SIMIA/desktop/   # 301 vers la racine
 
 # les quatre paquets : la landing porte l'etiquette de la version, donc ce sont
-# ces URL-la qu'il faut tester, pas une copie locale. Remplacer v0.1.19 par la
+# ces URL-la qu'il faut tester, pas une copie locale. Remplacer v0.1.20 par la
 # version publiee (celle de launcher/Cargo.toml, prefixee d'un v).
 for f in simia-windows-x64.zip simia-macos-arm64.tar.gz simia-macos-x64.tar.gz simia-linux-x64.tar.gz; do
   curl.exe -sIL -o /dev/null -w "%{http_code} %{size_download} $f\n" \
-    https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/$f
+    https://github.com/zigmoon/SIMIA/releases/download/v0.1.20/$f
 done
 # 200 attendu pour les quatre, avec la taille de l'archive
 

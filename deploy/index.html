@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.19",
+      "softwareVersion": "0.1.20",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.19",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.20",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -947,7 +947,7 @@
           </div>
 
           <div class="mega-foot">
-            <span><b>38</b> modèles de texte · <b>14</b> modèles d'image · filtres par usage</span>
+            <span><b>40</b> modèles de texte, dont <b>4</b> européens · <b>14</b> modèles d'image · filtres par usage</span>
             <a href="#modeles">Voir le catalogue complet →</a>
           </div>
         </div>
@@ -1139,7 +1139,7 @@
 
   <div class="stats">
     <div class="wrap stats-grid">
-      <div class="stat"><b>38</b><span>modèles de texte</span></div>
+      <div class="stat"><b>40</b><span>modèles de texte</span></div>
       <div class="stat"><b>14</b><span>modèles d'image</span></div>
       <div class="stat"><b>0</b><span>donnée envoyée</span></div>
       <div class="stat"><b>3</b><span>systèmes supportés</span></div>
@@ -1286,7 +1286,7 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.20/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
           <p class="dl-note"><b>Avant de décompresser</b> : clic droit sur le <b>.zip</b> → <b>Propriétés</b> → <b>Débloquer</b>. Windows oublie ainsi que le fichier vient d'Internet, et l'application démarre sans demande. Fait après extraction, cela ne sert à rien.</p>
         </article>
@@ -1301,8 +1301,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.20/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.20/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1317,7 +1317,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.19/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.20/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1373,7 +1373,7 @@
           <span><i class="model-tag">À télécharger</i> la première fois seulement</span>
         </div>
 
-        <div class="grid-head reveal"><b>Modèles de texte · 38</b><span>trois sont servis par ce site, les autres viennent d'un CDN</span></div>
+        <div class="grid-head reveal"><b>Modèles de texte · 40</b><span>trois sont servis par ce site, les autres viennent d'un CDN</span></div>
         <ul class="models dense reveal" id="desktop-text">
           <li class="model"><p class="cat">Généraliste</p><b>Llama 3.2 1B</b><span>770 Mo</span><i class="model-tag here">Hébergé ici</i></li>
           <li class="model"><p class="cat">Généraliste</p><b>Qwen 2.5 1.5B</b><span>1,0 Go</span><i class="model-tag here">Hébergé ici</i></li>
@@ -1411,6 +1411,8 @@
           <li class="model"><p class="cat">Maths</p><b>DeepSeek R1 7B</b><span>4,4 Go</span></li>
           <li class="model"><p class="cat">Maths</p><b>DeepSeek R1 0528 8B</b><span>4,7 Go</span></li>
           <li class="model"><p class="cat">Documents</p><b>Qwen 3.5 9B</b><span>5,3 Go</span></li>
+          <li class="model"><p class="cat">Généraliste · Europe</p><b>Mistral 7B Instruct</b><span>4,1 Go</span><i class="model-tag here">Europe</i></li>
+          <li class="model"><p class="cat">Documents · Europe</p><b>Mistral Nemo 12B</b><span>7,0 Go</span><i class="model-tag here">Europe</i></li>
           <li class="model"><p class="cat">Code</p><b>Qwen 2.5 Coder 14B</b><span>8,4 Go</span></li>
           <li class="model"><p class="cat">Code</p><b>DeepSeek Coder V2 Lite</b><span>9,7 Go</span></li>
         </ul>
@@ -1611,14 +1613,14 @@
      fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
      préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
-  const RELEASE_TAG = "v0.1.19";
+  const RELEASE_TAG = "v0.1.20";
   const RELEASE_BASE = `https://github.com/zigmoon/SIMIA/releases/download/${RELEASE_TAG}`;
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   const RELEASE_API = `https://api.github.com/repos/zigmoon/SIMIA/releases/tags/${RELEASE_TAG}`;
 
   /* Les paquets viennent tous de GitHub, et d'une version nommee : chaque lien
-     porte l'etiquette `releases/download/v0.1.19/<nom>`. Rien ne resout
+     porte l'etiquette `releases/download/v0.1.20/<nom>`. Rien ne resout
      « latest » a notre place : ce que le visiteur telecharge est exactement la
      version annoncee sur la page, et une publication ulterieure ne remplace pas
      sous ses pieds le fichier derriere un bouton deja affiche.

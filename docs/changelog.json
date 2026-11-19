@@ -1,6 +1,23 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.20": {
+      "title": "Vibe travaille sur plusieurs fichiers, et quatre modeles europeens entrent au catalogue",
+      "highlights": [
+        "Vibe envoie desormais plusieurs fichiers a la fois. Une pastille dans la zone de saisie ouvre la liste du projet : on coche les fichiers concernes, et le modele les recoit ensemble, numerotes, avec la consigne de tenir compte de leurs interactions et de nommer le fichier dans chaque bloc de code. Le fichier ouvert reste prioritaire quand le budget de jetons manque.",
+        "Un fichier cite par son nom dans la question est joint automatiquement, meme s'il n'est pas coche : « corrige styles.css » ne laisse plus le modele inventer le contenu.",
+        "Defaut corrige : une reponse qui touchait b.js ecrasait a.js des que les deux parlaient la meme langue, parce que le fichier ouvert passait avant le fichier nomme. L'ordre est maintenant : fichier vise, puis fichier nomme, puis fichier ouvert.",
+        "La colonne de gauche de Vibe gagne un bouton « Vider le projet » : tous les fichiers, dossiers vides et onglets partent d'un coup, avec une confirmation qui annonce le nombre d'elements.",
+        "Defaut corrige, et il expliquait beaucoup de choses : les boutons « Nouveau fichier » et « Nouveau dossier » de l'en-tete du projet etaient invisibles en permanence. Une regle CSS masquait toutes les actions de l'arborescence, y compris celles de l'en-tete, au lieu des seules actions de ligne.",
+        "Quatre modeles europeens, dont deux nouveaux : Ministral 3 3B et sa variante raisonnement (Mistral AI, France, 2 Go), plus Mistral 7B Instruct (4,1 Go) et Mistral Nemo 12B (7 Go). Un filtre « Europeen » et une pastille EUROPE les rendent reperables sans ouvrir leur fiche.",
+        "En version web, les modeles europeens trop lourds pour le navigateur ne disparaissent plus de l'onglet « Europeen » : ils s'affichent avec un renvoi vers la version de bureau.",
+        "L'atelier s'appelle Vibe partout : barre laterale, menu, bouton d'accueil, onglets, reglages. Le nom ne change pas d'une langue a l'autre.",
+        "Les trois cartes sous « Comment puis-je vous aider ? » passent en grille : trois colonnes au large, une seule quand Vibe s'ouvre et resserre la colonne de conversation, sans plus ecraser le texte sur quatre lignes.",
+        "La pastille du modele dans la zone de saisie prend un contour sombre au lieu du vert pale, et la barre d'etat de l'editeur repasse bien a « Enregistre » apres la sauvegarde automatique au lieu de rester sur « Modifications... ».",
+        "Export et import se repondent enfin : une archive ZIP exportee depuis Vibe peut etre reimportee. Le lecteur accepte aussi les archives compressees d'autres outils, et les dossiers vides survivent a l'aller-retour (ils etaient perdus).",
+        "Defaut corrige a l'import : choisir un dossier par le selecteur du systeme retirait le premier niveau de rangement, transformant src/app.js en app.js."
+      ]
+    },
     "0.1.19": {
       "title": "L'installation ressemble enfin a quelque chose, et l'application s'ouvre d'elle-meme",
       "highlights": [

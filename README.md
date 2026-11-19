@@ -45,16 +45,23 @@ navigateur, s'arrête à 1,9 Go par modèle et sert surtout à essayer.
 
 **SIMIA est un espace de travail IA qui tourne entièrement en local.** Trois
 outils réunis dans une seule page : une conversation avec un modèle de langage,
-un générateur d'images Stable Diffusion, et un atelier de code capable
+un générateur d'images Stable Diffusion, et un atelier de code — **Vibe** — capable
 d'exécuter le JavaScript et le Python que l'assistant écrit.
 
-L'atelier et la conversation forment une seule boucle : on ouvre un fichier ou un
-dossier de projet dans l'atelier, on l'envoie à l'assistant, et le code qu'il
-renvoie revient dans le fichier d'un clic, sans copier-coller. L'aperçu intégré
+Vibe et la conversation forment une seule boucle : on ouvre un fichier ou un
+dossier de projet dans l'atelier, on choisit **plusieurs fichiers** à envoyer
+ensemble, et le code qui revient se pose dans le bon fichier d'un clic, sans
+copier-coller. Une réponse qui touche `panier.js` et `styles.css` produit deux
+blocs, chacun rangé dans son fichier ; un fichier nommé dans la question est
+joint automatiquement. L'aperçu intégré
 reconstruit la page avec ses feuilles de style, ses scripts et ses images, et
 l'exécute dans une iframe isolée : le HTML, le CSS et le JavaScript du projet se
 comportent comme dans un navigateur, avec la console du projet sous les yeux, et
 sur un écran large l'aperçu se place à côté de l'éditeur.
+
+Le projet entier s'exporte en `.zip` et se réimporte tel quel, dossiers vides
+compris ; les archives produites par d'autres outils sont lues aussi, sans rien
+installer.
 
 Le projet n'est pas prisonnier du navigateur : les fichiers importés depuis un
 dossier peuvent être réécrits sur le disque (« Enregistrer sur le disque », API
@@ -92,6 +99,11 @@ directement le GPU sans plafond de ce genre :
 - **Tout le catalogue, y compris les gros modèles.** La version web s'arrête aux
   modèles 1B à 2B ; la version bureau fait tourner des modèles de 7, 14 ou 32
   milliards de paramètres, soit jusqu'à 9,7 Go de poids pour un seul fichier.
+- **Quatre modèles européens**, édités par Mistral AI : Ministral 3 3B et sa
+  variante raisonnement (2 Go, dont le français est une langue de travail),
+  Mistral 7B Instruct (4,1 Go) et Mistral Nemo 12B (7 Go). Le filtre « Européen »
+  de la bibliothèque les isole ; chacun porte une pastille **EUROPE**, parce que
+  c'est une raison de le choisir et pas un détail de fiche.
 - **Génération d'images.** Stable Diffusion en natif, sept packs de 512 à
   1024 px, sans passer par le réseau.
 - **Vos propres fichiers `.gguf`.** Le dossier `models/` de l'application est un

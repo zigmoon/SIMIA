@@ -262,7 +262,7 @@
             </div>
           </div>
         </div>
-        <input id="code-file-input" type="file" multiple hidden accept=".js,.mjs,.cjs,.jsx,.ts,.tsx,.py,.html,.htm,.css,.scss,.less,.sass,.json,.md,.markdown,.txt,.sql,.sh,.bash,.ps1,.yml,.yaml,.xml,.svg,.vue,.svelte,.astro,.toml,.env,.png,.jpg,.jpeg,.gif,.webp,.avif,.ico,.woff,.woff2,.ttf,.otf,.mp4,.webm,.mp3,.wav,.pdf,text/*,application/json,image/*">
+        <input id="code-file-input" type="file" multiple hidden accept=".js,.mjs,.cjs,.jsx,.ts,.tsx,.py,.html,.htm,.css,.scss,.less,.sass,.json,.md,.markdown,.txt,.sql,.sh,.bash,.ps1,.yml,.yaml,.xml,.svg,.vue,.svelte,.astro,.toml,.env,.zip,.png,.jpg,.jpeg,.gif,.webp,.avif,.ico,.woff,.woff2,.ttf,.otf,.mp4,.webm,.mp3,.wav,.pdf,text/*,application/json,image/*">
         <input id="code-folder-input" type="file" webkitdirectory directory multiple hidden>
         <div class="code-output" id="code-output" hidden>
           <div class="code-output-head">
@@ -336,10 +336,14 @@
               </button>
               <div class="composer-model-menu" id="composer-model-menu" role="menu" hidden></div>
             </div>
-            <button type="button" class="composer-chip composer-code-context" id="composer-code-context" aria-pressed="true" hidden>
-              <span class="composer-code-glyph" aria-hidden="true">›_</span>
-              <span id="composer-code-context-name">fichier actif</span>
-            </button>
+            <div class="composer-code-wrap">
+              <button type="button" class="composer-chip composer-code-context" id="composer-code-context" aria-haspopup="menu" aria-expanded="false" hidden>
+                <span class="composer-code-glyph" aria-hidden="true">›_</span>
+                <span id="composer-code-context-name">fichier actif</span>
+                <span class="composer-chip-caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="composer-code-menu" id="composer-code-menu" role="menu" hidden></div>
+            </div>
           </div>
           <textarea id="prompt" rows="1" maxlength="4000" placeholder="Écrivez votre message..." aria-label="Votre message"></textarea>
           <input id="attachment-input" type="file" multiple hidden accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.htm,.css,.js,.mjs,.ts,.py,.xml,.yml,.yaml,.log,.rtf,.pdf,.docx,.xlsx,.xlsm,.pptx,.odt,.ods,.odp,.epub,.tex,.png,.jpg,.jpeg,.webp,.gif,.avif,.webm,.mp4,.glb,text/*,application/json,application/rtf,text/rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/epub+zip,image/*,video/*,model/gltf-binary">

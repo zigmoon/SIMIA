@@ -38,7 +38,7 @@ const MODELS = [
   { id: "Qwen3-1.7B-q4f16_1-MLC", name: "Qwen 3 1.7B", category: "Généraliste", size: "~1.2 GB", vramMB: 2037, document: true, note: "Excellent rapport qualité/taille. Polyvalent, pense avant de répondre. Bon sur documents.", instruction: "Réfléchis brièvement avant de répondre, puis réponds de manière claire et structurée." },
   { id: "Qwen3.5-2B-q4f16_1-MLC", name: "Qwen 3.5 2B", category: "Généraliste", size: "~1.4 GB", vramMB: 2245, document: true, recommended: true, note: "Dernière génération, plus de capacité pour des réponses riches et nuancées. Utilisable sur documents.", instruction: "Réfléchis brièvement avant de répondre, puis réponds de manière claire, riche et structurée." },
   { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC", name: "Llama 3.2 3B", category: "Généraliste", size: "~1.9 GB", vramMB: 2264, document: true, note: "Généraliste solide et fluide pour rédiger, raisonner et structurer. Utilisable sur documents.", instruction: "Réponds avec clarté et concision." },
-  { id: "Ministral-3-3B-Instruct-2512-BF16-q4f16_1-MLC", name: "Ministral 3 3B", category: "Généraliste", size: "~1.9 GB", vramMB: 2864, document: true, note: "Nouvelle génération compacte de Mistral : multilingue (dont le français), précise pour suivre des consignes et résumer un document.", instruction: "Réponds avec précision, dans la langue de l'utilisateur, et structure tes réponses." },
+  { id: "Ministral-3-3B-Instruct-2512-BF16-q4f16_1-MLC", name: "Ministral 3 3B", origin: "EU", category: "Généraliste", size: "~1.9 GB", vramMB: 2864, document: true, note: "Nouvelle génération compacte de Mistral : multilingue (dont le français), précise pour suivre des consignes et résumer un document.", instruction: "Réponds avec précision, dans la langue de l'utilisateur, et structure tes réponses." },
   // Écriture
   { id: "gemma3-1b-it-q4f16_1-MLC", name: "Gemma 3 1B", category: "Écriture", size: "~700 MB", vramMB: 711, requiresF16: true, note: "Compact et agréable pour les textes, idées et reformulations.", instruction: "Adopte une plume précise et naturelle." },
   { id: "gemma-2-2b-jpn-it-q4f16_1-MLC", name: "Gemma 2 2B JP", category: "Écriture", size: "~1.4 GB", vramMB: 1895, requiresF16: true, note: "Version japonaise de Gemma 2 : naturelle et précise pour écrire, reformuler ou converser en japonais.", instruction: "Réponds dans un japonais naturel, précis et adapté au ton demandé." },
@@ -49,7 +49,7 @@ const MODELS = [
   { id: "Qwen2.5-Coder-7B-Instruct-q4f16_1-MLC", name: "Qwen 2.5 Coder 7B", category: "Code", size: "~4.1 GB", vramMB: 5107, note: "Pour les projets de code plus ambitieux : refactorisations, revues complètes et raisonnement technique avancé.", instruction: "Agis comme un ingénieur logiciel senior. Analyse avant d'écrire, produis du code complet et signale les risques." },
   // Maths
   { id: "Qwen2.5-Math-1.5B-Instruct-q4f16_1-MLC", name: "Qwen 2.5 Math 1.5B", category: "Maths", size: "~1 GB", vramMB: 1630, note: "Pour résoudre des problèmes mathématiques étape par étape.", instruction: "Résous les problèmes pas à pas, pose les formules puis vérifie le résultat final." },
-  { id: "Ministral-3-3B-Reasoning-2512-q4f16_1-MLC", name: "Ministral 3 3B Reasoning", category: "Maths", size: "~1.9 GB", vramMB: 2864, note: "Version raisonnement de Ministral 3 : maths, logique et problèmes techniques résolus étape par étape.", instruction: "Résous les problèmes étape par étape, vérifie chaque calcul et termine par une réponse claire." },
+  { id: "Ministral-3-3B-Reasoning-2512-q4f16_1-MLC", name: "Ministral 3 3B Reasoning", origin: "EU", category: "Maths", size: "~1.9 GB", vramMB: 2864, note: "Version raisonnement de Ministral 3 : maths, logique et problèmes techniques résolus étape par étape.", instruction: "Résous les problèmes étape par étape, vérifie chaque calcul et termine par une réponse claire." },
   { id: "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC", name: "DeepSeek R1 7B", category: "Maths", size: "~4.1 GB", vramMB: 5107, note: "Modèle de raisonnement réputé : démonstrations, maths et problèmes complexes avec un raisonnement détaillé.", instruction: "Raisonne étape par étape, explicite tes vérifications et termine par la réponse finale." },
   // Documents
   { id: "OLMo-2-0425-1B-Instruct-q4f16_1-MLC", name: "OLMo 2 1B", category: "Documents", size: "~1.1 GB", vramMB: 1776, document: true, note: "Modèle 1B totalement ouvert (licence libre) : léger, il lit et cite les passages d'un document sans consommer de mémoire.", instruction: "Tu analyses des documents. Réponds uniquement à partir des extraits fournis et cite-les." },
@@ -197,6 +197,8 @@ if (NATIVE && Array.isArray(NATIVE.models) && NATIVE.models.length) {
     name: model.name,
     category: model.category || "Généraliste",
     size: model.size || "",
+    origin: model.origin || "",
+    vendor: model.vendor || "",
     vramMB: 0,
     document: true,
     nativeLocal: Boolean(model.local),
@@ -245,6 +247,8 @@ const state = {
     open: false,
     focus: "code",
     attachFile: true,
+    contextIds: [],
+    contextMenu: false,
     preview: false,
     pendingApply: null,
     treeVisible: true,
@@ -474,7 +478,8 @@ const ui = {
   composerModelState: document.querySelector("#composer-model-state"),
   composerModelMenu: document.querySelector("#composer-model-menu"),
   composerCodeContext: document.querySelector("#composer-code-context"),
-  composerCodeContextName: document.querySelector("#composer-code-context-name")
+  composerCodeContextName: document.querySelector("#composer-code-context-name"),
+  composerCodeMenu: document.querySelector("#composer-code-menu")
 };
 
 const copy = {
@@ -839,6 +844,7 @@ function modelFilterFor(model) {
 
 function modelMatchesFilter(model) {
   if (state.modelFilter === "all") return true;
+  if (state.modelFilter === "eu") return model.origin === "EU";
   if (state.modelFilter === "documents") return Boolean(model.document) || modelFilterFor(model) === "documents";
   return modelFilterFor(model) === state.modelFilter;
 }
@@ -1462,6 +1468,7 @@ function codeFileRemove(id) {
   if (index < 0) return;
   state.code.files.splice(index, 1);
   state.code.openIds = state.code.openIds.filter(openId => openId !== id);
+  state.code.contextIds = state.code.contextIds.filter(contextId => contextId !== id);
   codeFileDelete(id);
   if (state.code.activeId === id) {
     state.code.activeId = state.code.openIds[state.code.openIds.length - 1] || state.code.files[0]?.id || null;
@@ -1539,6 +1546,7 @@ function codeClearProject() {
   state.code.openIds = [];
   state.code.activeId = null;
   state.code.emptyFolders = [];
+  state.code.contextIds = [];
   state.code.collapsed.clear();
   codeMarkSaved();
   renderCodeTabs();
@@ -1857,12 +1865,14 @@ function onCodeInput() {
     renderCodeSaveState();
     updateCodeHighlight();
     updateCodeMeta();
+    renderComposerCodeContext();
     return;
   }
   state.code.saving = true;
   renderCodeSaveState();
   updateCodeHighlight();
   updateCodeMeta();
+  renderComposerCodeContext();
   clearTimeout(codeSaveTimer);
   codeSaveTimer = setTimeout(() => {
     codeFileSave(file);
@@ -2181,6 +2191,7 @@ window.addEventListener("message", event => {
 function codeImportable(file) {
   if (!file) return false;
   const extension = attachmentExtension(file);
+  if (extension === "zip") return true;
   if (CODE_BINARY_EXTENSIONS.has(extension)) return true;
   return file.type.startsWith("text/") || file.type === "application/json" || Boolean(CODE_LANGUAGES[extension]);
 }
@@ -2210,6 +2221,42 @@ function codeEntriesFromFiles(files, { stripRoot = true } = {}) {
 }
 
 async function codeImportEntries(entries) {
+  if (!entries.length) return 0;
+  /* Un projet exporte en ZIP doit revenir : on l'ouvre ici, avant tout le
+     reste, pour que ses fichiers suivent le meme chemin que les autres. */
+  const flat = [];
+  for (const entry of entries) {
+    if (!/\.zip$/i.test(entry.file.name) || entry.file.size > CODE_ZIP_MAX_BYTES) {
+      flat.push(entry);
+      continue;
+    }
+    let members = [];
+    try {
+      members = await codeUnzip(await entry.file.arrayBuffer());
+    } catch (error) {
+      toast(localizedText(
+        `Archive ${entry.file.name} illisible : ${error?.message || "format inconnu"}.`,
+        `Archive ${entry.file.name} could not be read: ${error?.message || "unknown format"}.`,
+        `No se pudo leer el archivo ${entry.file.name}: ${error?.message || "formato desconocido"}.`,
+        `アーカイブ ${entry.file.name} を読み込めませんでした：${error?.message || "不明な形式"}。`
+      ), "error");
+      continue;
+    }
+    members.forEach(member => {
+      if (!member.path) return;
+      if (member.folder) {
+        if (!state.code.emptyFolders.includes(member.path)) state.code.emptyFolders.push(member.path);
+        return;
+      }
+      flat.push({ path: member.path, file: new File([member.data], codeFileNameOf(member.path)) });
+    });
+  }
+  entries = flat;
+  const foldersOnly = !entries.length && state.code.emptyFolders.length;
+  if (foldersOnly) {
+    renderCodeTree();
+    renderCodeTabs();
+  }
   if (!entries.length) return 0;
   let imported = 0;
   let skipped = 0;
@@ -2364,10 +2411,13 @@ async function codeOpenDiskFolder() {
       if (child.kind === "directory") { await walk(child, path); continue; }
       if (name.startsWith(".") || name === "node_modules") continue;
       const file = await child.getFile();
-      entries.push({ path: codeStripRoot(path), file });
+      entries.push({ path, file });
     }
   };
   await walk(handle, "");
+  /* Le dossier choisi EST la racine : ses sous-dossiers doivent garder leur
+     place. Appliquer codeStripRoot ici retirait le premier niveau et
+     transformait src/app.js en app.js. */
   const imported = await codeImportEntries(entries);
   if (imported) {
     toast(localizedText(
@@ -2499,6 +2549,59 @@ function codeZip(entries) {
   return new Blob([...chunks, ...central, end], { type: "application/zip" });
 }
 
+/* Lecture d'une archive ZIP, pour boucler l'export : un projet exporte doit
+   pouvoir revenir tel quel. Les archives que nous produisons sont stockees
+   sans compression ; celles des autres outils passent par deflate, que le
+   navigateur decompresse lui-meme. Aucun outil externe, aucun reseau. */
+const CODE_ZIP_MAX_BYTES = 64 * 1024 * 1024;
+
+async function codeZipInflate(bytes, method) {
+  if (method === 0) return bytes;
+  if (method !== 8) throw new Error("compression inconnue");
+  if (typeof DecompressionStream !== "function") throw new Error("deflate indisponible");
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function codeUnzip(buffer) {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  const decoder = new TextDecoder();
+  /* Fin du repertoire central : on la cherche depuis la fin, un commentaire
+     d'archive pouvant suivre la signature. */
+  let end = -1;
+  for (let offset = buffer.byteLength - 22; offset >= 0 && offset >= buffer.byteLength - 65558; offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) { end = offset; break; }
+  }
+  if (end < 0) throw new Error("archive illisible");
+  const count = view.getUint16(end + 10, true);
+  let cursor = view.getUint32(end + 16, true);
+  const entries = [];
+  let total = 0;
+  for (let index = 0; index < count; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) break;
+    const method = view.getUint16(cursor + 10, true);
+    const compressed = view.getUint32(cursor + 20, true);
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const localOffset = view.getUint32(cursor + 42, true);
+    const name = decoder.decode(bytes.subarray(cursor + 46, cursor + 46 + nameLength));
+    cursor += 46 + nameLength + extraLength + commentLength;
+    if (!name || name.startsWith("__MACOSX/")) continue;
+    if (name.endsWith("/")) { entries.push({ path: codeNormalizePath(name), folder: true }); continue; }
+    const localName = view.getUint16(localOffset + 26, true);
+    const localExtra = view.getUint16(localOffset + 28, true);
+    const start = localOffset + 30 + localName + localExtra;
+    total += compressed;
+    /* Une archive piegee ne doit pas remplir la memoire de l'appareil. */
+    if (total > CODE_ZIP_MAX_BYTES) throw new Error("archive trop volumineuse");
+    const data = await codeZipInflate(bytes.subarray(start, start + compressed), method);
+    entries.push({ path: codeNormalizePath(name), data });
+  }
+  return entries;
+}
+
 async function codeExportProject() {
   if (!state.code.files.length) {
     toast(localizedText("Le projet est vide.", "The project is empty.", "El proyecto está vacío.", "プロジェクトは空です。"), "error");
@@ -2506,6 +2609,13 @@ async function codeExportProject() {
   }
   const encoder = new TextEncoder();
   const entries = [];
+  /* Les dossiers vides sont ecrits comme des entrees terminées par « / » :
+     sans elles, un projet range en src/ + assets/ revenait tout a plat, et
+     l'utilisateur ne comprenait pas ou etait passe son rangement. */
+  state.code.emptyFolders.forEach(folder => {
+    const path = codeNormalizePath(folder);
+    if (path) entries.push({ path: `${path}/`, data: new Uint8Array(0) });
+  });
   for (const file of state.code.files) {
     const path = codePathOf(file);
     if (file.binary && file.dataUrl) {
@@ -2522,7 +2632,12 @@ async function codeExportProject() {
   link.download = `simia-projet-${new Date().toISOString().slice(0, 10)}.zip`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-  toast(localizedText(`${entries.length} fichier(s) exportés en archive.`, `${entries.length} file(s) exported as an archive.`, `${entries.length} archivo(s) exportados en un archivo comprimido.`, `${entries.length} ファイルを ZIP に書き出しました。`));
+  toast(localizedText(
+    `${state.code.files.length} fichier(s) et ${state.code.emptyFolders.length} dossier(s) exportés en archive.`,
+    `${state.code.files.length} file(s) and ${state.code.emptyFolders.length} folder(s) exported as an archive.`,
+    `${state.code.files.length} archivo(s) y ${state.code.emptyFolders.length} carpeta(s) exportados en un archivo comprimido.`,
+    `${state.code.files.length} ファイルと ${state.code.emptyFolders.length} フォルダを ZIP に書き出しました。`
+  ));
 }
 
 /* --- Execution ----------------------------------------------------------- */
@@ -2816,6 +2931,20 @@ function codeDiffSummary(before, after) {
 /* Applique un bloc de code de la conversation dans l'atelier : c'est la moitie
    manquante du parcours. La reponse du modele restait dans le chat, il fallait
    la copier puis la recoller a la main dans l'editeur. */
+/* Ordre de choix du fichier qui recoit un bloc de code : le fichier
+   explicitement vise (Corriger, Tests), puis celui que l'utilisateur a nomme
+   dans sa question, et seulement ensuite le fichier ouvert. Sans cet ordre,
+   une reponse qui touchait b.js ecrasait a.js des que les deux parlaient la
+   meme langue. Rend null s'il faut creer un fichier. */
+function codeTargetForBlock(language, pendingFile, activeFile, namedFile) {
+  const compatible = file => Boolean(file) && !file.binary
+    && (!language || language === file.language || language === "text");
+  if (compatible(pendingFile)) return pendingFile;
+  if (compatible(namedFile)) return namedFile;
+  if (compatible(activeFile)) return activeFile;
+  return null;
+}
+
 function applyCodeBlock(button) {
   const block = button.closest(".code-block");
   if (!block) return;
@@ -2849,14 +2978,10 @@ function applyCodeBlock(button) {
     return;
   }
 
-  if (pendingFile && !pendingFile.binary && (!language || language === pendingFile.language || language === "text")) {
-    file = pendingFile;
-  } else if (active && !active.binary && (!language || language === active.language || language === "text")) {
-    file = active;
-  } else {
-    const named = codeFileFromConversation(language);
-    if (named) file = named;
-  }
+  /* Ordre de choix : le fichier explicitement vise (Corriger, Tests), puis
+     celui que l'utilisateur a nomme dans sa question, et seulement ensuite le
+     fichier ouvert. */
+  file = codeTargetForBlock(language, pendingFile, active, codeFileFromConversation(language));
 
   state.code.pendingApply = null;
   if (!file) {
@@ -5594,6 +5719,7 @@ function saveState() {
     codeOpen: state.code.open,
     codeFocus: state.code.focus,
     codeAttachFile: state.code.attachFile,
+    codeContextIds: state.code.contextIds.slice(0, 40),
     codeOpenIds: state.code.openIds.slice(0, 40),
     codeActiveId: state.code.activeId,
     profile: state.profile,
@@ -5643,6 +5769,7 @@ function loadState() {
     state.code.open = Boolean(backup.codeOpen);
     state.code.focus = backup.codeFocus === "chat" ? "chat" : "code";
     state.code.attachFile = backup.codeAttachFile !== false;
+    state.code.contextIds = Array.isArray(backup.codeContextIds) ? backup.codeContextIds.filter(id => typeof id === "string") : [];
     state.code.openIds = Array.isArray(backup.codeOpenIds) ? backup.codeOpenIds.filter(id => typeof id === "string") : [];
     state.code.activeId = typeof backup.codeActiveId === "string" ? backup.codeActiveId : null;
     state.conversations = backup.conversations.filter(conversation => conversation && typeof conversation.id === "string" && Array.isArray(conversation.messages)).map(conversation => ({
@@ -6604,22 +6731,80 @@ async function respondWithTransformersVision(prompt, model) {
 
 /* Le fichier ouvert dans l'atelier accompagne la question, sans polluer le
    message affiche : le modele le voit, la conversation reste lisible. */
-function codeContextForPrompt() {
-  if (!state.code.open || !state.code.attachFile) return "";
-  const file = activeCodeFile();
-  if (!file || file.binary || !file.content.trim()) return "";
-  const content = file.content.replace(/\s+$/, "");
-  const trimmed = content.length > CODE_PROMPT_LIMIT
-    ? `${content.slice(0, CODE_PROMPT_LIMIT)}\n// … code tronqué (${content.length} caractères au total)`
-    : content;
-  const path = codePathOf(file);
-  const header = localizedText(
-    `[ATELIER — fichier actif ${path}]`,
-    `[WORKSPACE — active file ${path}]`,
-    `[TALLER — archivo activo ${path}]`,
-    `[作業台 — アクティブファイル ${path}]`
+/* Budget total du contexte projet. Un modele local a 8 000 jetons de contexte :
+   au-dela, il ne reste plus de place pour la question et la reponse. On
+   partage donc ce budget entre les fichiers choisis, en donnant la priorite au
+   fichier actif plutot que de tout couper au meme endroit. */
+const CODE_CONTEXT_TOTAL = Math.floor(CODE_PROMPT_LIMIT * 1.6);
+
+/* Fichiers envoyes avec la question : la selection explicite, sinon le fichier
+   ouvert. Un fichier binaire ou vide n'apprend rien au modele et coute des
+   jetons : il est ignore. */
+function codeContextFiles() {
+  if (!state.code.open || !state.code.attachFile) return [];
+  const chosen = state.code.contextIds.length
+    ? state.code.contextIds
+    : (state.code.activeId ? [state.code.activeId] : []);
+  const files = chosen.map(codeFileById).filter(file => file && !file.binary && file.content.trim());
+  if (!files.length) {
+    const active = activeCodeFile();
+    if (active && !active.binary && active.content.trim()) return [active];
+  }
+  return files;
+}
+
+/* Un fichier cite par son nom dans la question doit etre lu, meme s'il n'est
+   pas dans la selection : « corrige styles.css » sans le joindre laissait le
+   modele inventer le contenu. */
+function codeMentionedFiles(text) {
+  const source = String(text || "");
+  if (!source) return [];
+  return state.code.files.filter(file => {
+    if (file.binary || !file.content.trim()) return false;
+    const path = codePathOf(file);
+    const name = codeFileNameOf(path);
+    const probe = name.length >= 4 ? name : path;
+    if (probe.length < 4) return false;
+    const escaped = probe.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^\\w./-])${escaped}([^\\w./-]|$)`, "i").test(source);
+  });
+}
+
+function codeContextForPrompt(extraFiles = []) {
+  const base = codeContextFiles();
+  const files = [...base];
+  extraFiles.forEach(file => {
+    if (file && !files.includes(file)) files.push(file);
+  });
+  if (!files.length) return "";
+  /* Le fichier actif passe en premier : si le budget manque, c'est lui qui
+     reste lisible en entier. */
+  const active = activeCodeFile();
+  files.sort((first, second) => (first === active ? -1 : second === active ? 1 : 0));
+  const share = Math.max(1200, Math.floor(CODE_CONTEXT_TOTAL / files.length));
+  const header = (path, index, total) => localizedText(
+    `[VIBE — fichier ${index + 1}/${total} : ${path}]`,
+    `[VIBE — file ${index + 1}/${total}: ${path}]`,
+    `[VIBE — archivo ${index + 1}/${total}: ${path}]`,
+    `[VIBE — ファイル ${index + 1}/${total}：${path}]`
   );
-  return `${header}\n\`\`\`${file.language || ""}\n${trimmed}\n\`\`\`\n`;
+  const blocks = files.map((file, index) => {
+    const content = file.content.replace(/\s+$/, "");
+    const limit = Math.min(share, CODE_PROMPT_LIMIT);
+    const trimmed = content.length > limit
+      ? `${content.slice(0, limit)}\n// … code tronqué (${content.length} caractères au total)`
+      : content;
+    return `${header(codePathOf(file), index, files.length)}\n\`\`\`${file.language || ""}\n${trimmed}\n\`\`\``;
+  });
+  const intro = files.length > 1
+    ? localizedText(
+        `${files.length} fichiers du projet sont joints. Tiens compte de leurs interactions ; si tu modifies l'un d'eux, nomme le fichier concerné dans un bloc de code distinct.`,
+        `${files.length} project files are attached. Account for how they interact; if you change one, name the file in its own code block.`,
+        `${files.length} archivos del proyecto están adjuntos. Ten en cuenta sus interacciones; si modificas uno, nombra el archivo en su propio bloque de código.`,
+        `プロジェクトの ${files.length} ファイルを添付しました。相互作用を考慮し、変更する場合はファイル名を各コードブロックに明記してください。`
+      )
+    : "";
+  return `${intro ? `${intro}\n` : ""}${blocks.join("\n")}\n`;
 }
 
 async function submitPrompt(rawPrompt, options = {}) {
@@ -6670,7 +6855,7 @@ async function submitPrompt(rawPrompt, options = {}) {
     state.lastDocumentSources = [];
     const answering = visionActive || textActive;
     const stream = answering && state.streaming ? beginStreamingMessage(typing) : null;
-    const workspaceContext = options.workspaceContext === false ? "" : codeContextForPrompt();
+    const workspaceContext = options.workspaceContext === false ? "" : codeContextForPrompt(codeMentionedFiles(messageContent));
     const answer = answering
       ? await respond(messageContent, attachments, stream ? delta => stream.update(delta) : null, workspaceContext)
       : MODEL_REQUIRED;
@@ -7455,28 +7640,78 @@ function switchModelQuickly(modelId) {
 
 function renderComposerCodeContext() {
   if (!ui.composerCodeContext) return;
-  const file = activeCodeFile();
-  const visible = Boolean(state.code.open && file && !file.binary);
+  const textFiles = state.code.files.filter(file => !file.binary && file.content.trim());
+  const visible = Boolean(state.code.open && textFiles.length);
   ui.composerCodeContext.hidden = !visible;
-  if (!visible) return;
-  const path = codePathOf(file);
-  ui.composerCodeContextName.textContent = path;
-  ui.composerCodeContext.setAttribute("aria-pressed", String(state.code.attachFile));
-  const label = state.code.attachFile
-    ? localizedText(
-      `${path} accompagne vos questions. Cliquez pour l'exclure.`,
-      `${path} is sent with your questions. Click to exclude it.`,
-      `${path} acompaña tus preguntas. Haz clic para excluirlo.`,
-      `${path} は質問と一緒に送信されます。クリックで除外。`
-    )
+  if (!visible) {
+    if (ui.composerCodeMenu) ui.composerCodeMenu.hidden = true;
+    return;
+  }
+  const selected = codeContextFiles();
+  const names = selected.map(file => codePathOf(file));
+  const none = !state.code.attachFile || !selected.length;
+  ui.composerCodeContext.classList.toggle("is-off", none);
+  ui.composerCodeContext.classList.toggle("is-on", !none);
+  ui.composerCodeContextName.textContent = none
+    ? localizedText("aucun fichier", "no file", "ningún archivo", "ファイルなし")
+    : names.length === 1
+      ? names[0]
+      : localizedText(`${names.length} fichiers`, `${names.length} files`, `${names.length} archivos`, `${names.length} ファイル`);
+  /* Le volume part dans l'infobulle : on voit avant d'envoyer combien de texte
+     le modele va recevoir, sans allonger la pastille. */
+  const chars = selected.reduce((sum, file) => sum + file.content.length, 0);
+  const volume = none
+    ? ""
     : localizedText(
-      `${path} n'est pas envoyé. Cliquez pour le joindre de nouveau.`,
-      `${path} is not sent. Click to attach it again.`,
-      `${path} no se envía. Haz clic para volver a adjuntarlo.`,
-      `${path} は送信されません。クリックで再び添付。`
-    );
-  ui.composerCodeContext.title = label;
-  ui.composerCodeContext.setAttribute("aria-label", label);
+        ` (${chars > 999 ? `${(chars / 1000).toFixed(1).replace(".", ",")} k` : chars} caractères)`,
+        ` (${chars > 999 ? `${(chars / 1000).toFixed(1)} k` : chars} characters)`,
+        ` (${chars > 999 ? `${(chars / 1000).toFixed(1)} k` : chars} caracteres)`,
+        ` (${chars > 999 ? `${(chars / 1000).toFixed(1)} k` : chars} 文字)`
+      );
+  const summary = none
+    ? localizedText(
+        "Aucun fichier du projet n'accompagne la question.",
+        "No project file is sent with your question.",
+        "Ningún archivo del proyecto acompaña tu pregunta.",
+        "プロジェクトのファイルは送信されません。"
+      )
+    : localizedText(
+        `${names.length} fichier(s) du projet accompagnent vos questions${volume} : ${names.join(", ")}. Cliquez pour choisir.`,
+        `${names.length} project file(s) sent with your questions${volume}: ${names.join(", ")}. Click to choose.`,
+        `${names.length} archivo(s) del proyecto acompañan tus preguntas${volume}: ${names.join(", ")}. Haz clic para elegir.`,
+        `プロジェクトの ${names.length} ファイルを質問と一緒に送信します${volume}：${names.join("、")}。クリックで選択。`
+      );
+  /* La capture d'ecran et le lecteur d'ecran n'ont que ce texte : les noms
+     doivent y figurer, pas seulement une pastille coloree. */
+  ui.composerCodeContext.title = summary;
+  ui.composerCodeContext.setAttribute("aria-label", summary + " " + localizedText("Choisir les fichiers du contexte", "Choose context files", "Elegir los archivos de contexto", "コンテキストのファイルを選択"));
+  if (ui.composerCodeMenu && !ui.composerCodeMenu.hidden) renderComposerCodeMenu(textFiles, selected);
+}
+
+/* Une ligne par fichier du projet, cochée si elle est envoyée. Le fichier
+   actif est marqué : c'est celui que l'on regarde, il ne doit pas se perdre
+   au milieu des autres. */
+function renderComposerCodeMenu(textFiles, selected) {
+  if (!ui.composerCodeMenu) return;
+  const title = localizedText("Fichiers envoyés avec la question", "Files sent with your question", "Archivos enviados con la pregunta", "質問と一緒に送信するファイル");
+  const rows = textFiles.map(file => {
+    const path = codePathOf(file);
+    const checked = selected.includes(file);
+    const active = file.id === state.code.activeId;
+    const chars = file.content.length;
+    const size = chars > 999 ? `${Math.round(chars / 1000)} k` : `${chars} c`;
+    const mark = checked ? "✓" : "";
+    const label = active
+      ? localizedText(`${path} (fichier ouvert)`, `${path} (open file)`, `${path} (archivo abierto)`, `${path}（開いているファイル）`)
+      : path;
+    return `<button type="button" role="menuitemcheckbox" aria-checked="${checked}" data-context-file="${escapeHtml(file.id)}" title="${escapeHtml(label)}"><span class="menu-mark" aria-hidden="true">${mark}</span><span class="menu-path">${escapeHtml(label)}</span><span class="menu-size">${escapeHtml(size)}</span></button>`;
+  }).join("");
+  const all = localizedText("Tout envoyer", "Send all", "Enviar todo", "すべて送信");
+  const clear = localizedText("N'en envoyer aucun", "Send none", "No enviar ninguno", "どれも送信しない");
+  ui.composerCodeMenu.innerHTML = `<p class="menu-head">${escapeHtml(title)}</p>${rows}`
+    + `<div class="menu-sep"></div>`
+    + `<button type="button" role="menuitem" class="menu-all" data-context-all="1">${escapeHtml(all)}</button>`
+    + `<button type="button" role="menuitem" class="menu-all" data-context-all="0">${escapeHtml(clear)}</button>`;
 }
 
 /* Libelles de la carte Parametres, dans les quatre langues. Les controles sont
@@ -7567,7 +7802,7 @@ function renderModelLibrary() {
     ? `${intro} ${text.split}`
     : `${intro} ${text.webLimit}`;
   document.querySelector("#model-library-close").setAttribute("aria-label", text.close);
-  const filters = [["all", text.all], ["general", text.general], ["documents", text.documents], ["writing", text.writing], ["code", text.code], ["reasoning", text.reasoning], ["vision", text.vision]];
+  const filters = [["all", text.all], ["general", text.general], ["documents", text.documents], ["writing", text.writing], ["code", text.code], ["reasoning", text.reasoning], ["vision", text.vision], ["eu", localizedText("Européen", "European", "Europeo", "欧州")]];
   if (IMAGE) filters.push(["image", localizedText("Image", "Image", "Imagen", "画像生成")]);
   ui.modelFilters.replaceChildren(...filters.map(([id, label]) => {
     const button = document.createElement("button");
@@ -7644,6 +7879,18 @@ function renderModelLibrary() {
     return [...separator, card];
   });
   const oversized = NATIVE ? [] : MODELS.filter(model => !modelNeedsUnavailableFeature(model) && modelSizeMB(model) > WEB_MAX_MODEL_MB);
+  /* Un modele europeen trop lourd pour le navigateur ne doit pas disparaitre :
+     l'onglet « Européen » aurait l'air vide alors que la banque en contient.
+     On l'affiche, avec une carte qui renvoie vers la version de bureau. */
+  const oversizedEu = !NATIVE && state.modelFilter === "eu"
+    ? oversized.filter(model => model.origin === "EU")
+    : [];
+  const euDesktopCards = oversizedEu.map(model => {
+    const card = document.createElement("article");
+    card.className = "model-card remote desktop-only-card";
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("EUROPÉEN", "EUROPEAN", "EUROPEO", "欧州"))}</p><span class="model-badge model-badge-download">${escapeHtml(localizedText("DESKTOP", "DESKTOP", "DESKTOP", "デスクトップ"))}</span></div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(modelDetails(model)[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(model.size))}</span><a class="model-card-link" href="${DESKTOP_PAGE_URL}" target="_blank" rel="noopener">${escapeHtml(localizedText("Version desktop", "Desktop version", "Versión de escritorio", "デスクトップ版"))}</a></div>`;
+    return card;
+  });
   /* La possibilite d'ajouter ses propres poids existait deja — le lanceur
      scanne models/ — mais rien ne l'annoncait dans l'interface. Un fichier
      depose la main apparait dans cette liste sous son nom de fichier. */
@@ -7663,7 +7910,7 @@ function renderModelLibrary() {
         card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("HORS LIGNE", "OFFLINE", "SIN CONEXIÓN", "オフライン"))}</p><span class="model-badge model-badge-download">${escapeHtml(localizedText("DESKTOP", "DESKTOP", "DESKTOP", "デスクトップ"))}</span></div><div><h3>${escapeHtml(localizedText("Version desktop", "Desktop version", "Versión de escritorio", "デスクトップ版"))}</h3><p>${escapeHtml(localizedText(`${oversized.length} modèles supplémentaires vous attendent sur PC, Mac et Linux : jusqu'à 9,7 Go, sans limite de navigateur, avec la génération d'images.`, `${oversized.length} more models wait on PC, Mac and Linux: up to 9.7 GB, no browser limit, with image generation.`, `${oversized.length} modelos más te esperan en PC, Mac y Linux: hasta 9,7 GB, sin límite del navegador y con generación de imágenes.`, `PC・Mac・Linux 版では ${oversized.length} 個の追加モデル（最大 9.7GB、ブラウザ制限なし、画像生成対応）が使えます。`))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("Sans téléversement", "Nothing uploaded", "Sin subir nada", "アップロードなし"))}</span><a class="model-card-link" href="${DESKTOP_PAGE_URL}" target="_blank" rel="noopener">${escapeHtml(localizedText("Télécharger", "Download", "Descargar", "ダウンロード"))}</a></div>`;
         return card;
       })()];
-  ui.modelCards.replaceChildren(...imageCards, ...customCards, ...visibleModels.map(model => {
+  ui.modelCards.replaceChildren(...imageCards, ...customCards, ...euDesktopCards, ...visibleModels.map(model => {
     const details = modelDetails(model);
     const active = model.id === state.selectedModel && !state.customModelActive;
     const remote = NATIVE && model.nativeLocal === false;
@@ -7683,6 +7930,11 @@ function renderModelLibrary() {
     const badge = needsDownload
       ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>`
       : model.recommended ? `<span class="model-badge">${escapeHtml(recommendedLabel)}</span>` : "";
+    /* Un modele europeen le dit sur sa carte, sans avoir a ouvrir sa fiche :
+       c'est une raison de le choisir, pas un detail technique. */
+    const euBadge = model.origin === "EU"
+      ? `<span class="model-origin model-origin-eu" title="${escapeHtml(localizedText("Modèle européen", "European model", "Modelo europeo", "欧州のモデル"))}">${escapeHtml(localizedText("EUROPE", "EUROPE", "EUROPA", "欧州"))}</span>`
+      : "";
     const note = state.cachedModelId === model.id ? ` <span class="model-card-note">${escapeHtml(text.stored)}</span>` : "";
     const label = active && !needsDownload
       ? text.selected
@@ -7691,7 +7943,7 @@ function renderModelLibrary() {
         : text.choose;
     const card = document.createElement("article");
     card.className = `model-card${active ? " selected" : ""}${model.recommended ? " recommended" : ""}${remote ? " remote" : ""}`;
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(model.size))}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(label)}</button></div>${downloadBlock(model.id)}`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${euBadge}${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(model.size))}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(label)}</button></div>${downloadBlock(model.id)}`;
     return card;
   }), ...ownModelCard, ...desktopCard);
   /* Resume chiffre : « 1 fourni · 2 sur votre disque · 8 a telecharger ». Sans
@@ -7710,10 +7962,10 @@ function renderModelLibrary() {
             `この PC に ${localCount} · ダウンロード待ち ${remoteCount} · カタログ ${MODELS.length}`
           )
         : localizedText(
-            `${MODELS.length} modèles proposés · la version desktop en compte 38 et accepte vos propres fichiers`,
-            `${MODELS.length} models available · the desktop version has 38 and accepts your own files`,
-            `${MODELS.length} modelos disponibles · la versión de escritorio tiene 38 y acepta tus archivos`,
-            `${MODELS.length} 個のモデル · デスクトップ版は 38 個と独自ファイルに対応`
+            `${MODELS.length} modèles proposés, dont ${MODELS.filter(model => model.origin === "EU").length} européens · la version desktop en compte 40 et accepte vos propres fichiers`,
+            `${MODELS.length} models available, ${MODELS.filter(model => model.origin === "EU").length} of them European · the desktop version has 40 and accepts your own files`,
+            `${MODELS.length} modelos disponibles, ${MODELS.filter(model => model.origin === "EU").length} europeos · la versión de escritorio tiene 40 y acepta tus archivos`,
+            `${MODELS.length} 個のモデル（うち欧州 ${MODELS.filter(model => model.origin === "EU").length} 個）· デスクトップ版は 40 個と独自ファイルに対応`
           );
     } else {
       const bundled = state.imagePacks.filter(pack => pack.bundled).length;
@@ -7728,7 +7980,7 @@ function renderModelLibrary() {
     }
     summary.hidden = !summary.textContent;
   }
-  if (!customCards.length && !visibleModels.length && !imageCards.length && !desktopCard.length) {
+  if (!customCards.length && !visibleModels.length && !imageCards.length && !desktopCard.length && !euDesktopCards.length) {
     const empty = document.createElement("p");
     empty.className = "model-cards-empty";
     empty.textContent = text.empty;
@@ -9225,10 +9477,72 @@ ui.composerModelMenu?.addEventListener("click", event => {
   const choice = event.target.closest("[data-quick-model]");
   if (choice) switchModelQuickly(choice.dataset.quickModel);
 });
-ui.composerCodeContext?.addEventListener("click", () => {
-  state.code.attachFile = !state.code.attachFile;
+/* Le chip ouvre la liste des fichiers du projet : cocher plusieurs fichiers
+   les envoie ensemble, ce qui est le geste attendu pour corriger un appel
+   entre deux fichiers. */
+function setCodeContextMenu(open) {
+  if (!ui.composerCodeMenu) return;
+  state.code.contextMenu = Boolean(open);
+  ui.composerCodeMenu.hidden = !state.code.contextMenu;
+  ui.composerCodeContext?.setAttribute("aria-expanded", String(state.code.contextMenu));
+  if (state.code.contextMenu) {
+    renderComposerCodeMenu(
+      state.code.files.filter(file => !file.binary && file.content.trim()),
+      codeContextFiles()
+    );
+  }
+}
+
+function toggleCodeContextFile(id) {
+  if (!state.code.attachFile) {
+    state.code.attachFile = true;
+    state.code.contextIds = [];
+  }
+  const current = codeContextFiles().map(file => file.id);
+  const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id];
+  state.code.contextIds = next;
+  /* Tout decocher doit vraiment tout decocher : sinon le repli sur le fichier
+     ouvert renverrait aussitot celui que l'on vient de retirer. */
+  if (!next.length) state.code.attachFile = false;
   renderComposerCodeContext();
   saveState();
+}
+
+ui.composerCodeContext?.addEventListener("click", event => {
+  event.stopPropagation();
+  setCodeContextMenu(!state.code.contextMenu);
+});
+ui.composerCodeMenu?.addEventListener("click", event => {
+  event.stopPropagation();
+  const row = event.target.closest("[data-context-file]");
+  if (row) {
+    toggleCodeContextFile(row.dataset.contextFile);
+    setCodeContextMenu(true);
+    return;
+  }
+  const all = event.target.closest("[data-context-all]");
+  if (!all) return;
+  if (all.dataset.contextAll === "1") {
+    state.code.attachFile = true;
+    state.code.contextIds = state.code.files.filter(file => !file.binary && file.content.trim()).map(file => file.id);
+  } else {
+    state.code.attachFile = false;
+    state.code.contextIds = [];
+  }
+  renderComposerCodeContext();
+  setCodeContextMenu(true);
+  saveState();
+});
+document.addEventListener("click", event => {
+  if (!state.code.contextMenu) return;
+  if (ui.composerCodeMenu?.contains(event.target) || ui.composerCodeContext?.contains(event.target)) return;
+  setCodeContextMenu(false);
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && state.code.contextMenu) {
+    setCodeContextMenu(false);
+    ui.composerCodeContext?.focus();
+  }
 });
 ui.exportToggle.addEventListener("click", () => ui.exportDialog.showModal());
 ui.purgeToggle.addEventListener("click", purgeModelCaches);

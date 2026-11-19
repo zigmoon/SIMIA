@@ -1,6 +1,6 @@
 [package]
 name = "simia-desktop"
-version = "0.1.19"
+version = "0.1.20"
 edition = "2021"
 description = "SIMIA desktop launcher: serves the SIMIA web UI locally, supervises llama.cpp and downloads models on demand."
 

@@ -58,6 +58,10 @@ struct ModelEntry {
     mirror: Option<String>,
     hosted: bool,
     recommended: bool,
+    /// "EU" pour un modele edite en Europe (Mistral AI, par exemple).
+    origin: String,
+    /// Editeur, repris du catalogue.
+    vendor: String,
     /// Projecteur multimodal associe : rend le modele capable de lire une image.
     mmproj: Option<PathBuf>,
 }
@@ -291,6 +295,11 @@ struct CatalogEntry {
     mirror: String,
     #[serde(default)]
     source: String,
+    /// Editeur europeen : affiche sur la carte et retenu par le filtre.
+    #[serde(default)]
+    origin: String,
+    #[serde(default)]
+    vendor: String,
     #[serde(default)]
     recommended: bool,
 }
@@ -1145,6 +1154,8 @@ fn build_model_list(dir: &Path, catalog: &[CatalogEntry], base: &str) -> Vec<Mod
             mirror,
             hosted,
             recommended: entry.recommended,
+            origin: entry.origin.clone(),
+            vendor: entry.vendor.clone(),
             mmproj: find_mmproj(&dir.join(format!("{}.gguf", entry.id))),
         });
     }
@@ -1223,6 +1234,8 @@ fn describe_model(path: &Path) -> ModelEntry {
         mirror: None,
         hosted: false,
         recommended: false,
+        origin: String::new(),
+        vendor: String::new(),
         mmproj,
     }
 }
@@ -1851,6 +1864,8 @@ fn fetch_pack_file(
         mirror: None,
         hosted: false,
         recommended: false,
+        origin: String::new(),
+        vendor: String::new(),
         mmproj: None,
     };
     let state_for_progress = Arc::clone(state);
@@ -2407,7 +2422,7 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
                 .iter()
                 .map(|model| {
                     format!(
-                        "{{\"id\":{},\"name\":{},\"category\":{},\"size\":{},\"bytes\":{},\"local\":{},\"recommended\":{},\"vision\":{},\"hosted\":{},\"mirror\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"category\":{},\"size\":{},\"bytes\":{},\"local\":{},\"recommended\":{},\"vision\":{},\"hosted\":{},\"mirror\":{},\"origin\":{},\"vendor\":{}}}",
                         js_escape(&model.id),
                         js_escape(&model.name),
                         js_escape(&model.category),
@@ -2417,7 +2432,9 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
                         model.recommended,
                         model.mmproj.is_some(),
                         model.hosted,
-                        model.mirror.is_some()
+                        model.mirror.is_some(),
+                        js_escape(&model.origin),
+                        js_escape(&model.vendor)
                     )
                 })
                 .collect::<Vec<_>>()
@@ -2904,7 +2921,7 @@ fn native_script(state: &Shared) -> String {
                 .iter()
                 .map(|model| {
                     format!(
-                        "{{\"id\":{},\"name\":{},\"category\":{},\"size\":{},\"bytes\":{},\"local\":{},\"recommended\":{},\"vision\":{},\"hosted\":{},\"mirror\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"category\":{},\"size\":{},\"bytes\":{},\"local\":{},\"recommended\":{},\"vision\":{},\"hosted\":{},\"mirror\":{},\"origin\":{},\"vendor\":{}}}",
                         js_escape(&model.id),
                         js_escape(&model.name),
                         js_escape(&model.category),
@@ -2914,7 +2931,9 @@ fn native_script(state: &Shared) -> String {
                         model.recommended,
                         model.mmproj.is_some(),
                         model.hosted,
-                        model.mirror.is_some()
+                        model.mirror.is_some(),
+                        js_escape(&model.origin),
+                        js_escape(&model.vendor)
                     )
                 })
                 .collect::<Vec<_>>()
