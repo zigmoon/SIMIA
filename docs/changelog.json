@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.23": {
+      "title": "Un oeil pour l'apercu, et des dossiers qui restent fermes",
+      "highlights": [
+        "L'aperçu du volet Vibe ne s'ouvre plus tout seul : il reste fermé, et un œil dans la barre d'outils l'affiche ou le masque. L'icône dit l'état — œil ouvert quand l'aperçu est là, œil barré quand il est fermé — et l'infobulle annonce ce que fait le clic. Sur un volet étroit, c'est la moitié de la largeur qui revient au code.",
+        "Le réglage « Aperçu automatique » reste là pour ceux qui préfèrent l'ouverture automatique. Le nouveau défaut s'applique une fois aux installations existantes : les sauvegardes écrites jusqu'ici contenaient « aperçu ouvert » sans que personne ne l'ait demandé, un numéro de révision distingue désormais ce défaut d'un vrai choix, qui lui est respecté.",
+        "Les dossiers de l'arborescence sont repliés par défaut : la colonne montre la structure du projet, pas trente fichiers. Un clic sur le dossier l'ouvre, un autre le referme. Le dossier que l'on vient de créer s'ouvre, pour y déposer un fichier tout de suite.",
+        "Un fichier atteint autrement que par l'arbre — recherche Ctrl+P, étape autorisée depuis une réponse, session reprise au démarrage — rouvre ses dossiers parents : il ne peut plus se retrouver caché par un dossier fermé. Renommer ou supprimer un dossier met à jour la même liste, sans refermer ce qui était ouvert.",
+        "Cache hors ligne 4.17.0."
+      ]
+    },
     "0.1.22": {
       "title": "Valider chaque etape, et le code qui change vraiment a gauche",
       "highlights": [

@@ -252,7 +252,11 @@ const state = {
     preview: false,
     pendingApply: null,
     treeVisible: true,
-    collapsed: new Set(),
+    /* Les dossiers sont repliés dans l'arbre : on retient ceux que l'utilisateur a
+       ouverts. Partir de tout ouvert remplissait la colonne dès qu'un projet
+       importé contenait deux ou trois sous-dossiers, et l'on ne voyait plus la
+       structure du projet. */
+    expanded: new Set(),
     emptyFolders: [],
     previewWidth: "full",
     splitWidth: 0,
@@ -275,7 +279,9 @@ const state = {
   codeAutosave: true,
   codeWrap: false,
   codeFontSize: 13,
-  codeAutoPreview: true,
+  /* L'aperçu ne s'ouvre plus tout seul : il prend la moitié du volet, et l'oeil
+     de la barre d'outils l'affiche à la demande. */
+  codeAutoPreview: false,
   /* Chaque bloc de code attend une autorisation avant d'ecraser un fichier :
      c'est le geste « valider l'etape » des editeurs de code. Desactivable
      depuis la boite de prompt, et seulement actif dans Vibe. */
@@ -890,6 +896,10 @@ const ICON_REGENERATE = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="
 const ICON_CONTINUE = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h15"></path><path d="M13.5 6.5L20 12l-6.5 5.5"></path></svg>';
 const ICON_CODE = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 8.5L4.5 12l4 3.5"></path><path d="M15.5 8.5l4 3.5-4 3.5"></path><path d="M13.5 5.5l-3 13"></path></svg>';
 const ICON_CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg>';
+/* L'oeil du volet de code : ouvert quand l'aperçu est affiché, barré quand il
+   est masqué. L'icône montre l'état, l'infobulle dit ce que fait le clic. */
+const ICON_EYE = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.7 12S6.1 6.5 12 6.5 21.3 12 21.3 12 17.9 17.5 12 17.5 2.7 12 2.7 12Z"></path><circle cx="12" cy="12" r="2.9"></circle></svg>';
+const ICON_EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.4 3.4l17.2 17.2"></path><path d="M9.9 7.2A10.6 10.6 0 0 1 12 7c5.9 0 9.3 5 9.3 5a16 16 0 0 1-2.9 3.1"></path><path d="M6.5 8.7A15.6 15.6 0 0 0 2.7 12s3.4 5 9.3 5a10 10 0 0 0 3.2-.5"></path><path d="M9.9 10.2a3 3 0 0 0 4.2 4.2"></path></svg>';
 
 const HIGHLIGHT_FAMILIES = {
   clike: {
@@ -1247,6 +1257,13 @@ function formatMessageContent(content, options = {}) {
  * scripts et ses images, puis l'affiche dans une iframe sandboxee.
  * ------------------------------------------------------------------------ */
 
+/* L'aperçu s'ouvrait tout seul jusqu'à la 0.1.22 : toute sauvegarde écrite par
+   ces versions contient donc `codeAutoPreview: true` sans que personne ne l'ait
+   demandé. Ce numéro permet d'appliquer le nouveau défaut (aperçu fermé) une
+   seule fois, puis de respecter le choix de l'utilisateur.
+   → incrémenter si le défaut doit de nouveau changer. */
+const CODE_PREVIEW_REV = 2;
+
 const CODE_DB_NAME = "simia.project";
 const CODE_LEGACY_DB_NAME = "simia.workspace";
 const CODE_STORE = "files";
@@ -1457,6 +1474,7 @@ function suggestCodePath(language) {
 
 function codeFileCreate(seed = {}) {
   const path = uniqueCodePath(seed.path || suggestCodePath(seed.language));
+  codeRevealPath(path);
   const file = {
     id: globalThis.crypto?.randomUUID?.() || `f${Date.now()}${Math.random().toString(16).slice(2)}`,
     path,
@@ -1491,6 +1509,9 @@ function codeFileRemove(id) {
 function codeFolderCreate(path) {
   const clean = codeNormalizePath(path);
   if (!clean) return;
+  /* Le dossier que l'on vient de créer s'ouvre : on veut y déposer un fichier
+     tout de suite, pas deviner qu'il faut cliquer dessus. */
+  state.code.expanded.add(clean);
   /* Un dossier n'existe que par ses fichiers : on garde une liste de dossiers
      vides pour qu'il apparaisse et accepte un fichier. */
   if (!state.code.emptyFolders.includes(clean)) state.code.emptyFolders.push(clean);
@@ -1504,6 +1525,7 @@ function codeRenameFile(id, nextPath) {
   if (!clean || clean === codePathOf(file)) return;
   const clash = state.code.files.some(other => other.id !== id && codePathOf(other).toLowerCase() === clean.toLowerCase());
   file.path = clash ? uniqueCodePath(clean) : clean;
+  codeRevealPath(file.path);
   file.language = normalizeCodeLanguage(codeLanguageFor(file.path, file.language));
   file.updatedAt = Date.now();
   file.diskPath = "";
@@ -1527,6 +1549,13 @@ function codeRenameFolder(oldPath, nextPath) {
     codeFileSave(file);
   });
   state.code.emptyFolders = state.code.emptyFolders.map(folder => (folder === from || folder.startsWith(`${from}/`) ? `${to}${folder.slice(from.length)}` : folder));
+  /* Les dossiers ouverts suivaient l'ancien chemin : sans cette migration,
+     renommer un dossier refermait tout ce qu'il contenait. */
+  [...state.code.expanded].forEach(folder => {
+    if (folder !== from && !folder.startsWith(`${from}/`)) return;
+    state.code.expanded.delete(folder);
+    state.code.expanded.add(`${to}${folder.slice(from.length)}`);
+  });
   codeMarkSaved();
   renderCodeTabs();
   renderCodeEditor();
@@ -1541,6 +1570,9 @@ function codeDeleteFolder(path) {
     if (filePath === dir || filePath.startsWith(`${dir}/`)) codeFileRemove(file.id);
   });
   state.code.emptyFolders = state.code.emptyFolders.filter(folder => folder !== dir && !folder.startsWith(`${dir}/`));
+  [...state.code.expanded].forEach(folder => {
+    if (folder === dir || folder.startsWith(`${dir}/`)) state.code.expanded.delete(folder);
+  });
   codeMarkSaved();
   renderCodeTabs();
   renderCodeEditor();
@@ -1559,7 +1591,7 @@ function codeClearProject() {
   state.code.activeId = null;
   state.code.emptyFolders = [];
   state.code.contextIds = [];
-  state.code.collapsed.clear();
+  state.code.expanded.clear();
   codeMarkSaved();
   renderCodeTabs();
   renderCodeTree();
@@ -1568,6 +1600,20 @@ function codeClearProject() {
 }
 
 /* --- Arborescence -------------------------------------------------------- */
+
+/* Un dossier est fermé tant qu'on ne l'a pas ouvert. Un fichier atteint par la
+   recherche, par une étape autorisée ou par une restauration de session doit
+   rester visible : on ouvre ses dossiers parents, sinon l'arbre semblait avoir
+   perdu le fichier que l'on venait de modifier. */
+function codeRevealPath(path) {
+  const segments = codeNormalizePath(path).split("/").filter(Boolean);
+  segments.pop();
+  let prefix = "";
+  segments.forEach(segment => {
+    prefix = prefix ? `${prefix}/${segment}` : segment;
+    state.code.expanded.add(prefix);
+  });
+}
 
 function codeTreeModel() {
   const root = { type: "folder", name: "", path: "", children: new Map(), depth: 0 };
@@ -1612,7 +1658,7 @@ function codeCollator() {
 
 function renderCodeTree() {
   if (!ui.codeTreeList) return;
-  const collapsed = state.code.collapsed;
+  const expanded = state.code.expanded;
   const sortNodes = nodes => [...nodes].sort((first, second) => {
     if (first.type !== second.type) return first.type === "folder" ? -1 : 1;
     return codeCollator().compare(first.name, second.name);
@@ -1621,7 +1667,7 @@ function renderCodeTree() {
   const walk = (node, depth) => {
     sortNodes(node.children.values()).forEach(child => {
       if (child.type === "folder") {
-        const isOpen = !collapsed.has(child.path);
+        const isOpen = expanded.has(child.path);
         rows.push(`<div class="code-tree-row code-tree-folder" data-tree-folder="${escapeHtml(child.path)}" data-depth="${depth}" role="treeitem" aria-expanded="${isOpen}"><span class="code-tree-twist">${isOpen ? "▾" : "▸"}</span><span class="code-tree-icon" aria-hidden="true"></span><span class="code-tree-name">${escapeHtml(child.name)}</span><span class="code-tree-actions"><button type="button" data-tree-rename="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Renommer le dossier", "Rename folder", "Renombrar la carpeta", "フォルダ名を変更"))}">✎</button><button type="button" data-tree-delete="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Supprimer le dossier", "Delete folder", "Eliminar la carpeta", "フォルダを削除"))}">✕</button></span></div>`);
         if (isOpen) walk(child, depth + 1);
         return;
@@ -1975,6 +2021,7 @@ function codeQuickChoose(id) {
   if (!file) return;
   state.code.activeId = file.id;
   if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
+  codeRevealPath(codePathOf(file));
   setCodeQuickOpen(false);
   renderCodeTabs();
   renderCodeTree();
@@ -2125,6 +2172,21 @@ function codePreviewAppendLog(level, text) {
   ui.codePreviewLog.scrollTop = ui.codePreviewLog.scrollHeight;
 }
 
+/* L'oeil de la barre d'outils : l'icône dit si l'aperçu est affiché, le clic le
+   bascule. L'aperçu démarre fermé, sinon il prenait la moitié du volet sans
+   qu'on l'ait demandé. */
+function renderCodePreviewToggle() {
+  if (!ui.codePreviewToggle) return;
+  const open = Boolean(state.code.preview);
+  ui.codePreviewToggle.innerHTML = open ? ICON_EYE : ICON_EYE_OFF;
+  ui.codePreviewToggle.setAttribute("aria-pressed", String(open));
+  const label = open
+    ? localizedText("Masquer l'aperçu", "Hide the preview", "Ocultar la vista previa", "プレビューを隠す")
+    : localizedText("Afficher l'aperçu", "Show the preview", "Mostrar la vista previa", "プレビューを表示");
+  ui.codePreviewToggle.setAttribute("aria-label", label);
+  ui.codePreviewToggle.setAttribute("title", label);
+}
+
 function setCodePreview(open) {
   if (!ui.codePreview) return;
   const file = codePreviewTarget();
@@ -2139,7 +2201,7 @@ function setCodePreview(open) {
   }
   state.code.preview = Boolean(built);
   ui.codePreview.hidden = !built;
-  ui.codePreviewToggle?.setAttribute("aria-pressed", String(Boolean(built)));
+  renderCodePreviewToggle();
   syncCodePreviewSplit();
   if (!built) {
     ui.codePreviewFrame.srcdoc = "";
@@ -3021,6 +3083,7 @@ function applyCodeBlock(button) {
     toast(localizedText(`Fichier de test ${codePathOf(file)}.`, `Test file ${codePathOf(file)}.`, `Archivo de prueba ${codePathOf(file)}.`, `テストファイル ${codePathOf(file)}。`));
     state.code.activeId = file.id;
     markCodeBlockState(block, "applied");
+    codeRevealPath(codePathOf(file));
     renderCodeTabs();
     renderCodeTree();
     renderCodeEditor();
@@ -3083,6 +3146,7 @@ function applyCodeBlock(button) {
   }
   state.code.activeId = file.id;
   if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
+  codeRevealPath(codePathOf(file));
   markCodeBlockState(block, "applied");
   renderCodeTabs();
   renderCodeTree();
@@ -3213,6 +3277,7 @@ function openCodeWorkspace(seed) {
     }
     state.code.activeId = twin.id;
     if (!state.code.openIds.includes(twin.id)) state.code.openIds.push(twin.id);
+    codeRevealPath(codePathOf(twin));
     renderCodeTabs();
     renderCodeTree();
     renderCodeEditor();
@@ -3468,11 +3533,7 @@ function renderCodeWorkspaceText() {
     ui.codeExport.setAttribute("aria-label", exportLabel);
     ui.codeExport.setAttribute("title", exportLabel);
   }
-  const previewLabel = localizedText("Aperçu du fichier", "File preview", "Vista previa del archivo", "ファイルのプレビュー");
-  if (ui.codePreviewToggle) {
-    ui.codePreviewToggle.setAttribute("aria-label", previewLabel);
-    ui.codePreviewToggle.setAttribute("title", previewLabel);
-  }
+  renderCodePreviewToggle();
   if (ui.codePreviewClose) ui.codePreviewClose.setAttribute("aria-label", localizedText("Fermer l'aperçu", "Close preview", "Cerrar la vista previa", "プレビューを閉じる"));
   if (ui.codePreviewRefresh) ui.codePreviewRefresh.setAttribute("aria-label", localizedText("Recharger l'aperçu", "Reload the preview", "Recargar la vista previa", "プレビューを再読み込み"));
   if (ui.codePreviewOpen) ui.codePreviewOpen.setAttribute("aria-label", localizedText("Ouvrir dans un onglet", "Open in a tab", "Abrir en una pestaña", "タブで開く"));
@@ -3553,6 +3614,10 @@ async function initCodeWorkspace() {
      fermee, et le bouton de la barre la fait apparaitre. */
   if (window.matchMedia("(max-width: 900px)").matches) state.code.treeVisible = false;
   setCodeTreeVisible(state.code.treeVisible !== false);
+  /* La session reprend sur un fichier : ses dossiers s'ouvrent pour qu'il soit
+     visible, même si tout le reste de l'arbre démarre replié. */
+  const restored = state.code.files.find(file => file.id === state.code.activeId);
+  if (restored) codeRevealPath(codePathOf(restored));
   setCodePreviewWidth(state.code.previewWidth);
   applyCodeTypography();
   state.code.dirty = false;
@@ -5894,6 +5959,7 @@ function saveState() {
     codeWrap: state.codeWrap,
     codeFontSize: state.codeFontSize,
     codeAutoPreview: state.codeAutoPreview,
+    codePreviewRev: CODE_PREVIEW_REV,
     allowSteps: state.allowSteps,
     customModel: state.customModel,
     customModelActive: state.customModelActive,
@@ -5944,7 +6010,7 @@ function loadState() {
     state.codeAutosave = backup.codeAutosave !== false;
     state.codeWrap = Boolean(backup.codeWrap);
     state.codeFontSize = [12, 13, 15, 17].includes(Number(backup.codeFontSize)) ? Number(backup.codeFontSize) : 13;
-    state.codeAutoPreview = backup.codeAutoPreview !== false;
+    state.codeAutoPreview = Number(backup.codePreviewRev) >= CODE_PREVIEW_REV && backup.codeAutoPreview === true;
     state.allowSteps = backup.allowSteps !== false;
     state.customModel = normalizedCustomModel(backup.customModel);
     state.customModelActive = Boolean(state.customModel) && Boolean(backup.customModelActive);
@@ -7967,7 +8033,7 @@ function renderSettingsText() {
   set("#settings-code-font-name", localizedText("Taille du texte", "Text size", "Tamaño del texto", "文字サイズ"));
   set("#settings-code-font-hint", localizedText("Éditeur de Vibe uniquement.", "Vibe editor only.", "Solo el editor de Vibe.", "Vibe のエディターのみ。"));
   set("#settings-code-preview-name", localizedText("Aperçu automatique", "Automatic preview", "Vista previa automática", "自動プレビュー"));
-  set("#settings-code-preview-hint", localizedText("Ouvre l'aperçu dès qu'un fichier HTML, CSS ou Markdown est ouvert.", "Opens the preview as soon as an HTML, CSS, or Markdown file is opened.", "Abre la vista previa al abrir un archivo HTML, CSS o Markdown.", "HTML・CSS・Markdown を開くとプレビューを表示します。"));
+  set("#settings-code-preview-hint", localizedText("Affiche l'aperçu dès qu'un fichier HTML, CSS ou Markdown est ouvert. Coupé par défaut : l'œil du volet l'ouvre à la demande.", "Opens the preview as soon as an HTML, CSS, or Markdown file is opened. Off by default: the eye in the workspace toolbar opens it on demand.", "Abre la vista previa al abrir un archivo HTML, CSS o Markdown. Desactivado por defecto: el ojo de la barra la abre cuando quieras.", "HTML・CSS・Markdown を開くとプレビューを表示します。デフォルトはオフで、プレビュー欄の目で開きます。"));
   set("#settings-history-name", localizedText("Mémoriser l'historique", "Remember the history", "Recordar el historial", "履歴を保存"));
   set("#settings-history-hint", localizedText("Les conversations restent sur cet appareil. Coupé, seuls les réglages sont conservés.", "Conversations stay on this device. Off, only settings are kept.", "Las conversaciones se quedan aquí. Desactivado, solo se guardan los ajustes.", "会話はこのデバイスに残ります。オフだと設定のみ保存されます。"));
   set("#settings-clearchat-name", localizedText("Effacer cette conversation", "Clear this conversation", "Borrar esta conversación", "この会話を消去"));
@@ -9496,8 +9562,8 @@ ui.codeTreeList?.addEventListener("click", event => {
   const toggle = event.target.closest("[data-tree-folder]");
   if (toggle && !event.target.closest("[data-tree-rename],[data-tree-delete]")) {
     const path = toggle.dataset.treeFolder;
-    if (state.code.collapsed.has(path)) state.code.collapsed.delete(path);
-    else state.code.collapsed.add(path);
+    if (state.code.expanded.has(path)) state.code.expanded.delete(path);
+    else state.code.expanded.add(path);
     renderCodeTree();
     return;
   }

@@ -53,11 +53,21 @@ dossier de projet dans l'atelier, on choisit **plusieurs fichiers** à envoyer
 ensemble, et le code qui revient se pose dans le bon fichier d'un clic, sans
 copier-coller. Une réponse qui touche `panier.js` et `styles.css` produit deux
 blocs, chacun rangé dans son fichier ; un fichier nommé dans la question est
-joint automatiquement. L'aperçu intégré
+joint automatiquement. La pastille **Étapes** de la boîte de prompt fait de
+chaque bloc une étape à autoriser : « Autoriser » écrit dans le fichier et le
+volet de gauche affiche la nouvelle version aussitôt, « Refuser » laisse le bloc
+de côté. L'aperçu intégré
 reconstruit la page avec ses feuilles de style, ses scripts et ses images, et
 l'exécute dans une iframe isolée : le HTML, le CSS et le JavaScript du projet se
 comportent comme dans un navigateur, avec la console du projet sous les yeux, et
-sur un écran large l'aperçu se place à côté de l'éditeur.
+sur un écran large l'aperçu se place à côté de l'éditeur. Il reste fermé par
+défaut : l'œil de la barre d'outils l'ouvre et le referme, et le réglage
+« Aperçu automatique » le rouvre seul à chaque page HTML, CSS ou Markdown.
+
+L'arborescence replie les dossiers par défaut, pour ne montrer que la structure
+du projet ; un fichier atteint par la recherche, par une étape autorisée ou par
+la reprise d'une session rouvre ses dossiers parents, pour qu'il ne disparaisse
+jamais de la colonne.
 
 Le projet entier s'exporte en `.zip` et se réimporte tel quel, dossiers vides
 compris ; les archives produites par d'autres outils sont lues aussi, sans rien
