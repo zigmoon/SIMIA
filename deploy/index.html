@@ -1605,9 +1605,11 @@
 
 <script>
   /* ------------------------------------------------------------------
-     Un seul endroit à modifier après la première publication GitHub.
-     Les workflows de SIMIA-desktop/.github/workflows/ produisent
-     exactement ces noms de fichiers dans la release publiée.
+     Une seule version à la fois : après chaque publication, mettre à jour
+     l'étiquette ci-dessous et les quatre liens du HTML. Les workflows de
+     SIMIA-desktop/.github/workflows/ produisent exactement ces noms de
+     fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
+     préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
   const RELEASE_TAG = "v0.1.19";
   const RELEASE_BASE = `https://github.com/zigmoon/SIMIA/releases/download/${RELEASE_TAG}`;
@@ -1622,7 +1624,7 @@
      sous ses pieds le fichier derriere un bouton deja affiche.
 
      L'etiquette est ecrite en dur a trois endroits : les quatre liens du HTML
-     (qui doivent marcher sans JavaScript), la constante ci-dessous, et le bloc
+     (qui doivent marcher sans JavaScript), la constante ci-dessus, et le bloc
      de donnees structurees. tools/prepare-ftp.ps1 refuse de preparer le site si
      l'une de ces copies ne correspond plus a la version du lanceur.
 
