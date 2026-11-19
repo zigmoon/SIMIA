@@ -254,6 +254,9 @@ const state = {
     /* Passe a true par « Continuer » : le bloc suivant s'ajoute a la fin du
        fichier au lieu de le remplacer. */
     appendNext: false,
+    /* Tour de page : les blocs HTML, CSS et JavaScript creent leurs fichiers
+       s'ils n'existent pas encore. */
+    pageTurn: false,
     treeVisible: true,
     /* Les dossiers sont repliés dans l'arbre : on retient ceux que l'utilisateur a
        ouverts. Partir de tout ouvert remplissait la colonne dès qu'un projet
@@ -1502,7 +1505,9 @@ function codeFileCreate(seed = {}) {
     updatedAt: Date.now()
   };
   state.code.files.push(file);
-  codeFileSave(file);
+  /* Un fichier cree pour une reponse en attente n'est pas encore du projet :
+     il ne part sur le disque que si l'utilisateur accepte. */
+  if (!seed.draft) codeFileSave(file);
   state.code.activeId = file.id;
   if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
   codeMarkSaved();
@@ -3092,12 +3097,88 @@ function codeDraftTargetFor(language) {
   return sameLanguage.length === 1 ? sameLanguage[0] : null;
 }
 
-function startCodeDraft(file, language) {
+/* --------------------------------------------------------------------------
+ * Une page se construit en trois fichiers
+ *
+ * Un modele a qui l'on demande « une page » ecrit tout dans index.html : le
+ * style dans une balise <style>, le script dans un <script>. C'est une page,
+ * ce n'est pas un projet, et il faut tout decouper a la main ensuite. La
+ * consigne ci-dessous part avec la question quand elle demande une page, et le
+ * projet recoit alors index.html, style.css et script.js.
+ * ------------------------------------------------------------------------ */
+
+/* Ce qui ressemble a une demande de page : page, site, landing, page web, et
+   leurs equivalents dans les trois autres langues. */
+const PAGE_REQUEST_HINT = /(?:\bpage\b|\bsite\b|\blanding\b|\bweb ?app\b|\bhtml\b|p[áa]gina|\bsitio\b|ページ|サイト)/i;
+/* Sauf demande explicite du contraire : « en un seul fichier », « inline »… */
+const SINGLE_FILE_REQUEST_HINT = /(?:un seul fichier|single file|one file|fichier unique|mono[- ]?fichier|m[êe]me fichier|tout dans (?:le|un) fichier|en un seul|inline|mismo archivo|un solo archivo|1 ?つのファイル|単一ファイル)/i;
+
+function codeWantsPage(prompt) {
+  const text = String(prompt || "");
+  if (!text.trim()) return false;
+  if (SINGLE_FILE_REQUEST_HINT.test(text)) return false;
+  return PAGE_REQUEST_HINT.test(text);
+}
+
+/* Nom du fichier attendu pour une langue, quand le modele n'en donne pas. */
+function codePageDefaultPath(language) {
+  const extension = CODE_EXTENSIONS[language] || "";
+  if (language === "html") return uniqueCodePath("index.html");
+  if (language === "css") return uniqueCodePath("style.css");
+  if (language === "scss") return uniqueCodePath("style.scss");
+  if (language === "javascript") return uniqueCodePath("script.js");
+  if (language === "typescript") return uniqueCodePath("script.ts");
+  return extension ? uniqueCodePath(`page.${extension}`) : "";
+}
+
+/* La consigne envoyee au modele, dans la langue de l'interface. */
+function codeTurnInstruction(prompt) {
+  if (!state.code.open) return "";
+  if (!codeWantsPage(prompt)) return "";
+  return localizedText(
+    "Le projet est ouvert dans Vibe. Construis la page en trois fichiers séparés, un bloc par fichier, et nomme le fichier dans la ligne d'ouverture du bloc (```html title=index.html) : 1) index.html — la structure seule, avec <link rel=\"stylesheet\" href=\"style.css\"> dans <head> et <script src=\"script.js\" defer></script> juste avant </body> ; 2) style.css — toutes les règles de style ; 3) script.js — tout le JavaScript. N'écris ni <style> ni <script> contenant du code dans le HTML, et ne duplique pas un même contenu dans deux blocs. Si l'utilisateur demande explicitement un seul fichier, ignore cette consigne.",
+    "The project is open in Vibe. Build the page as three separate files, one block per file, naming the file on the block's opening line (```html title=index.html): 1) index.html — structure only, with <link rel=\"stylesheet\" href=\"style.css\"> in <head> and <script src=\"script.js\" defer></script> just before </body>; 2) style.css — every style rule; 3) script.js — all the JavaScript. Write neither <style> nor an inline <script> holding code in the HTML, and do not duplicate the same content across two blocks. If the user explicitly asks for a single file, ignore this instruction.",
+    "El proyecto está abierto en Vibe. Construye la página en tres archivos separados, un bloque por archivo, nombrando el archivo en la línea de apertura del bloque (```html title=index.html): 1) index.html — solo la estructura, con <link rel=\"stylesheet\" href=\"style.css\"> en <head> y <script src=\"script.js\" defer></script> justo antes de </body>; 2) style.css — todas las reglas de estilo; 3) script.js — todo el JavaScript. No escribas ni <style> ni <script> con código dentro del HTML, y no dupliques el mismo contenido en dos bloques. Si el usuario pide explícitamente un solo archivo, ignora esta instrucción.",
+    "プロジェクトは Vibe で開かれています。ページを 3 つのファイルに分けて作り、1 ファイルにつき 1 ブロックとし、ブロックの開始行でファイル名を示してください（```html title=index.html）。1) index.html — 構造のみ。<head> に <link rel=\"stylesheet\" href=\"style.css\">、</body> の直前に <script src=\"script.js\" defer></script>。2) style.css — すべてのスタイル。3) script.js — すべての JavaScript。HTML の中に <style> やコード入りの <script> を書かず、同じ内容を 2 つのブロックに重複させないでください。ユーザーが明示的に 1 ファイルを求めた場合は、この指示を無視してください。"
+  );
+}
+
+/* Le fichier qui recoit un bloc pendant la generation, avec creation au besoin :
+   sans cela, une page demandee depuis un projet vide restait entierement dans
+   la conversation. */
+function codeDraftFileForBlock(block, language) {
+  const drafted = codeDraftFor(language);
+  if (drafted) return { file: drafted, created: false };
+  const named = codeFileNameFromMeta(block.meta);
+  const byName = named ? codeFileByPath(named) : null;
+  if (byName && !byName.binary) return { file: byName, created: false };
+  const existing = codeDraftTargetFor(language);
+  /* Un tour de page nomme ses fichiers : « ```js title=script.js » doit creer
+     script.js, pas remplir le snippet.js que le projet contenait deja. Le
+     fichier nomme passe donc avant le repli sur la langue. */
+  if (state.code.pageTurn && named) {
+    return { file: codeFileCreate({ path: named, language, content: "", draft: true }), created: true };
+  }
+  if (existing) return { file: existing, created: false };
+  if (!state.code.pageTurn) return null;
+  const path = codePageDefaultPath(language);
+  if (!path) return null;
+  return { file: codeFileCreate({ path, language, content: "", draft: true }), created: true };
+}
+
+function startCodeDraft(file, language, options = {}) {
   if (!file || file.binary) return null;
   if (file.draft) return file.draft;
   const append = Boolean(state.code.appendNext);
   state.code.appendNext = false;
-  file.draft = { previous: file.content, append, language: language || file.language };
+  file.draft = {
+    previous: file.content,
+    append,
+    language: language || file.language,
+    /* Un fichier cree pour la reponse en cours disparait si l'on refuse : il
+       n'existait pas avant, il ne doit pas rester vide dans le projet. */
+    created: Boolean(options.created)
+  };
   codeDrafts.set(file.id, file);
   /* Un point dans l'arbre : quand la reponse vise un autre fichier que celui
      qui est ouvert, on doit voir lequel attend une autorisation. */
@@ -3173,9 +3254,15 @@ function commitCodeDraft(file) {
 
 function discardCodeDraft(file) {
   if (!file?.draft) return false;
-  file.content = file.draft.previous;
+  const created = Boolean(file.draft.created);
+  const previous = file.draft.previous;
   delete file.draft;
   codeDrafts.delete(file.id);
+  if (created) {
+    codeFileRemove(file.id);
+    return true;
+  }
+  file.content = previous;
   file.updatedAt = Date.now();
   file.dirty = false;
   codeFileSave(file);
@@ -3190,61 +3277,93 @@ function discardAllCodeDrafts() {
   if (!codeDrafts.size) return;
   [...codeDrafts.values()].forEach(discardCodeDraft);
   codeDrafts.clear();
+  state.code.pageTurn = false;
   renderCodeDraftBar();
 }
 
+/* Ce qu'il faut pour revenir en arriere apres une acceptation : le contenu
+   d'avant, et le fait que le fichier n'existait pas. */
 function commitAllCodeDrafts() {
   if (!codeDrafts.size) return [];
   const files = [...codeDrafts.values()];
-  const snapshots = files.map(file => ({ id: file.id, content: file.draft.previous }));
+  const snapshots = files.map(file => ({ id: file.id, content: file.draft.previous, created: Boolean(file.draft.created) }));
   files.forEach(commitCodeDraft);
   return snapshots;
 }
 
-/* Appele a chaque tranche recue : le dernier bloc de la reponse, meme
-   inacheve, part dans le fichier correspondant. */
+function codeDraftUndo(snapshots) {
+  snapshots.forEach(snapshot => {
+    if (snapshot.created) {
+      codeFileRemove(snapshot.id);
+      return;
+    }
+    const file = codeFileById(snapshot.id);
+    if (!file) return;
+    file.content = snapshot.content;
+    file.updatedAt = Date.now();
+    codeFileSave(file);
+  });
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+}
+
+/* Appele a chaque tranche recue : tous les blocs de la reponse, y compris le
+   dernier encore inacheve, partent dans leur fichier. Une page arrive donc en
+   trois fichiers qui se remplissent ensemble, pas en un seul bloc. */
 function streamCodeDraft(text) {
   if (!state.code.open || !ui.codePane) return;
   const blocks = splitFences(text).filter(segment => segment.type === "code" && segment.value.trim());
   if (!blocks.length) return;
-  const block = blocks[blocks.length - 1];
-  const language = normalizeCodeLanguage(block.language);
-  const file = codeDraftFor(language) || codeDraftTargetFor(language);
-  if (!file) return;
-  startCodeDraft(file, language);
-  writeCodeDraft(file, block.value.replace(/\s+$/, ""));
+  blocks.forEach(block => {
+    const language = normalizeCodeLanguage(block.language);
+    const target = codeDraftFileForBlock(block, language);
+    if (!target) return;
+    /* `created` : le fichier n'existait pas avant ce tour. « Refuser » doit le
+       retirer au lieu de laisser un fichier vide dans le projet. */
+    const draft = startCodeDraft(target.file, language, { created: target.created });
+    if (!draft) return;
+    writeCodeDraft(target.file, block.value.replace(/\s+$/, ""));
+  });
 }
 
-/* Fin de tour : avec la validation des etapes, le brouillon reste affiche et
-   attend l'accord ; sans elle, il est ecrit tout de suite, avec une annulation
-   dans la notification. */
+/* Fin de tour : avec la validation des etapes, les brouillons restent affiches
+   et attendent l'accord ; sans elle, ils sont ecrits tout de suite, avec une
+   annulation dans la notification. */
 function settleCodeDrafts() {
   /* Le drapeau d'ajout ne vaut que pour le tour qui l'a pose : le laisser
      arme ferait s'ajouter la reponse suivante a la fin du fichier. */
   state.code.appendNext = false;
+  const pageTurn = state.code.pageTurn;
+  state.code.pageTurn = false;
   if (!codeDrafts.size) return;
   if (state.allowSteps) {
+    /* Une page, c'est le HTML : c'est lui que l'on montre en premier, et c'est
+       lui que « Continuer » doit nommer. */
+    const page = pageTurn ? [...codeDrafts.values()].find(file => file.language === "html") : null;
+    if (page) {
+      state.code.activeId = page.id;
+      if (!state.code.openIds.includes(page.id)) state.code.openIds.push(page.id);
+      renderCodeTabs();
+      renderCodeTree();
+      renderCodeEditor();
+    }
     renderCodeDraftBar();
     renderCodeSaveState();
     return;
   }
-  const first = [...codeDrafts.values()][0];
+  const files = [...codeDrafts.values()];
+  const names = files.map(codePathOf).join(", ");
   const snapshots = commitAllCodeDrafts();
   toast(
-    localizedText(`Écrit dans ${codePathOf(first)}.`, `Written to ${codePathOf(first)}.`, `Escrito en ${codePathOf(first)}.`, `${codePathOf(first)} に書き込みました。`),
+    files.length > 1
+      ? localizedText(`Écrit dans ${files.length} fichiers : ${names}.`, `Written to ${files.length} files: ${names}.`, `Escrito en ${files.length} archivos: ${names}.`, `${files.length} ファイルに書き込みました：${names}。`)
+      : localizedText(`Écrit dans ${names}.`, `Written to ${names}.`, `Escrito en ${names}.`, `${names} に書き込みました。`),
     "info",
     {
       label: localizedText("Annuler", "Undo", "Deshacer", "元に戻す"),
       run: () => {
-        snapshots.forEach(snapshot => {
-          const file = codeFileById(snapshot.id);
-          if (!file) return;
-          file.content = snapshot.content;
-          file.updatedAt = Date.now();
-          codeFileSave(file);
-        });
-        renderCodeEditor();
-        renderCodeTree();
+        codeDraftUndo(snapshots);
         toast(localizedText("Écriture annulée.", "Write undone.", "Escritura deshecha.", "書き込みを元に戻しました。"));
       }
     }
@@ -3253,52 +3372,97 @@ function settleCodeDrafts() {
 
 /* --- Barre d'accord, au-dessus du fichier -------------------------------- */
 
-function renderCodeDraftBar() {
-  if (!ui.codeDraftBar) return;
-  const file = activeCodeFile();
-  const draft = file?.draft;
-  ui.codeDraftBar.hidden = !draft;
-  if (!draft) return;
-  const added = Math.max(0, file.content.length - String(draft.previous || "").length);
-  ui.codeDraftBarText.textContent = draft.append
-    ? localizedText(
-      `Suite reçue pour ${codePathOf(file)} (+${added} caractères). Rien n'est enregistré avant votre accord.`,
-      `Continuation received for ${codePathOf(file)} (+${added} characters). Nothing is saved until you agree.`,
-      `Continuación recibida para ${codePathOf(file)} (+${added} caracteres). Nada se guarda hasta tu acuerdo.`,
-      `${codePathOf(file)} の続きを受信しました（+${added} 文字）。承認するまで保存されません。`
-    )
-    : localizedText(
-      `Réponse reçue pour ${codePathOf(file)} : elle remplace le contenu du fichier. Rien n'est enregistré avant votre accord.`,
-      `Reply received for ${codePathOf(file)}: it replaces the file content. Nothing is saved until you agree.`,
-      `Respuesta recibida para ${codePathOf(file)}: reemplaza el contenido del archivo. Nada se guarda hasta tu acuerdo.`,
-      `${codePathOf(file)} の応答を受信しました。ファイルの内容を置き換えます。承認するまで保存されません。`
-    );
-  if (ui.codeDraftAccept) ui.codeDraftAccept.textContent = localizedText("Autoriser", "Allow", "Permitir", "許可");
-  if (ui.codeDraftRefuse) ui.codeDraftRefuse.textContent = localizedText("Refuser", "Refuse", "Rechazar", "拒否");
+/* Le bouton « Continuer dans … » est dessine avec le message : sans cette
+   remise a jour, il continuait d'annoncer le fichier actif au moment de la
+   reponse, alors que le projet a change depuis. */
+function refreshContinueLabels() {
+  const buttons = document.querySelectorAll('.message-action[data-action="continue"]');
+  if (!buttons.length) return;
+  const label = continueLabelFor(codeContinueTarget());
+  buttons.forEach(button => {
+    const span = button.querySelector("span");
+    if (span) span.textContent = label;
+    button.title = label;
+  });
 }
 
+function renderCodeDraftBar() {
+  refreshContinueLabels();
+  if (!ui.codeDraftBar) return;
+  const files = [...codeDrafts.values()];
+  ui.codeDraftBar.hidden = !files.length;
+  if (!files.length) return;
+  const active = activeCodeFile();
+  const draft = active?.draft;
+  if (files.length > 1) {
+    const names = files.map(codePathOf).join(", ");
+    ui.codeDraftBarText.textContent = localizedText(
+      `Réponse reçue pour ${files.length} fichiers : ${names}. Rien n'est enregistré avant votre accord.`,
+      `Reply received for ${files.length} files: ${names}. Nothing is saved until you agree.`,
+      `Respuesta recibida para ${files.length} archivos: ${names}. Nada se guarda hasta tu acuerdo.`,
+      `${files.length} ファイルの応答を受信しました：${names}。承認するまで保存されません。`
+    );
+  } else if (draft) {
+    const added = Math.max(0, active.content.length - String(draft.previous || "").length);
+    ui.codeDraftBarText.textContent = draft.append
+      ? localizedText(
+        `Suite reçue pour ${codePathOf(active)} (+${added} caractères). Rien n'est enregistré avant votre accord.`,
+        `Continuation received for ${codePathOf(active)} (+${added} characters). Nothing is saved until you agree.`,
+        `Continuación recibida para ${codePathOf(active)} (+${added} caracteres). Nada se guarda hasta tu acuerdo.`,
+        `${codePathOf(active)} の続きを受信しました（+${added} 文字）。承認するまで保存されません。`
+      )
+      : localizedText(
+        `Réponse reçue pour ${codePathOf(active)} : elle remplace le contenu du fichier. Rien n'est enregistré avant votre accord.`,
+        `Reply received for ${codePathOf(active)}: it replaces the file content. Nothing is saved until you agree.`,
+        `Respuesta recibida para ${codePathOf(active)}: reemplaza el contenido del archivo. Nada se guarda hasta tu acuerdo.`,
+        `${codePathOf(active)} の応答を受信しました。ファイルの内容を置き換えます。承認するまで保存されません。`
+      );
+  } else {
+    /* Le fichier affiche n'est pas celui qui attend : on nomme celui qui
+       attend, sinon la barre parle d'un fichier invisible. */
+    const pending = files[0];
+    ui.codeDraftBarText.textContent = localizedText(
+      `Réponse reçue pour ${codePathOf(pending)}. Rien n'est enregistré avant votre accord.`,
+      `Reply received for ${codePathOf(pending)}. Nothing is saved until you agree.`,
+      `Respuesta recibida para ${codePathOf(pending)}. Nada se guarda hasta tu acuerdo.`,
+      `${codePathOf(pending)} の応答を受信しました。承認するまで保存されません。`
+    );
+  }
+  const many = files.length > 1;
+  if (ui.codeDraftAccept) {
+    ui.codeDraftAccept.textContent = many
+      ? localizedText("Tout autoriser", "Allow all", "Permitir todo", "すべて許可")
+      : localizedText("Autoriser", "Allow", "Permitir", "許可");
+  }
+  if (ui.codeDraftRefuse) {
+    ui.codeDraftRefuse.textContent = many
+      ? localizedText("Tout refuser", "Refuse all", "Rechazar todo", "すべて拒否")
+      : localizedText("Refuser", "Refuse", "Rechazar", "拒否");
+  }
+}
+
+/* Un seul geste pour toute la reponse : une page refusee en trois morceaux
+   laisserait un projet a moitie modifie. */
 function acceptCodeDraft() {
-  const file = activeCodeFile();
-  if (!file?.draft) return;
-  const snapshot = file.draft.previous;
-  const appended = file.draft.append;
-  const path = codePathOf(file);
-  commitCodeDraft(file);
+  if (!codeDrafts.size) return;
+  const files = [...codeDrafts.values()];
+  const names = files.map(codePathOf).join(", ");
+  const appended = files.length === 1 && Boolean(files[0].draft.append);
+  const snapshots = commitAllCodeDrafts();
+  renderCodeTabs();
   renderCodeTree();
+  renderCodeDraftBar();
   toast(
-    appended
-      ? localizedText(`Suite ajoutée à ${path}.`, `Continuation added to ${path}.`, `Continuación añadida a ${path}.`, `${path} に続きを追加しました。`)
-      : localizedText(`Écrit dans ${path}.`, `Written to ${path}.`, `Escrito en ${path}.`, `${path} に書き込みました。`),
+    files.length > 1
+      ? localizedText(`Écrit dans ${files.length} fichiers : ${names}.`, `Written to ${files.length} files: ${names}.`, `Escrito en ${files.length} archivos: ${names}.`, `${files.length} ファイルに書き込みました：${names}。`)
+      : appended
+        ? localizedText(`Suite ajoutée à ${names}.`, `Continuation added to ${names}.`, `Continuación añadida a ${names}.`, `${names} に続きを追加しました。`)
+        : localizedText(`Écrit dans ${names}.`, `Written to ${names}.`, `Escrito en ${names}.`, `${names} に書き込みました。`),
     "info",
     {
       label: localizedText("Annuler", "Undo", "Deshacer", "元に戻す"),
       run: () => {
-        const target = codeFileById(file.id);
-        if (!target) return;
-        target.content = snapshot;
-        target.updatedAt = Date.now();
-        codeFileSave(target);
-        renderCodeEditor();
+        codeDraftUndo(snapshots);
         toast(localizedText("Écriture annulée.", "Write undone.", "Escritura deshecha.", "書き込みを元に戻しました。"));
       }
     }
@@ -3306,11 +3470,26 @@ function acceptCodeDraft() {
 }
 
 function refuseCodeDraft() {
-  const file = activeCodeFile();
-  if (!file?.draft) return;
-  discardCodeDraft(file);
+  if (!codeDrafts.size) return;
+  discardAllCodeDrafts();
   renderCodeSaveState();
-  toast(localizedText("Réponse refusée, fichier inchangé.", "Reply refused, file unchanged.", "Respuesta rechazada, archivo sin cambios.", "応答を拒否しました。ファイルは変更されていません。"));
+  toast(localizedText("Réponse refusée, projet inchangé.", "Reply refused, project unchanged.", "Respuesta rechazada, proyecto sin cambios.", "応答を拒否しました。プロジェクトは変更されていません。"));
+}
+
+/* Le fichier que « Continuer » doit prolonger : celui qui vient de recevoir une
+   reponse, sinon celui qui est ouvert. Un bouton qui annonce « index.html »
+   alors que la reponse visait style.css envoie le modele au mauvais endroit. */
+function codeContinueTarget() {
+  const active = activeCodeFile();
+  if (active?.draft) return active;
+  /* Une page en attente se prolonge par son HTML : c'est le fichier que l'on
+     montre, et celui dont la suite a un sens. */
+  const page = [...codeDrafts.values()].find(file => file.language === "html");
+  if (page) return page;
+  const drafted = [...codeDrafts.values()][0];
+  if (drafted) return drafted;
+  if (active && !active.binary) return active;
+  return null;
 }
 
 /* --- Continuer dans le meme fichier -------------------------------------- */
@@ -3330,7 +3509,7 @@ function lastAssistantCodeBlock() {
 /* La suite s'ecrit dans le fichier ou le modele vient de travailler, pas dans
    un nouveau bloc de conversation. */
 async function continueInVibe() {
-  let file = [...codeDrafts.values()][0] || activeCodeFile();
+  let file = codeContinueTarget();
   if (!file) {
     const block = lastAssistantCodeBlock();
     if (!block) { await continueLast(); return; }
@@ -6522,14 +6701,20 @@ function renderMessage(role, content, scroll = true, attachments = [], sources =
   return element;
 }
 
+/* Le bouton nomme le fichier qu'il va prolonger, et reste « Continuer » quand
+   aucun fichier n'est vise : mieux vaut un libelle honnete qu'un nom faux. */
+function continueLabelFor(file) {
+  if (!file) return localizedText("Continuer", "Continue", "Continuar", "続ける");
+  const name = codeFileNameOf(codePathOf(file));
+  return localizedText(`Continuer dans ${name}`, `Continue in ${name}`, `Continuar en ${name}`, `${name} の続きを書く`);
+}
+
 function messageToolbarMarkup(content, allowTurn = true) {
   const labels = {
     copy: localizedText("Copier", "Copy", "Copiar", "コピー"),
     copied: localizedText("Copié", "Copied", "Copiado", "コピー済み"),
     regenerate: localizedText("Régénérer", "Regenerate", "Regenerar", "再生成"),
-    continue: state.code.open && activeCodeFile()
-      ? localizedText(`Continuer dans ${codeFileNameOf(codePathOf(activeCodeFile()))}`, `Continue in ${codeFileNameOf(codePathOf(activeCodeFile()))}`, `Continuar en ${codeFileNameOf(codePathOf(activeCodeFile()))}`, `${codeFileNameOf(codePathOf(activeCodeFile()))} の続きを書く`)
-      : localizedText("Continuer", "Continue", "Continuar", "続ける")
+    continue: continueLabelFor(codeContinueTarget())
   };
   const suggestions = [
     localizedText("Développe ce point", "Expand on this", "Amplía este punto", "この点を詳しく"),
@@ -6612,6 +6797,7 @@ async function runAssistantTurn(prompt, options = {}) {
     const onDelta = stream
       ? delta => { stream.update(delta); streamCodeDraft(delta); }
       : null;
+    state.code.pageTurn = false;
     const answer = answering ? await respond(prompt, [], onDelta, options.extraContext || "") : MODEL_REQUIRED;
     const node = stream ? stream.finish(answer, state.lastDocumentSources) : (typing.remove(), renderMessage("assistant", answer));
     addMessage("assistant", answer);
@@ -7197,7 +7383,7 @@ function trimMessagesToContext(messages) {
   return kept;
 }
 
-async function respond(prompt, currentAttachments = [], onDelta = null, extraContext = "") {
+async function respond(prompt, currentAttachments = [], onDelta = null, extraContext = "", systemExtra = "") {
   const conversation = activeConversation();
   if (!conversation) return MODEL_REQUIRED;
   const model = MODELS.find(candidate => candidate.id === conversation?.modelId);
@@ -7216,7 +7402,10 @@ async function respond(prompt, currentAttachments = [], onDelta = null, extraCon
     ? localizedText(" Des extraits du ou des documents de l'utilisateur sont fournis entre les balises [EXTRAITS DES DOCUMENTS]. Réponds uniquement à partir de ces extraits : appuie chaque affirmation sur un extrait et cite-le sous la forme [E1], [E2] en indiquant la page. Si l'information ne figure pas dans les extraits, dis-le clairement au lieu d'inventer, et propose de reformuler la question.", " Excerpts from the user's document(s) are provided between the [EXTRAITS DES DOCUMENTS] tags. Answer only from those excerpts: support each statement with an excerpt and cite it as [E1], [E2] including the page. If the information is not in the excerpts, say so clearly instead of inventing, and offer to rephrase the question.", " Se proporcionan extractos del documento o documentos del usuario entre las etiquetas [EXTRAITS DES DOCUMENTS]. Responde solo a partir de esos extractos: apoya cada afirmación en un extracto y cítalo como [E1], [E2] indicando la página. Si la información no está en los extractos, dilo claramente en lugar de inventar y propón reformular la pregunta.")
     : "";
   const recentMessages = conversation.messages.slice(-6, -1);
-  const messages = [{ role: "system", content: `${baseInstruction} ${model?.instruction || ""} ${conversation?.customModel?.instructions || ""}${documentInstruction}${profileNote}` }, ...recentMessages.map(message => {
+  /* La consigne de decoupage part avec la question, pas avec la conversation :
+     elle ne vaut que pour ce tour. */
+  const pageInstruction = systemExtra ? ` ${systemExtra}` : "";
+  const messages = [{ role: "system", content: `${baseInstruction} ${model?.instruction || ""} ${conversation?.customModel?.instructions || ""}${documentInstruction}${pageInstruction}${profileNote}` }, ...recentMessages.map(message => {
     const content = `${message.content}${attachmentContext(message.attachments || [], true)}`;
     const images = isVisionModel() ? (message.attachments || []).filter(attachment => attachment.kind === "image" && attachment.dataUrl) : [];
     if (message.role === "user" && images.length) return { role: "user", content: [{ type: "text", text: content }, ...images.map(image => ({ type: "image_url", image_url: { url: image.dataUrl } }))] };
@@ -7542,8 +7731,13 @@ async function submitPrompt(rawPrompt, options = {}) {
     const onDelta = stream
       ? delta => { stream.update(delta); streamCodeDraft(delta); }
       : null;
+    /* Une page demandee depuis Vibe arrive en trois fichiers : la consigne
+       part avec la question, et les blocs creent leurs fichiers au fil de
+       l'eau. Hors de Vibe, ou pour un seul fichier demande, rien ne change. */
+    const pageInstruction = codeTurnInstruction(messageContent);
+    state.code.pageTurn = Boolean(pageInstruction);
     const answer = answering
-      ? await respond(messageContent, attachments, onDelta, workspaceContext)
+      ? await respond(messageContent, attachments, onDelta, workspaceContext, pageInstruction)
       : MODEL_REQUIRED;
     const node = stream ? stream.finish(answer, state.lastDocumentSources) : (typing.remove(), renderMessage("assistant", answer));
     addMessage("assistant", answer);

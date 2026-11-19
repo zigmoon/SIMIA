@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.25": {
+      "title": "Vibe : une page arrive en trois fichiers, et Continuer nomme le bon",
+      "highlights": [
+        "Demandez une page dans Vibe : elle arrive en trois fichiers séparés — index.html, style.css, script.js — au lieu d'un seul bloc où tout est noyé. La consigne part avec la question : le HTML garde la structure et deux références (<link rel=\"stylesheet\" href=\"style.css\"> et <script src=\"script.js\" defer>), le CSS et le JavaScript vivent dans leurs fichiers. L'aperçu les assemble tout seul, comme un vrai navigateur.",
+        "Les trois fichiers se créent au fil de l'eau s'ils n'existent pas, même dans un projet vide, et chacun se remplit dans le volet de gauche pendant la génération. Une seule barre d'accord : « Tout autoriser » ou « Tout refuser » — refuser retire les fichiers qui n'existaient pas, accepter les enregistre tous, avec une annulation unique.",
+        "« Continuer dans… » ne nomme plus le fichier par hasard. Le bouton annonce le fichier qui a reçu la réponse (le HTML quand la page est en attente), suit le fichier que l'on ouvre, et redevient un simple « Continuer » quand aucun fichier n'est visé. Un tour de continuation ne déclenche jamais le découpage en trois fichiers.",
+        "Une demande explicite d'un seul fichier — « tout dans un seul fichier », « css inline » — est respectée : aucune consigne de découpage n'est envoyée, et aucun fichier n'est crée sans votre accord.",
+        "Les vérifications de `tools/check-vibe-draft.mjs` passent de 29 à 51 : détection de la demande de page, création des trois fichiers, refus qui nettoie tout, libellé de continuation.",
+        "Cache hors ligne 4.19.0."
+      ]
+    },
     "0.1.24": {
       "title": "Vibe : le code s'écrit dans le fichier, et Continuer prolonge le même fichier",
       "highlights": [

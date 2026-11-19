@@ -55,6 +55,13 @@ Une réponse qui touche `panier.js` et `styles.css` produit deux blocs, chacun
 rangé dans son fichier ; un fichier nommé dans la question est joint
 automatiquement.
 
+Une page demandée depuis Vibe arrive en **trois fichiers** — `index.html`,
+`style.css`, `script.js` — créés au besoin et remplis ensemble : le HTML garde la
+structure et les deux références, le style et le script vivent chez eux, et
+l'aperçu les assemble comme un navigateur. Une barre d'accord unique couvre les
+trois : « Tout autoriser » ou « Tout refuser ». Demandez explicitement un seul
+fichier et la consigne disparaît.
+
 Le code arrive dans le fichier **pendant** la génération : le volet de gauche
 montre la page se construire, ligne après ligne, en même temps qu'elle apparaît
 dans la conversation. Rien n'est enregistré avant l'accord — une barre au-dessus
