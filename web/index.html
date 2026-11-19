@@ -72,7 +72,7 @@
       "Conversations avec des modèles de langage exécutés en local",
       "Analyse de documents PDF, Word, OpenDocument et texte",
       "Génération d'images locale avec Stable Diffusion",
-      "Atelier de code avec exécution JavaScript et Python",
+      "Vibe (atelier de code) avec exécution JavaScript et Python",
       "Recherche web assistée et dictée vocale",
       "Export et import des conversations en JSON"
     ],
@@ -98,7 +98,7 @@
         <li>Conversations avec des modèles de langage exécutés en local</li>
         <li>Analyse de documents PDF, Word, OpenDocument, CSV et texte</li>
         <li>Génération d'images locale avec Stable Diffusion</li>
-        <li>Atelier de code avec exécution JavaScript et Python</li>
+        <li>Vibe, l'atelier de code, avec exécution JavaScript et Python</li>
         <li>Recherche web assistée et dictée vocale</li>
         <li>Export et import des conversations au format JSON</li>
       </ul>
@@ -128,7 +128,7 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="sidebar-actions">
-          <button class="settings-button" id="sidebar-code" type="button">Atelier de code</button>
+          <button class="settings-button" id="sidebar-code" type="button" title="Vibe — votre atelier de code : écrire, exécuter et prévisualiser">Vibe</button>
           <button class="settings-button" id="info-toggle" type="button">Information</button>
           <button class="settings-button" id="export-toggle" type="button">Exporter / Importer</button>
           <button class="settings-button" id="purge-toggle" type="button">Purger</button>
@@ -147,7 +147,7 @@
           <button class="engine-chip" id="image-engine" type="button" hidden></button>
         </div>
         <div class="top-actions">
-          <div class="code-mode-switch" id="code-mode-switch" role="tablist" aria-label="Atelier et conversation" hidden>
+          <div class="code-mode-switch" id="code-mode-switch" role="tablist" aria-label="Vibe et conversation" hidden>
             <button type="button" role="tab" data-code-focus="code" aria-selected="true">Code</button>
             <button type="button" role="tab" data-code-focus="chat" aria-selected="false">Chat</button>
           </div>
@@ -157,7 +157,7 @@
               <svg class="app-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
             </button>
             <div class="app-menu" id="app-menu" role="menu" hidden>
-              <button type="button" role="menuitem" id="app-menu-code">Atelier de code</button>
+              <button type="button" role="menuitem" id="app-menu-code">Vibe</button>
               <button type="button" role="menuitem" id="app-menu-settings">Paramètres</button>
         <button type="button" role="menuitem" id="app-menu-install" hidden>Installer SIMIA</button>
               <button type="button" role="menuitem" id="app-menu-info">Information</button>
@@ -181,7 +181,7 @@
         </div>
       </header>
 
-            <section class="code-pane" id="code-pane" aria-label="Atelier code">
+            <section class="code-pane" id="code-pane" aria-label="Vibe">
         <div class="code-pane-head">
           <button type="button" class="code-tool" id="code-tree-toggle" aria-pressed="true" aria-label="Arborescence du projet" title="Arborescence du projet"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h6M4 12h10M4 18h7"/></svg></button>
           <div class="code-tabs" id="code-tabs" role="tablist" aria-label="Fichiers ouverts"></div>
@@ -203,7 +203,7 @@
               </div>
             </div>
             <button type="button" class="code-tool" id="code-preview-toggle" aria-label="Aperçu du fichier" title="Aperçu du fichier" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="16" height="14" rx="1.6"/><path d="M10 9.4 15 12l-5 2.6Z" fill="currentColor" stroke="none"/></svg></button>
-            <button type="button" class="code-tool code-tool-close" id="code-close" aria-label="Fermer l'atelier" title="Fermer l'atelier">✕</button>
+            <button type="button" class="code-tool code-tool-close" id="code-close" aria-label="Fermer Vibe" title="Fermer Vibe">✕</button>
           </div>
         </div>
         <div class="code-body" id="code-body" data-tree="shown">
@@ -214,6 +214,7 @@
               <span class="code-tree-actions">
                 <button type="button" id="code-tree-new-file" aria-label="Nouveau fichier" title="Nouveau fichier"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
                 <button type="button" id="code-tree-new-folder" aria-label="Nouveau dossier" title="Nouveau dossier"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2h9A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><path d="M12 11v5M9.5 13.5h5"/></svg></button>
+                <button type="button" id="code-tree-clear" aria-label="Vider le projet" title="Vider le projet" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16"/><path d="M9.5 7V5.4A1.4 1.4 0 0 1 10.9 4h2.2A1.4 1.4 0 0 1 14.5 5.4V7"/><path d="M6.4 7l.8 11.6A1.5 1.5 0 0 0 8.7 20h6.6a1.5 1.5 0 0 0 1.5-1.4L17.6 7"/><path d="M10.4 11v5M13.6 11v5"/></svg></button>
               </span>
             </div>
             <div class="code-tree-list" id="code-tree-list" role="tree"></div>
@@ -306,7 +307,7 @@
           </ol>
           <div class="welcome-start">
             <button class="home-model-button" id="home-model-button" type="button">Choisir un modèle pour commencer</button>
-            <button class="home-model-button secondary" id="home-code-button" type="button">Ouvrir l'atelier de code</button>
+            <button class="home-model-button secondary" id="home-code-button" type="button">Ouvrir Vibe</button>
             <p id="welcome-setup">Le modèle se télécharge une fois, puis reste sur cet appareil.</p>
           </div>
         </div>
@@ -374,7 +375,7 @@
             <button class="settings-tab is-active" id="settings-sec-model" type="button" role="tab" aria-controls="settings-panel-model" aria-selected="true" data-settings-tab="model">Modèle</button>
             <button class="settings-tab" id="settings-sec-reply" type="button" role="tab" aria-controls="settings-panel-reply" aria-selected="false" tabindex="-1" data-settings-tab="reply">Réponses</button>
             <button class="settings-tab" id="settings-sec-composer" type="button" role="tab" aria-controls="settings-panel-composer" aria-selected="false" tabindex="-1" data-settings-tab="composer">Saisie</button>
-            <button class="settings-tab" id="settings-sec-code" type="button" role="tab" aria-controls="settings-panel-code" aria-selected="false" tabindex="-1" data-settings-tab="code">Atelier de code</button>
+            <button class="settings-tab" id="settings-sec-code" type="button" role="tab" aria-controls="settings-panel-code" aria-selected="false" tabindex="-1" data-settings-tab="code">Vibe</button>
             <button class="settings-tab" id="settings-sec-data" type="button" role="tab" aria-controls="settings-panel-data" aria-selected="false" tabindex="-1" data-settings-tab="data">Historique et données</button>
           </div>
 
@@ -497,7 +498,7 @@
               <div class="setting-row">
                 <div class="setting-text">
                   <span class="setting-name" id="settings-code-font-name">Taille du texte</span>
-                  <span class="setting-hint" id="settings-code-font-hint">Éditeur de l'atelier uniquement.</span>
+                  <span class="setting-hint" id="settings-code-font-hint">Éditeur de Vibe uniquement.</span>
                 </div>
                 <select id="setting-code-font" aria-labelledby="settings-code-font-name">
                   <option value="12">12 px</option>

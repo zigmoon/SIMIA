@@ -443,6 +443,7 @@ const ui = {
   codeTreeToggle: document.querySelector("#code-tree-toggle"),
   codeTreeNewFile: document.querySelector("#code-tree-new-file"),
   codeTreeNewFolder: document.querySelector("#code-tree-new-folder"),
+  codeTreeClear: document.querySelector("#code-tree-clear"),
   codeOpenFolder: document.querySelector("#code-open-folder"),
   codeWriteBack: document.querySelector("#code-write-back"),
   codeExport: document.querySelector("#code-export"),
@@ -1045,13 +1046,13 @@ function renderInline(source) {
 function renderCodeBlock(language, code, options = {}) {
   const label = String(language || "").toLowerCase() || "code";
   const copyLabel = localizedText("Copier le code", "Copy code", "Copiar el código", "コードをコピー");
-  const openLabel = localizedText("Ouvrir dans l'atelier", "Open in code workspace", "Abrir en el taller", "コード作業台で開く");
+  const openLabel = localizedText("Ouvrir dans Vibe", "Open in Vibe", "Abrir en Vibe", "Vibe で開く");
   /* Un bloc de code peut revenir dans l'atelier d'un clic : sans ce bouton,
      corriger un fichier demandait de copier la reponse puis de la recoller a
      la main. Il n'apparait que si l'atelier est ouvert, ou juste apres une
      action de l'atelier (le fichier cible est alors connu). */
   const canApply = options.apply !== false && (state.code.open || Boolean(state.code.pendingApply));
-  const applyLabel = localizedText("Appliquer dans l'atelier", "Apply to the workspace", "Aplicar en el taller", "作業台に適用");
+  const applyLabel = localizedText("Appliquer dans Vibe", "Apply in Vibe", "Aplicar en Vibe", "Vibe に適用");
   const applyButton = canApply
     ? `<button type="button" class="code-copy is-apply" data-action="apply-code" title="${escapeHtml(applyLabel)}" aria-label="${escapeHtml(applyLabel)}">${ICON_CHECK}<span>${escapeHtml(localizedText("Appliquer", "Apply", "Aplicar", "適用"))}</span></button>`
     : "";
@@ -1527,6 +1528,25 @@ function codeDeleteFolder(path) {
   renderCodeTree();
 }
 
+/* Vide le projet d'un coup : fichiers, dossiers vides, onglets et selection.
+   Supprimer un fichier a la fois obligeait a recommencer autant de fois qu'il
+   y avait de fichiers pour repartir d'une page blanche. */
+function codeClearProject() {
+  const total = state.code.files.length + state.code.emptyFolders.length;
+  if (!total) return;
+  [...state.code.files].forEach(file => codeFileRemove(file.id));
+  state.code.files = [];
+  state.code.openIds = [];
+  state.code.activeId = null;
+  state.code.emptyFolders = [];
+  state.code.collapsed.clear();
+  codeMarkSaved();
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  toast(localizedText("Projet vidé.", "Project cleared.", "Proyecto vaciado.", "プロジェクトを空にしました。"));
+}
+
 /* --- Arborescence -------------------------------------------------------- */
 
 function codeTreeModel() {
@@ -1624,6 +1644,7 @@ function renderCodeTabs() {
 
 function renderCodeTreeCount() {
   if (ui.codeTreeCount) ui.codeTreeCount.textContent = String(state.code.files.length);
+  if (ui.codeTreeClear) ui.codeTreeClear.hidden = state.code.files.length === 0 && state.code.emptyFolders.length === 0;
 }
 
 const CODE_LANG_CHOICES = [
@@ -1707,7 +1728,7 @@ function renderCodeModelHint() {
   const name = profile ? profile.name : model.name;
   const isCodeModel = String(model?.category || "").toLowerCase() === "code";
   ui.codeModelHintText.textContent = localizedText(
-    `Modèle de l'atelier : ${name}${live ? " (actif)" : " (à charger)"}${isCodeModel ? "" : " · un modèle Code écrit plus juste"}.`,
+    `Modèle de Vibe : ${name}${live ? " (actif)" : " (à charger)"}${isCodeModel ? "" : " · un modèle Code écrit plus juste"}.`,
     `Workspace model: ${name}${live ? " (active)" : " (not loaded)"}${isCodeModel ? "" : " · a Code model writes more accurately"}.`,
     `Modelo del taller: ${name}${live ? " (activo)" : " (sin cargar)"}${isCodeModel ? "" : " · un modelo de Código es más preciso"}.`,
     `作業台のモデル：${name}${live ? "（有効）" : "（未読み込み）"}${isCodeModel ? "" : " · コード用モデルの方が正確です"}。`
@@ -1846,6 +1867,11 @@ function onCodeInput() {
   codeSaveTimer = setTimeout(() => {
     codeFileSave(file);
     state.code.saving = false;
+    /* L'indicateur restait sur « Modifications… » alors que le fichier etait
+       enregistre : la barre d'etat annoncait un travail non fait. On ne le
+       retire que si l'on est toujours sur le fichier sauvegarde, sinon la
+       frappe en cours sur un autre fichier serait declaree enregistree. */
+    if (activeCodeFile() === file) state.code.dirty = false;
     renderCodeSaveState();
   }, 450);
   /* L'aperçu suit la frappe : c'est ce qui rend l'atelier utilisable pour du
@@ -2917,7 +2943,7 @@ function openAllCodeBlocks(button) {
   renderCodeTabs();
   renderCodeTree();
   renderCodeEditor();
-  toast(localizedText(`${segments.length} bloc(s) ouvert(s) dans l'atelier.`, `${segments.length} block(s) opened in the workspace.`, `${segments.length} bloque(s) abierto(s) en el taller.`, `作業台で ${segments.length} 個のブロックを開きました。`));
+  toast(localizedText(`${segments.length} bloc(s) ouvert(s) dans Vibe.`, `${segments.length} block(s) opened in the workspace.`, `${segments.length} bloque(s) abierto(s) en el taller.`, `作業台で ${segments.length} 個のブロックを開きました。`));
 }
 
 function findAttachmentById(id) {
@@ -2937,7 +2963,7 @@ function openAttachmentInWorkspace(attachment) {
   const text = attachment?.text;
   if (!text || !String(text).trim()) {
     toast(localizedText(
-      "Le contenu de ce fichier n'est plus disponible : joignez-le de nouveau pour l'ouvrir dans l'atelier.",
+      "Le contenu de ce fichier n'est plus disponible : joignez-le de nouveau pour l'ouvrir dans Vibe.",
       "This file's content is no longer available: attach it again to open it in the workspace.",
       "El contenido de este archivo ya no está disponible: vuelve a adjuntarlo para abrirlo en el taller.",
       "このファイルの内容は保持されていません。もう一度添付すると作業台で開けます。"
@@ -3174,14 +3200,19 @@ function renderCodeWorkspaceText() {
     ui.codeTreeNewFolder.setAttribute("aria-label", newFolderLabel);
     ui.codeTreeNewFolder.setAttribute("title", newFolderLabel);
   }
-  const closeLabel = localizedText("Fermer l'atelier", "Close workspace", "Cerrar el taller", "作業台を閉じる");
+  const clearLabel = localizedText("Vider le projet", "Clear the project", "Vaciar el proyecto", "プロジェクトを空にする");
+  if (ui.codeTreeClear) {
+    ui.codeTreeClear.setAttribute("aria-label", clearLabel);
+    ui.codeTreeClear.setAttribute("title", clearLabel);
+  }
+  const closeLabel = localizedText("Fermer Vibe", "Close Vibe", "Cerrar Vibe", "Vibe を閉じる");
   if (ui.codeClose) {
     ui.codeClose.setAttribute("aria-label", closeLabel);
     ui.codeClose.setAttribute("title", closeLabel);
   }
   ui.codeInput?.setAttribute("aria-label", localizedText("Éditeur de code", "Code editor", "Editor de código", "コードエディター"));
-  ui.codePane.setAttribute("aria-label", localizedText("Atelier code", "Code workspace", "Taller de código", "コード作業台"));
-  ui.codeSwitch?.setAttribute("aria-label", localizedText("Atelier et conversation", "Workspace and chat", "Taller y conversación", "作業台とチャット"));
+  ui.codePane.setAttribute("aria-label", localizedText("Vibe", "Vibe", "Vibe", "Vibe"));
+  ui.codeSwitch?.setAttribute("aria-label", localizedText("Vibe et conversation", "Vibe and chat", "Vibe y conversación", "Vibe とチャット"));
   document.querySelector("#code-tabs")?.setAttribute("aria-label", localizedText("Fichiers ouverts", "Open files", "Archivos abiertos", "開いているファイル"));
   document.querySelectorAll(".code-mode-switch [data-code-focus]").forEach(button => {
     button.textContent = button.dataset.codeFocus === "chat"
@@ -4998,7 +5029,7 @@ function attachmentCard(attachment, pending = false) {
      le maillon manquant entre la piece jointe et l'editeur. Un PDF ou un Word
      n'y a pas sa place : son texte extrait n'est pas un fichier source. */
   const openWorkspace = isCodeAttachment(attachment) && attachment.text && String(attachment.text).trim()
-    ? `<button type="button" class="attachment-open" data-open-attachment-code="${escapeHtml(attachment.id)}" title="${escapeHtml(localizedText("Ouvrir dans l'atelier", "Open in the workspace", "Abrir en el taller", "作業台で開く"))}" aria-label="${escapeHtml(localizedText("Ouvrir dans l'atelier", "Open in the workspace", "Abrir en el taller", "作業台で開く"))}">${ICON_CODE}</button>`
+    ? `<button type="button" class="attachment-open" data-open-attachment-code="${escapeHtml(attachment.id)}" title="${escapeHtml(localizedText("Ouvrir dans Vibe", "Open in Vibe", "Abrir en Vibe", "Vibe で開く"))}" aria-label="${escapeHtml(localizedText("Ouvrir dans Vibe", "Open in Vibe", "Abrir en Vibe", "Vibe で開く"))}">${ICON_CODE}</button>`
     : "";
   const mediaNote = blind
     ? copy[state.language].imageNeedsVision
@@ -5066,7 +5097,7 @@ async function addAttachments(files) {
   const usable = selected.filter(file => !looksLikeFolder(file));
   if (folders.length) {
     toast(localizedText(
-      "Un dossier ne peut pas être joint à la conversation. Déposez-le sur l'atelier de code pour l'ouvrir.",
+      "Un dossier ne peut pas être joint à la conversation. Déposez-le sur Vibe pour l'ouvrir.",
       "A folder cannot be attached to the conversation. Drop it on the code workspace to open it.",
       "No se puede adjuntar una carpeta a la conversación. Suéltala en el taller de código para abrirla.",
       "フォルダは会話に添付できません。コード作業台にドロップすると開けます。"
@@ -5737,7 +5768,7 @@ function messageToolbarMarkup(content, allowTurn = true) {
      bloc pour retrouver les fichiers. */
   const blocks = splitFences(content).filter(segment => segment.type === "code" && segment.value.trim()).length;
   const workspaceAction = blocks >= 2
-    ? `<button type="button" class="message-action" data-action="open-all-code" title="${escapeHtml(localizedText(`Ouvrir les ${blocks} blocs dans l'atelier`, `Open all ${blocks} blocks in the workspace`, `Abrir los ${blocks} bloques en el taller`, `${blocks} 個のブロックを作業台で開く`))}">${ICON_CODE}<span>${escapeHtml(localizedText("Projet → atelier", "Project → workspace", "Proyecto → taller", "プロジェクト → 作業台"))}</span></button>`
+    ? `<button type="button" class="message-action" data-action="open-all-code" title="${escapeHtml(localizedText(`Ouvrir les ${blocks} blocs dans Vibe`, `Open all ${blocks} blocks in the workspace`, `Abrir los ${blocks} bloques en el taller`, `${blocks} 個のブロックを作業台で開く`))}">${ICON_CODE}<span>${escapeHtml(localizedText("Projet → Vibe", "Project → Vibe", "Proyecto → Vibe", "プロジェクト → Vibe"))}</span></button>`
     : "";
   const turnActions = allowTurn
     ? `<button type="button" class="message-action" data-action="regenerate" title="${escapeHtml(labels.regenerate)}">${ICON_REGENERATE}<span>${escapeHtml(labels.regenerate)}</span></button><button type="button" class="message-action" data-action="continue" title="${escapeHtml(labels.continue)}">${ICON_CONTINUE}<span>${escapeHtml(labels.continue)}</span></button>`
@@ -6684,7 +6715,7 @@ function infoDialogText() {
           : "SIMIA exécute des modèles d'IA directement dans votre navigateur grâce à WebGPU. Choisissez un modèle, téléchargez-le une fois, puis il répond localement : rien n'est envoyé sur un serveur.",
         categoriesTitle: "2. Les types de modèles",
         categories: NATIVE
-          ? "Généraliste, code, maths, écriture et documents pour interroger vos fichiers ; l'atelier de code exécute JavaScript et Python."
+          ? "Généraliste, code, maths, écriture et documents pour interroger vos fichiers ; Vibe exécute JavaScript et Python."
           : "Généraliste, code, maths et écriture pour discuter et créer ; Documents & PDF pour lire et questionner vos fichiers ; Vision (SmolVLM) pour analyser les images que vous joignez.",
         documentsTitle: "3. Vos documents, même les livres",
         documents: "Joignez un PDF, un Word, un Excel, un PowerPoint, un RTF, un OpenDocument, un EPUB ou un texte : <strong>il n'y a aucune limite de taille</strong>, même pour un livre de plusieurs centaines de pages. SIMIA extrait le texte dans votre navigateur, le découpe en passages et indexe tout en arrière-plan : vous pouvez écrire pendant l'indexation.<br><br><strong>Pour un livre volumineux, la méthode la plus efficace :</strong><br>1. Posez des questions précises (« Que dit l'auteur sur la confiance en soi au chapitre 4 ? »). L'index retrouve les bons passages et cite les pages.<br>2. Pour une vue d'ensemble, lancez « Résumer les documents » : SIMIA résume le livre partie par partie — chapitre par chapitre si le PDF contient une table des matières — puis fusionne le tout.<br>3. Pour aller plus loin, demandez un chapitre à la fois : les réponses sont alors beaucoup plus détaillées.<br><br>Un PDF scanné (image) doit d'abord être converti en texte (OCR).",
@@ -7044,10 +7075,19 @@ function applyLanguage() {
   if (sidebarNav) sidebarNav.setAttribute("aria-label", localizedText("Navigation principale", "Main navigation", "Navegación principal", "メインナビゲーション"));
   if (ui.appMenuToggle) {
     ui.appMenuToggle.setAttribute("aria-label", localizedText("Menu", "Menu", "Menú", "メニュー"));
-    const codeLabel = localizedText("Atelier de code", "Code workspace", "Taller de código", "コード作業台");
+    const codeLabel = localizedText("Vibe", "Vibe", "Vibe", "Vibe");
+    const codeHint = localizedText(
+      "Vibe — votre atelier de code : écrire, exécuter et prévisualiser",
+      "Vibe — your code workspace: write, run and preview",
+      "Vibe — tu taller de código: escribir, ejecutar y previsualizar",
+      "Vibe — コード作業台：書く、実行する、プレビューする"
+    );
     if (ui.appMenuCode) ui.appMenuCode.textContent = codeLabel;
-    if (ui.sidebarCode) ui.sidebarCode.textContent = codeLabel;
-    if (ui.homeCodeButton) ui.homeCodeButton.textContent = localizedText("Ouvrir l'atelier de code", "Open the code workspace", "Abrir el taller de código", "コード作業台を開く");
+    if (ui.sidebarCode) {
+      ui.sidebarCode.textContent = codeLabel;
+      ui.sidebarCode.title = codeHint;
+    }
+    if (ui.homeCodeButton) ui.homeCodeButton.textContent = localizedText("Ouvrir Vibe", "Open Vibe", "Abrir Vibe", "Vibe を開く");
     ui.appMenuSettings.textContent = text.settings;
     ui.appMenuInfo.textContent = localizedText("Information", "Information", "Información");
     ui.appMenuExport.textContent = text.export;
@@ -7452,7 +7492,7 @@ function renderSettingsText() {
   set("#settings-sec-model", localizedText("Modèle", "Model", "Modelo", "モデル"));
   set("#settings-sec-reply", localizedText("Réponses", "Answers", "Respuestas", "回答"));
   set("#settings-sec-composer", localizedText("Saisie", "Input", "Entrada", "入力"));
-  set("#settings-sec-code", localizedText("Atelier de code", "Code workspace", "Taller de código", "コード作業台"));
+  set("#settings-sec-code", localizedText("Vibe", "Vibe", "Vibe", "Vibe"));
   set("#settings-sec-data", localizedText("Historique et données", "History and data", "Historial y datos", "履歴とデータ"));
   document.querySelector("#settings-tabs")?.setAttribute("aria-label", localizedText("Sections des paramètres", "Settings sections", "Secciones de los ajustes", "設定のセクション"));
   set("#settings-model-hint", localizedText("Celui qui répond dans cette conversation.", "The one that answers in this conversation.", "El que responde en esta conversación.", "この会話で応答するモデル。"));
@@ -7498,7 +7538,7 @@ function renderSettingsText() {
   set("#settings-code-wrap-name", localizedText("Retour à la ligne", "Word wrap", "Ajuste de línea", "折り返し"));
   set("#settings-code-wrap-hint", localizedText("Les longues lignes reviennent à la ligne au lieu de défiler horizontalement.", "Long lines wrap instead of scrolling sideways.", "Las líneas largas se ajustan en vez de desplazarse.", "長い行は横スクロールせず折り返します。"));
   set("#settings-code-font-name", localizedText("Taille du texte", "Text size", "Tamaño del texto", "文字サイズ"));
-  set("#settings-code-font-hint", localizedText("Éditeur de l'atelier uniquement.", "Workspace editor only.", "Solo el editor del taller.", "作業台のエディターのみ。"));
+  set("#settings-code-font-hint", localizedText("Éditeur de Vibe uniquement.", "Vibe editor only.", "Solo el editor de Vibe.", "Vibe のエディターのみ。"));
   set("#settings-code-preview-name", localizedText("Aperçu automatique", "Automatic preview", "Vista previa automática", "自動プレビュー"));
   set("#settings-code-preview-hint", localizedText("Ouvre l'aperçu dès qu'un fichier HTML, CSS ou Markdown est ouvert.", "Opens the preview as soon as an HTML, CSS, or Markdown file is opened.", "Abre la vista previa al abrir un archivo HTML, CSS o Markdown.", "HTML・CSS・Markdown を開くとプレビューを表示します。"));
   set("#settings-history-name", localizedText("Mémoriser l'historique", "Remember the history", "Recordar el historial", "履歴を保存"));
@@ -8426,7 +8466,7 @@ document.addEventListener("drop", event => {
     codeImportDrop(event.dataTransfer).then(imported => {
       if (!imported) return;
       toast(localizedText(
-        "Dossier ouvert dans l'atelier de code.",
+        "Dossier ouvert dans Vibe.",
         "Folder opened in the code workspace.",
         "Carpeta abierta en el taller de código.",
         "フォルダをコード作業台で開きました。"
@@ -9053,6 +9093,23 @@ ui.codeTreeList?.addEventListener("click", event => {
   renderCodeEditor();
   saveState();
   ui.codeInput?.focus();
+});
+ui.codeTreeClear?.addEventListener("click", () => {
+  const files = state.code.files.length;
+  const folders = state.code.emptyFolders.length;
+  if (!files && !folders) return;
+  const details = [
+    files ? localizedText(`${files} fichier(s)`, `${files} file(s)`, `${files} archivo(s)`, `${files} ファイル`) : "",
+    folders ? localizedText(`${folders} dossier(s) vide(s)`, `${folders} empty folder(s)`, `${folders} carpeta(s) vacía(s)`, `${folders} 個の空フォルダ`) : ""
+  ].filter(Boolean).join(localizedText(" et ", " and ", " y ", " と "));
+  const message = localizedText(
+    `Vider le projet ? ${details} seront supprimés de ce navigateur. Cette action est définitive.`,
+    `Clear the project? ${details} will be deleted from this browser. This cannot be undone.`,
+    `¿Vaciar el proyecto? Se eliminarán ${details} de este navegador. Esta acción es definitiva.`,
+    `プロジェクトを空にしますか？ ${details} をこのブラウザから削除します。この操作は取り消せません。`
+  );
+  if (!window.confirm(message)) return;
+  codeClearProject();
 });
 ui.codeTreeNewFile?.addEventListener("click", () => {
   const active = activeCodeFile();
