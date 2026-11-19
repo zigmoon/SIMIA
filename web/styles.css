@@ -434,6 +434,25 @@ body.is-resizing, body.is-resizing * { cursor:col-resize !important; user-select
 .workspace[data-mode="code"] .composer-wrap { padding:0 24px 16px; }
 .workspace[data-mode="code"] .composer, .workspace[data-mode="code"] .document-tools, .workspace[data-mode="code"] .disclaimer { width:100%; }
 
+/* La reponse s'ecrit dans le fichier mais n'est pas encore acceptee : la barre
+   le dit, et porte les deux gestes. Sans elle, le code apparaissait a gauche
+   sans qu'on sache s'il etait enregistre. */
+.code-draft-bar { display:flex; align-items:center; gap:10px; padding:7px 10px; border-bottom:1px solid #3d4a2f; background:#1f2a1c; color:#d9e8c6; font:500 10.5px "DM Mono",monospace; }
+.code-draft-bar[hidden] { display:none; }
+.code-draft-dot { flex:none; width:7px; height:7px; border-radius:50%; background:#c7d95b; box-shadow:0 0 0 3px rgba(199,217,91,.18); animation:code-draft-pulse 1.6s ease-in-out infinite; }
+@keyframes code-draft-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+.code-draft-bar-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#c8d8b4; }
+.code-draft-bar button { flex:none; padding:4px 10px; border:1px solid #4a5b3c; border-radius:5px; background:#2b3a24; color:#dceccc; font:600 10px "DM Mono",monospace; cursor:pointer; }
+.code-draft-bar button:hover { border-color:#8fbf6c; background:#35492a; color:#f2fbe6; }
+.code-draft-bar .code-draft-accept { border-color:#7fa464; background:#31432a; color:#eaf7dc; }
+.code-draft-bar .code-draft-refuse:hover { border-color:#a4695c; background:#3a2b27; color:#f3d9d2; }
+.code-save-state[data-state="draft"] { color:#c7d95b; }
+
+@media (max-width: 560px) {
+  .code-draft-bar { flex-wrap:wrap; }
+  .code-draft-bar-text { white-space:normal; }
+}
+
 .code-pane-head { display:flex; align-items:center; gap:6px; padding:6px 8px; border-bottom:1px solid #2b352f; background:#1d2521; min-width:0; }
 .code-tabs { display:flex; flex:1; min-width:0; gap:4px; overflow-x:auto; scrollbar-width:none; }
 .code-tabs::-webkit-scrollbar { display:none; }
@@ -483,6 +502,10 @@ body.is-resizing, body.is-resizing * { cursor:col-resize !important; user-select
 .code-tree-ext { padding:0 3px; border:1px solid #33413a; border-radius:3px; color:#8fa196; font:500 8px/1.5 "DM Mono",monospace; text-transform:uppercase; }
 .code-tree-name { flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .code-tree-folder .code-tree-name { color:#c4d3c9; }
+/* Fichier dont la reponse attend une autorisation : un point suffit, la barre
+   du volet porte les deux boutons. */
+.code-tree-row.is-draft .code-tree-name { color:#dfeaa0; }
+.code-tree-row.is-draft .code-tree-name::after { content:" ●"; color:#c7d95b; font-size:8px; vertical-align:middle; }
 .code-tree-file.is-open .code-tree-name { color:#dfeae1; }
 .code-tree-file.is-active .code-tree-name { font-weight:700; }
 .code-tree-row .code-tree-actions { display:none; flex:none; }

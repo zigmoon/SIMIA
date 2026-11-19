@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.24": {
+      "title": "Vibe : le code s'écrit dans le fichier, et Continuer prolonge le même fichier",
+      "highlights": [
+        "Le défaut qui rendait Vibe pénible : une réponse s'arrêtait au bout d'une vingtaine de lignes. Le budget de sortie était de 640 jetons, alors qu'une page HTML en demande trois à cinq fois plus. Un tour de Vibe demande maintenant 2 048 jetons (3 072 en réponses longues), plafonné par la place réellement libre dans la fenêtre du modèle pour ne jamais la déborder.",
+        "Le code s'écrit dans le fichier pendant la génération : le volet de gauche montre la page se construire, ligne après ligne, en même temps qu'elle apparaît dans la conversation. Rien n'est enregistré tant que l'on n'a pas accepté : une barre au-dessus du fichier propose « Autoriser » et « Refuser », le fichier en attente porte un point dans l'arborescence, et l'indicateur annonce « Réponse en attente ». Refuser remet le fichier exactement dans son état précédent ; accepter enregistre, avec une annulation dans la notification.",
+        "« Continuer » ne repart plus de zéro. Dans Vibe, le bouton devient « Continuer dans index.html » : le modèle reçoit la fin du fichier et une consigne stricte — ne pas répéter, ne pas recopier depuis le début, rendre uniquement les lignes manquantes — et le résultat s'ajoute à la fin du même fichier. Quand le modèle répète quand même les dernières lignes, ou renvoie le fichier entier, le recouvrement est retiré avant l'ajout.",
+        "Une réponse coupée par la limite de jetons le dit maintenant : une note sous le message annonce la coupure et propose « Continuer dans le fichier ». C'était invisible auparavant, on croyait que le modèle avait terminé.",
+        "Le budget de génération par défaut de llama-server passe de 1 024 à 4 096 jetons : le plafond du moteur ne contredit plus la demande de l'interface.",
+        "Cache hors ligne 4.18.0."
+      ]
+    },
     "0.1.23": {
       "title": "Un oeil pour l'apercu, et des dossiers qui restent fermes",
       "highlights": [

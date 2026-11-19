@@ -50,13 +50,24 @@ d'exécuter le JavaScript et le Python que l'assistant écrit.
 
 Vibe et la conversation forment une seule boucle : on ouvre un fichier ou un
 dossier de projet dans l'atelier, on choisit **plusieurs fichiers** à envoyer
-ensemble, et le code qui revient se pose dans le bon fichier d'un clic, sans
-copier-coller. Une réponse qui touche `panier.js` et `styles.css` produit deux
-blocs, chacun rangé dans son fichier ; un fichier nommé dans la question est
-joint automatiquement. La pastille **Étapes** de la boîte de prompt fait de
-chaque bloc une étape à autoriser : « Autoriser » écrit dans le fichier et le
-volet de gauche affiche la nouvelle version aussitôt, « Refuser » laisse le bloc
-de côté. L'aperçu intégré
+ensemble, et le code qui revient s'écrit dans le bon fichier, sans copier-coller.
+Une réponse qui touche `panier.js` et `styles.css` produit deux blocs, chacun
+rangé dans son fichier ; un fichier nommé dans la question est joint
+automatiquement.
+
+Le code arrive dans le fichier **pendant** la génération : le volet de gauche
+montre la page se construire, ligne après ligne, en même temps qu'elle apparaît
+dans la conversation. Rien n'est enregistré avant l'accord — une barre au-dessus
+du fichier propose « Autoriser » et « Refuser », le fichier concerné porte un
+point dans l'arborescence, et l'indicateur annonce « Réponse en attente ».
+Refuser remet le fichier exactement dans son état précédent. Quand la génération
+s'arrête en cours de fichier (limite de jetons), une note le dit sous la réponse
+et « Continuer dans `<fichier>` » prolonge le **même** fichier : le modèle reçoit
+la fin du fichier, rend uniquement les lignes manquantes, et l'ajout se fait à la
+suite, recouvrement retiré. La pastille **Étapes** de la boîte de prompt règle ce
+comportement : validation à chaque étape, ou écriture directe.
+
+L'aperçu intégré
 reconstruit la page avec ses feuilles de style, ses scripts et ses images, et
 l'exécute dans une iframe isolée : le HTML, le CSS et le JavaScript du projet se
 comportent comme dans un navigateur, avec la console du projet sous les yeux, et

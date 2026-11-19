@@ -23,7 +23,11 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// de l'ancienne valeur, ce qui laisse la place a un gros fichier de code.
 const DEFAULT_CTX_SIZE: u32 = 8192;
 const MIN_CTX_SIZE: u32 = 2048;
-const MAX_OUTPUT: u32 = 1024;
+/* Plafond de generation par defaut de llama-server. L'interface demande son
+   propre budget par requete (jusqu'a 3072 jetons pour un fichier de code),
+   et ce plafond ne doit pas le contredire : 1024 coupait une page HTML au
+   bout d'une vingtaine de lignes. */
+const MAX_OUTPUT: u32 = 4096;
 /// Port fixe pour conserver les conversations (localStorage est lie a l'origine).
 const DEFAULT_UI_PORT: u16 = 8170;
 /// Le generateur d'images libere le GPU apres cette duree d'inactivite.

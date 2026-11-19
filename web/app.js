@@ -251,6 +251,9 @@ const state = {
     contextMenu: false,
     preview: false,
     pendingApply: null,
+    /* Passe a true par « Continuer » : le bloc suivant s'ajoute a la fin du
+       fichier au lieu de le remplacer. */
+    appendNext: false,
     treeVisible: true,
     /* Les dossiers sont repliés dans l'arbre : on retient ceux que l'utilisateur a
        ouverts. Partir de tout ouvert remplissait la colonne dès qu'un projet
@@ -484,6 +487,10 @@ const ui = {
   codePreviewOpen: document.querySelector("#code-preview-open"),
   codePreviewRefresh: document.querySelector("#code-preview-refresh"),
   codePreviewClose: document.querySelector("#code-preview-close"),
+  codeDraftBar: document.querySelector("#code-draft-bar"),
+  codeDraftBarText: document.querySelector("#code-draft-bar-text"),
+  codeDraftAccept: document.querySelector("#code-draft-accept"),
+  codeDraftRefuse: document.querySelector("#code-draft-refuse"),
   composerModel: document.querySelector("#composer-model"),
   composerModelWrap: document.querySelector("#composer-model-wrap"),
   composerModelName: document.querySelector("#composer-model-name"),
@@ -1287,6 +1294,13 @@ const CHAT_REPLY_TOKENS = 640;
 /* Le reglage « longueur des reponses » peut monter a 1024 : le budget du
    prompt se cale sur ce maximum, sinon la fenetre du modele deborde. */
 const CHAT_REPLY_TOKENS_MAX = 1024;
+/* Un tour de Vibe ecrit un fichier, pas une reponse : 640 jetons coupaient une
+   page HTML au bout d'une vingtaine de lignes, et il fallait relancer la
+   generation une dizaine de fois. Le budget reste borne par la place libre dans
+   la fenetre du modele (voir replyTokensFor). */
+const CODE_REPLY_TOKENS = { short: 1024, normal: 2048, long: 3072 };
+/* Marge gardee pour le gabarit de discussion du modele et l'amorce du tour. */
+const REPLY_TOKEN_MARGIN = 192;
 const CHARS_PER_TOKEN = 2.6;
 const PROMPT_TOKEN_BUDGET = Math.max(1200, Math.floor(CODE_CTX_TOKENS * 0.92) - CHAT_REPLY_TOKENS_MAX);
 /* Il reste a loger la consigne systeme et l'historique recent. */
@@ -1359,7 +1373,9 @@ async function codeFilesLoad() {
 
 async function codeFileSave(file) {
   const db = await codeDatabase();
-  if (!db || !file) return;
+  /* Un brouillon de reponse n'est pas encore accepte : l'ecrire sur le disque
+     ferait reapparaitre du code refuse au prochain demarrage. */
+  if (!db || !file || file.draft) return;
   try { db.transaction(CODE_STORE, "readwrite").objectStore(CODE_STORE).put(file); } catch { /* stockage indisponible */ }
 }
 
@@ -1524,6 +1540,7 @@ function codeRenameFile(id, nextPath) {
   const clean = codeNormalizePath(nextPath);
   if (!clean || clean === codePathOf(file)) return;
   const clash = state.code.files.some(other => other.id !== id && codePathOf(other).toLowerCase() === clean.toLowerCase());
+  codeDraftTakeOver(file);
   file.path = clash ? uniqueCodePath(clean) : clean;
   codeRevealPath(file.path);
   file.language = normalizeCodeLanguage(codeLanguageFor(file.path, file.language));
@@ -1675,7 +1692,7 @@ function renderCodeTree() {
       const active = child.file.id === state.code.activeId;
       const open = state.code.openIds.includes(child.file.id);
       const binary = child.file.binary ? ' data-binary="1"' : "";
-      rows.push(`<div class="code-tree-row code-tree-file${active ? " is-active" : ""}${open ? " is-open" : ""}" data-tree-file="${escapeHtml(child.file.id)}" data-depth="${depth}" role="treeitem" aria-selected="${active}"${binary}><span class="code-tree-icon" aria-hidden="true">${codeLanguageBadge(child.path)}</span><span class="code-tree-name">${escapeHtml(child.name)}</span><span class="code-tree-actions"><button type="button" data-tree-rename="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Renommer", "Rename", "Renombrar", "名前を変更"))}">✎</button><button type="button" data-tree-delete="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Supprimer", "Delete", "Eliminar", "削除"))}">✕</button></span></div>`);
+      rows.push(`<div class="code-tree-row code-tree-file${active ? " is-active" : ""}${open ? " is-open" : ""}${child.file.draft ? " is-draft" : ""}" data-tree-file="${escapeHtml(child.file.id)}" data-depth="${depth}" role="treeitem" aria-selected="${active}"${binary}><span class="code-tree-icon" aria-hidden="true">${codeLanguageBadge(child.path)}</span><span class="code-tree-name">${escapeHtml(child.name)}</span><span class="code-tree-actions"><button type="button" data-tree-rename="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Renommer", "Rename", "Renombrar", "名前を変更"))}">✎</button><button type="button" data-tree-delete="${escapeHtml(child.path)}" title="${escapeHtml(localizedText("Supprimer", "Delete", "Eliminar", "削除"))}">✕</button></span></div>`);
     });
   };
   walk(codeTreeModel(), 0);
@@ -1770,16 +1787,19 @@ function updateCodeMeta() {
 
 function renderCodeSaveState() {
   if (!ui.codeSaveState) return;
+  const draft = Boolean(activeCodeFile()?.draft);
   const saving = Boolean(state.code.saving);
   const pending = Boolean(state.code.dirty);
-  ui.codeSaveState.dataset.state = saving ? "saving" : pending ? "pending" : "saved";
-  ui.codeSaveState.textContent = saving
-    ? localizedText("Enregistrement…", "Saving…", "Guardando…", "保存中…")
-    : pending
-      ? state.codeAutosave
-        ? localizedText("Modifications…", "Unsaved changes…", "Cambios…", "未保存…")
-        : localizedText("Ctrl+S pour enregistrer", "Ctrl+S to save", "Ctrl+S para guardar", "Ctrl+S で保存")
-      : localizedText("Enregistré", "Saved", "Guardado", "保存済み");
+  ui.codeSaveState.dataset.state = draft ? "draft" : saving ? "saving" : pending ? "pending" : "saved";
+  ui.codeSaveState.textContent = draft
+    ? localizedText("Réponse en attente", "Reply waiting", "Respuesta pendiente", "応答の承認待ち")
+    : saving
+      ? localizedText("Enregistrement…", "Saving…", "Guardando…", "保存中…")
+      : pending
+        ? state.codeAutosave
+          ? localizedText("Modifications…", "Unsaved changes…", "Cambios…", "未保存…")
+          : localizedText("Ctrl+S pour enregistrer", "Ctrl+S to save", "Ctrl+S para guardar", "Ctrl+S で保存")
+        : localizedText("Enregistré", "Saved", "Guardado", "保存済み");
 }
 
 /* L'atelier nomme toujours le modele avec lequel on code. Avant, il ne le
@@ -1838,6 +1858,7 @@ function renderCodeEditor() {
     if (ui.codeBinary) ui.codeBinary.hidden = true;
     refreshCodeActions();
     renderComposerCodeContext();
+    renderCodeDraftBar();
     if (state.code.preview) setCodePreview(false);
     return;
   }
@@ -1865,6 +1886,7 @@ function renderCodeEditor() {
   updateCodeMeta();
   refreshCodeActions();
   renderComposerCodeContext();
+  renderCodeDraftBar();
   syncCodeAutoPreview(file);
   if (state.code.preview) refreshCodePreview();
 }
@@ -1874,7 +1896,7 @@ function renderCodeEditor() {
 function flushCodePersistence() {
   clearTimeout(codeSaveTimer);
   state.code.files.forEach(file => {
-    if (!file) return;
+    if (!file || file.draft) return;
     file.updatedAt = Date.now();
     codeFileSave(file);
   });
@@ -1913,6 +1935,7 @@ function syncCodeAutoPreview(file) {
 function onCodeInput() {
   const file = activeCodeFile();
   if (!file || file.binary) return;
+  codeDraftTakeOver(file);
   file.content = ui.codeInput.value;
   file.updatedAt = Date.now();
   state.code.dirty = true;
@@ -3005,6 +3028,362 @@ function codeDiffSummary(before, after) {
 /* Applique un bloc de code de la conversation dans l'atelier : c'est la moitie
    manquante du parcours. La reponse du modele restait dans le chat, il fallait
    la copier puis la recoller a la main dans l'editeur. */
+/* --------------------------------------------------------------------------
+ * La reponse s'ecrit dans le volet
+ *
+ * Un modele local s'arrete au bout de quelques centaines de jetons. Avant, une
+ * page HTML demandait donc dix relances : chaque bloc arrivait dans la
+ * conversation, il fallait cliquer « Appliquer », et « Continuer » repondait
+ * un nouveau bloc a cote sans jamais toucher au fichier.
+ *
+ * Maintenant le dernier bloc de la reponse s'ecrit dans le fichier au fil de
+ * l'eau. Rien n'est enregistre avant l'accord de l'utilisateur : « Autoriser »
+ * valide, « Refuser » remet le fichier dans son etat precedent. Et
+ * « Continuer » prolonge ce meme fichier.
+ * ------------------------------------------------------------------------ */
+
+/* Fichiers en attente pendant le tour en cours. Une reponse peut toucher deux
+   fichiers (HTML puis CSS) : on les suit tous les deux. */
+const codeDrafts = new Map();
+
+/* Le modele repete volontiers les dernieres lignes qu'il voit avant de
+   poursuivre, et parfois le fichier entier. Sans ce nettoyage, « Continuer »
+   recopiait le fichier dans lui-meme. */
+function codeAppendMerge(previous, addition) {
+  const base = String(previous ?? "").replace(/\s+$/, "");
+  const clean = String(addition ?? "").trim();
+  if (!base) return clean;
+  if (!clean) return base;
+  /* Cas franchement courant avec un petit modele : il renvoie tout le fichier
+     depuis le debut, puis la suite. On garde la partie qui suit. */
+  if (base.length > 120 && clean.includes(base)) {
+    const after = clean.slice(clean.lastIndexOf(base) + base.length).replace(/^\s+/, "");
+    return after ? `${base}\n${after}` : base;
+  }
+  /* Sinon on cherche le plus long recouvrement en fin de fichier / debut de
+     bloc, ligne par ligne : quelques dizaines de comparaisons suffisent. */
+  const tail = base.split("\n").slice(-80);
+  const head = clean.split("\n").slice(0, 80);
+  let overlap = 0;
+  for (let size = Math.min(tail.length, head.length); size > 0; size -= 1) {
+    if (tail.slice(-size).join("\n").trim() === head.slice(0, size).join("\n").trim()) {
+      overlap = size;
+      break;
+    }
+  }
+  const rest = head.slice(overlap).join("\n").trim();
+  return rest ? `${base}\n${rest}` : base;
+}
+
+function codeDraftFor(language) {
+  for (const file of state.code.files) {
+    if (file.draft && (!language || file.draft.language === language)) return file;
+  }
+  return null;
+}
+
+/* Le fichier qui doit recevoir un bloc de cette langue : celui que l'action en
+   cours vise, sinon l'ouvert, sinon l'unique fichier de cette langue. */
+function codeDraftTargetFor(language) {
+  const pending = state.code.pendingApply ? codeFileById(state.code.pendingApply.fileId) : null;
+  const direct = codeTargetForBlock(language, pending, activeCodeFile(), null);
+  if (direct) return direct;
+  const sameLanguage = state.code.files.filter(file => !file.binary && file.language === language);
+  return sameLanguage.length === 1 ? sameLanguage[0] : null;
+}
+
+function startCodeDraft(file, language) {
+  if (!file || file.binary) return null;
+  if (file.draft) return file.draft;
+  const append = Boolean(state.code.appendNext);
+  state.code.appendNext = false;
+  file.draft = { previous: file.content, append, language: language || file.language };
+  codeDrafts.set(file.id, file);
+  /* Un point dans l'arbre : quand la reponse vise un autre fichier que celui
+     qui est ouvert, on doit voir lequel attend une autorisation. */
+  codeRevealPath(codePathOf(file));
+  renderCodeTree();
+  return file.draft;
+}
+
+/* Peinture allegee : on ne redessine pas l'arbre ni les onglets a chaque
+   tranche recue, seulement le texte et les numeros de ligne. */
+function paintCodeDraft(file) {
+  if (!ui.codeInput || activeCodeFile() !== file) return;
+  if (ui.codeInput.value !== file.content) ui.codeInput.value = file.content;
+  updateCodeHighlight();
+  updateCodeMeta();
+  renderCodeSaveState();
+  renderCodeDraftBar();
+  ui.codeInput.scrollTop = ui.codeInput.scrollHeight;
+  ui.codeHighlight.scrollTop = ui.codeInput.scrollTop;
+  if (ui.codeGutter) ui.codeGutter.scrollTop = ui.codeInput.scrollTop;
+  if (state.code.preview) {
+    clearTimeout(codePreviewTimer);
+    codePreviewTimer = setTimeout(refreshCodePreview, 500);
+  }
+}
+
+let codeDraftPaintTimer = 0;
+let codeDraftPaintFile = null;
+function scheduleCodeDraftPaint(file) {
+  codeDraftPaintFile = file;
+  if (codeDraftPaintTimer) return;
+  codeDraftPaintTimer = setTimeout(() => {
+    codeDraftPaintTimer = 0;
+    const target = codeDraftPaintFile;
+    codeDraftPaintFile = null;
+    if (target) paintCodeDraft(target);
+  }, 140);
+}
+
+function writeCodeDraft(file, content) {
+  if (!file?.draft) return;
+  file.content = file.draft.append ? codeAppendMerge(file.draft.previous, content) : content;
+  file.updatedAt = Date.now();
+  scheduleCodeDraftPaint(file);
+}
+
+/* L'utilisateur ecrit dans le fichier, ou un autre chemin l'ecrit : le
+   brouillon n'a plus de sens, mais son contenu devient du contenu ordinaire.
+   Sans cela, l'ecriture serait ignoree (codeFileSave n'enregistre pas un
+   brouillon) et le travail disparaitrait au rechargement. */
+function codeDraftTakeOver(file) {
+  if (!file?.draft) return false;
+  delete file.draft;
+  codeDrafts.delete(file.id);
+  renderCodeDraftBar();
+  renderCodeSaveState();
+  return true;
+}
+
+function commitCodeDraft(file) {
+  if (!file?.draft) return false;
+  delete file.draft;
+  codeDrafts.delete(file.id);
+  file.dirty = true;
+  file.updatedAt = Date.now();
+  codeFileSave(file);
+  if (activeCodeFile() === file) {
+    renderCodeEditor();
+    codeMarkSaved();
+  }
+  return true;
+}
+
+function discardCodeDraft(file) {
+  if (!file?.draft) return false;
+  file.content = file.draft.previous;
+  delete file.draft;
+  codeDrafts.delete(file.id);
+  file.updatedAt = Date.now();
+  file.dirty = false;
+  codeFileSave(file);
+  if (activeCodeFile() === file) {
+    renderCodeEditor();
+    codeMarkSaved();
+  }
+  return true;
+}
+
+function discardAllCodeDrafts() {
+  if (!codeDrafts.size) return;
+  [...codeDrafts.values()].forEach(discardCodeDraft);
+  codeDrafts.clear();
+  renderCodeDraftBar();
+}
+
+function commitAllCodeDrafts() {
+  if (!codeDrafts.size) return [];
+  const files = [...codeDrafts.values()];
+  const snapshots = files.map(file => ({ id: file.id, content: file.draft.previous }));
+  files.forEach(commitCodeDraft);
+  return snapshots;
+}
+
+/* Appele a chaque tranche recue : le dernier bloc de la reponse, meme
+   inacheve, part dans le fichier correspondant. */
+function streamCodeDraft(text) {
+  if (!state.code.open || !ui.codePane) return;
+  const blocks = splitFences(text).filter(segment => segment.type === "code" && segment.value.trim());
+  if (!blocks.length) return;
+  const block = blocks[blocks.length - 1];
+  const language = normalizeCodeLanguage(block.language);
+  const file = codeDraftFor(language) || codeDraftTargetFor(language);
+  if (!file) return;
+  startCodeDraft(file, language);
+  writeCodeDraft(file, block.value.replace(/\s+$/, ""));
+}
+
+/* Fin de tour : avec la validation des etapes, le brouillon reste affiche et
+   attend l'accord ; sans elle, il est ecrit tout de suite, avec une annulation
+   dans la notification. */
+function settleCodeDrafts() {
+  /* Le drapeau d'ajout ne vaut que pour le tour qui l'a pose : le laisser
+     arme ferait s'ajouter la reponse suivante a la fin du fichier. */
+  state.code.appendNext = false;
+  if (!codeDrafts.size) return;
+  if (state.allowSteps) {
+    renderCodeDraftBar();
+    renderCodeSaveState();
+    return;
+  }
+  const first = [...codeDrafts.values()][0];
+  const snapshots = commitAllCodeDrafts();
+  toast(
+    localizedText(`Écrit dans ${codePathOf(first)}.`, `Written to ${codePathOf(first)}.`, `Escrito en ${codePathOf(first)}.`, `${codePathOf(first)} に書き込みました。`),
+    "info",
+    {
+      label: localizedText("Annuler", "Undo", "Deshacer", "元に戻す"),
+      run: () => {
+        snapshots.forEach(snapshot => {
+          const file = codeFileById(snapshot.id);
+          if (!file) return;
+          file.content = snapshot.content;
+          file.updatedAt = Date.now();
+          codeFileSave(file);
+        });
+        renderCodeEditor();
+        renderCodeTree();
+        toast(localizedText("Écriture annulée.", "Write undone.", "Escritura deshecha.", "書き込みを元に戻しました。"));
+      }
+    }
+  );
+}
+
+/* --- Barre d'accord, au-dessus du fichier -------------------------------- */
+
+function renderCodeDraftBar() {
+  if (!ui.codeDraftBar) return;
+  const file = activeCodeFile();
+  const draft = file?.draft;
+  ui.codeDraftBar.hidden = !draft;
+  if (!draft) return;
+  const added = Math.max(0, file.content.length - String(draft.previous || "").length);
+  ui.codeDraftBarText.textContent = draft.append
+    ? localizedText(
+      `Suite reçue pour ${codePathOf(file)} (+${added} caractères). Rien n'est enregistré avant votre accord.`,
+      `Continuation received for ${codePathOf(file)} (+${added} characters). Nothing is saved until you agree.`,
+      `Continuación recibida para ${codePathOf(file)} (+${added} caracteres). Nada se guarda hasta tu acuerdo.`,
+      `${codePathOf(file)} の続きを受信しました（+${added} 文字）。承認するまで保存されません。`
+    )
+    : localizedText(
+      `Réponse reçue pour ${codePathOf(file)} : elle remplace le contenu du fichier. Rien n'est enregistré avant votre accord.`,
+      `Reply received for ${codePathOf(file)}: it replaces the file content. Nothing is saved until you agree.`,
+      `Respuesta recibida para ${codePathOf(file)}: reemplaza el contenido del archivo. Nada se guarda hasta tu acuerdo.`,
+      `${codePathOf(file)} の応答を受信しました。ファイルの内容を置き換えます。承認するまで保存されません。`
+    );
+  if (ui.codeDraftAccept) ui.codeDraftAccept.textContent = localizedText("Autoriser", "Allow", "Permitir", "許可");
+  if (ui.codeDraftRefuse) ui.codeDraftRefuse.textContent = localizedText("Refuser", "Refuse", "Rechazar", "拒否");
+}
+
+function acceptCodeDraft() {
+  const file = activeCodeFile();
+  if (!file?.draft) return;
+  const snapshot = file.draft.previous;
+  const appended = file.draft.append;
+  const path = codePathOf(file);
+  commitCodeDraft(file);
+  renderCodeTree();
+  toast(
+    appended
+      ? localizedText(`Suite ajoutée à ${path}.`, `Continuation added to ${path}.`, `Continuación añadida a ${path}.`, `${path} に続きを追加しました。`)
+      : localizedText(`Écrit dans ${path}.`, `Written to ${path}.`, `Escrito en ${path}.`, `${path} に書き込みました。`),
+    "info",
+    {
+      label: localizedText("Annuler", "Undo", "Deshacer", "元に戻す"),
+      run: () => {
+        const target = codeFileById(file.id);
+        if (!target) return;
+        target.content = snapshot;
+        target.updatedAt = Date.now();
+        codeFileSave(target);
+        renderCodeEditor();
+        toast(localizedText("Écriture annulée.", "Write undone.", "Escritura deshecha.", "書き込みを元に戻しました。"));
+      }
+    }
+  );
+}
+
+function refuseCodeDraft() {
+  const file = activeCodeFile();
+  if (!file?.draft) return;
+  discardCodeDraft(file);
+  renderCodeSaveState();
+  toast(localizedText("Réponse refusée, fichier inchangé.", "Reply refused, file unchanged.", "Respuesta rechazada, archivo sin cambios.", "応答を拒否しました。ファイルは変更されていません。"));
+}
+
+/* --- Continuer dans le meme fichier -------------------------------------- */
+
+function lastAssistantCodeBlock() {
+  const conversation = activeConversation();
+  if (!conversation) return null;
+  for (let index = conversation.messages.length - 1; index >= 0; index -= 1) {
+    const message = conversation.messages[index];
+    if (message.role !== "assistant") continue;
+    const blocks = splitFences(message.content).filter(segment => segment.type === "code" && segment.value.trim());
+    return blocks.length ? blocks[blocks.length - 1] : null;
+  }
+  return null;
+}
+
+/* La suite s'ecrit dans le fichier ou le modele vient de travailler, pas dans
+   un nouveau bloc de conversation. */
+async function continueInVibe() {
+  let file = [...codeDrafts.values()][0] || activeCodeFile();
+  if (!file) {
+    const block = lastAssistantCodeBlock();
+    if (!block) { await continueLast(); return; }
+    file = codeFileCreate({ language: normalizeCodeLanguage(block.language), content: block.value.replace(/\s+$/, "") });
+    codeMarkSaved();
+    codeRevealPath(codePathOf(file));
+  }
+  /* Ce qui est deja affiche est acquis : la suite se posera apres. */
+  if (file.draft) commitCodeDraft(file);
+  state.code.appendNext = true;
+  state.code.activeId = file.id;
+  if (!state.code.openIds.includes(file.id)) state.code.openIds.push(file.id);
+  renderCodeTabs();
+  renderCodeTree();
+  renderCodeEditor();
+  enterCodeMode("code", { moveFocus: false });
+
+  const path = codePathOf(file);
+  const prompt = localizedText(
+    `Continue exactement le fichier ${path} à partir de sa dernière ligne. Ne répète pas ce qui est déjà écrit, ne recopie pas le fichier depuis le début, n'ajoute ni commentaire ni explication : réponds par un seul bloc de code qui contient uniquement les lignes manquantes, prêtes à être ajoutées à la fin.`,
+    `Continue the file ${path} exactly from its last line. Do not repeat what is already written, do not re-emit the file from the start, add no comment or explanation: answer with a single code block containing only the missing lines, ready to be appended at the end.`,
+    `Continúa el archivo ${path} exactamente desde su última línea. No repitas lo ya escrito, no vuelvas a emitir el archivo desde el principio, no añadas comentarios ni explicaciones: responde con un solo bloque de código que contenga únicamente las líneas que faltan, listas para añadirse al final.`,
+    `${path} を最後の行からそのまま続けてください。既に書かれている内容を繰り返さず、ファイルを先頭から再出力せず、説明も加えず、末尾に追加できる不足分の行だけを 1 つのコードブロックで返してください。`
+  );
+  await runAssistantTurn(prompt, { extraContext: codeContextForPrompt([file]) });
+}
+
+/* Reponse coupee par la limite de jetons : le dire, et proposer la suite au
+   lieu de laisser croire que le modele a termine. */
+function markReplyTruncated(element) {
+  if (!element) return;
+  const hasCode = Boolean(element.querySelector(".code-block"));
+  const note = document.createElement("div");
+  note.className = "message-note";
+  const label = document.createElement("span");
+  label.textContent = localizedText(
+    "Réponse coupée par la limite de jetons.",
+    "Reply cut off by the token limit.",
+    "Respuesta cortada por el límite de tokens.",
+    "トークン上限で応答が途切れました。"
+  );
+  note.append(label);
+  if (hasCode) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "message-note-action";
+    button.dataset.action = "continue-code";
+    button.textContent = localizedText("Continuer dans le fichier", "Continue in the file", "Continuar en el archivo", "ファイルの続きを書く");
+    note.append(button);
+  }
+  element.querySelector(".message-content")?.append(note);
+}
+
 /* Ordre de choix du fichier qui recoit un bloc de code : le fichier
    explicitement vise (Corriger, Tests), puis celui que l'utilisateur a nomme
    dans sa question, et seulement ensuite le fichier ouvert. Sans cet ordre,
@@ -3053,7 +3432,14 @@ function markCodeBlockState(block, applied) {
 function skipCodeBlock(button) {
   const block = button.closest(".code-block");
   if (!block) return;
+  /* Le bloc a peut-etre deja ete ecrit dans le fichier pendant la generation :
+     refuser doit rendre le fichier tel qu'il etait, sinon le refus ne servirait
+     a rien. */
+  const language = normalizeCodeLanguage(block.querySelector(".code-language")?.textContent || "text");
+  const file = codeDraftFor(language);
+  if (file) discardCodeDraft(file);
   markCodeBlockState(block, "skipped");
+  renderCodeSaveState();
 }
 
 function applyCodeBlock(button) {
@@ -3110,8 +3496,14 @@ function applyCodeBlock(button) {
     codeMarkSaved();
     toast(localizedText(`Nouveau fichier ${codePathOf(file)}.`, `New file ${codePathOf(file)}.`, `Nuevo archivo ${codePathOf(file)}.`, `新しいファイル ${codePathOf(file)}。`));
   } else {
-    const previous = file.content;
-    file.content = code;
+    /* Si la reponse s'est deja ecrite dans le fichier pendant la generation,
+       c'est elle qui fait foi : elle contient la suite ajoutee, alors que le
+       bloc affiche ne contient que ce dernier morceau. */
+    const draft = file.draft;
+    const previous = draft ? draft.previous : file.content;
+    file.content = draft?.append ? codeAppendMerge(previous, code) : code;
+    delete file.draft;
+    codeDrafts.delete(file.id);
     file.language = normalizeCodeLanguage(language || file.language);
     file.updatedAt = Date.now();
     file.dirty = true;
@@ -3136,6 +3528,7 @@ function applyCodeBlock(button) {
           renderCodeTabs();
           renderCodeTree();
           renderCodeEditor();
+          renderCodeDraftBar();
           markCodeBlockState(block, "none");
           codeStepsShown = null;
           renderComposerSteps();
@@ -3155,6 +3548,7 @@ function applyCodeBlock(button) {
      page a gauche, et le changement restait invisible. */
   codeAutoPreviewForId = null;
   renderCodeEditor();
+  renderCodeDraftBar();
   enterCodeMode("code", { moveFocus: false });
   if (state.code.preview) refreshCodePreview();
 }
@@ -3182,6 +3576,7 @@ function openAllCodeBlocks(button) {
       ? codeFileByPath(name)
       : state.code.files.find(file => !file.binary && file.content === segment.value && file.language === language);
     if (target) {
+      codeDraftTakeOver(target);
       target.content = segment.value;
       target.binary = false;
       target.updatedAt = Date.now();
@@ -6132,7 +6527,9 @@ function messageToolbarMarkup(content, allowTurn = true) {
     copy: localizedText("Copier", "Copy", "Copiar", "コピー"),
     copied: localizedText("Copié", "Copied", "Copiado", "コピー済み"),
     regenerate: localizedText("Régénérer", "Regenerate", "Regenerar", "再生成"),
-    continue: localizedText("Continuer", "Continue", "Continuar", "続ける")
+    continue: state.code.open && activeCodeFile()
+      ? localizedText(`Continuer dans ${codeFileNameOf(codePathOf(activeCodeFile()))}`, `Continue in ${codeFileNameOf(codePathOf(activeCodeFile()))}`, `Continuar en ${codeFileNameOf(codePathOf(activeCodeFile()))}`, `${codeFileNameOf(codePathOf(activeCodeFile()))} の続きを書く`)
+      : localizedText("Continuer", "Continue", "Continuar", "続ける")
   };
   const suggestions = [
     localizedText("Développe ce point", "Expand on this", "Amplía este punto", "この点を詳しく"),
@@ -6199,7 +6596,7 @@ function beginStreamingMessage(typing) {
   return { element, update, finish };
 }
 
-async function runAssistantTurn(prompt) {
+async function runAssistantTurn(prompt, options = {}) {
   const typing = createTyping();
   ui.send.disabled = true;
   try {
@@ -6211,10 +6608,15 @@ async function runAssistantTurn(prompt) {
        streaming, la reponse arrive d'un coup. Le delai est identique, seule
        l'animation disparait. */
     const stream = answering && state.streaming ? beginStreamingMessage(typing) : null;
-    const answer = answering ? await respond(prompt, [], stream ? delta => stream.update(delta) : null) : MODEL_REQUIRED;
-    if (stream) stream.finish(answer, state.lastDocumentSources);
-    else { typing.remove(); renderMessage("assistant", answer); }
+    replyFinishReason = "";
+    const onDelta = stream
+      ? delta => { stream.update(delta); streamCodeDraft(delta); }
+      : null;
+    const answer = answering ? await respond(prompt, [], onDelta, options.extraContext || "") : MODEL_REQUIRED;
+    const node = stream ? stream.finish(answer, state.lastDocumentSources) : (typing.remove(), renderMessage("assistant", answer));
     addMessage("assistant", answer);
+    settleCodeDrafts();
+    if (replyFinishReason === "length") markReplyTruncated(node);
   } catch (error) {
     typing.remove();
     const message = localizedText("Je n'ai pas pu générer une réponse.", "I could not generate a reply.", "No se pudo generar una respuesta.");
@@ -6242,8 +6644,8 @@ async function regenerateLast() {
   if (prompt) await runAssistantTurn(prompt);
 }
 
-function continueLast() {
-  runAssistantTurn(localizedText("Continue et complète ta réponse précédente sans te répéter.", "Continue and complete your previous answer without repeating yourself.", "Continúa y completa tu respuesta anterior sin repetirte."));
+async function continueLast() {
+  await runAssistantTurn(localizedText("Continue et complète ta réponse précédente sans te répéter.", "Continue and complete your previous answer without repeating yourself.", "Continúa y completa tu respuesta anterior sin repetirte."));
 }
 
 function handleMessageAction(button) {
@@ -6293,7 +6695,10 @@ function handleMessageAction(button) {
     return;
   }
   if (action === "regenerate") return regenerateLast();
-  if (action === "continue") return continueLast();
+  if (action === "continue-code") return continueInVibe();
+  /* Dans Vibe, « Continuer » prolonge le fichier ouvert ; ailleurs, il
+     poursuit simplement la conversation. */
+  if (action === "continue") return state.code.open ? continueInVibe() : continueLast();
 }
 
 function recommendModel() {
@@ -6818,8 +7223,9 @@ async function respond(prompt, currentAttachments = [], onDelta = null, extraCon
     return { role: message.role, content };
   }), currentUserMessage(prompt, currentAttachments, excerpts, extraContext)];
   const prepared = trimMessagesToContext(messages);
-  if (NATIVE) return nativeChat(prepared, onDelta);
-  return webllmChat(prepared, onDelta);
+  const maxTokens = replyTokensFor(prepared, Boolean(state.code.open));
+  if (NATIVE) return nativeChat(prepared, onDelta, maxTokens);
+  return webllmChat(prepared, onDelta, maxTokens);
 }
 
 /* Le tour courant porte aussi ses images. Sans cela, la premiere question
@@ -6832,15 +7238,19 @@ function currentUserMessage(prompt, attachments, excerpts, extraContext = "") {
   return { role: "user", content: [{ type: "text", text }, ...images.map(image => ({ type: "image_url", image_url: { url: image.dataUrl } }))] };
 }
 
-async function webllmChat(messages, onDelta) {
+async function webllmChat(messages, onDelta, maxTokens = chatReplyTokens()) {
+  replyFinishReason = "";
   if (!onDelta) {
-    const response = await state.engine.chat.completions.create({ messages, temperature: chatTemperature(), max_tokens: chatReplyTokens() });
+    const response = await state.engine.chat.completions.create({ messages, temperature: chatTemperature(), max_tokens: maxTokens });
+    replyFinishReason = response.choices?.[0]?.finish_reason || "";
     return response.choices[0].message.content;
   }
-  const stream = await state.engine.chat.completions.create({ messages, temperature: chatTemperature(), max_tokens: chatReplyTokens(), stream: true });
+  const stream = await state.engine.chat.completions.create({ messages, temperature: chatTemperature(), max_tokens: maxTokens, stream: true });
   let text = "";
   for await (const chunk of stream) {
-    const delta = chunk.choices?.[0]?.delta?.content || "";
+    const choice = chunk.choices?.[0] || {};
+    if (choice.finish_reason) replyFinishReason = choice.finish_reason;
+    const delta = choice.delta?.content || "";
     if (!delta) continue;
     text += delta;
     onDelta(text);
@@ -6848,16 +7258,21 @@ async function webllmChat(messages, onDelta) {
   return text;
 }
 
+/* Pourquoi la generation s'est arretee : « stop » (fin normale), « length »
+   (limite de jetons atteinte) ou vide si le moteur ne le dit pas. */
+let replyFinishReason = "";
+
 /* Desktop : llama-server expose une API compatible OpenAI sur l'origine locale. */
-async function nativeChat(messages, onDelta) {
+async function nativeChat(messages, onDelta, maxTokens = chatReplyTokens()) {
   const endpoint = new URL(NATIVE.chatUrl || "/v1/chat/completions", location.href).href;
+  replyFinishReason = "";
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       messages,
       temperature: chatTemperature(),
-      max_tokens: chatReplyTokens(),
+      max_tokens: maxTokens,
       stream: Boolean(onDelta),
       chat_template_kwargs: { enable_thinking: false }
     })
@@ -6866,7 +7281,9 @@ async function nativeChat(messages, onDelta) {
 
   if (!onDelta || !response.body) {
     const payload = await response.json();
-    const message = payload.choices?.[0]?.message || {};
+    const choice = payload.choices?.[0] || {};
+    replyFinishReason = choice.finish_reason || "";
+    const message = choice.message || {};
     return message.content || message.reasoning_content || "";
   }
 
@@ -6888,7 +7305,12 @@ async function nativeChat(messages, onDelta) {
       if (!data || data === "[DONE]") continue;
       let payload;
       try { payload = JSON.parse(data); } catch { continue; }
-      const delta = payload.choices?.[0]?.delta || {};
+      const choice = payload.choices?.[0] || {};
+      /* Sans ce drapeau, une reponse coupee par la limite de jetons etait
+         indiscernable d'une reponse terminee : on ne pouvait proposer la
+         suite, ni meme savoir qu'il en manquait. */
+      if (choice.finish_reason) replyFinishReason = choice.finish_reason;
+      const delta = choice.delta || {};
       if (delta.content) {
         text += delta.content;
         onDelta(text);
@@ -7096,6 +7518,9 @@ async function submitPrompt(rawPrompt, options = {}) {
   autoResize();
   saveDraft();
   ui.send.disabled = true;
+  /* Une reponse precedente jamais autorisee n'a pas a rester affichee dans le
+     fichier : on la retire avant la nouvelle question. */
+  discardAllCodeDrafts();
 
   if (state.agentMode) {
     await runWebAgent(messageContent);
@@ -7112,13 +7537,18 @@ async function submitPrompt(rawPrompt, options = {}) {
     state.lastDocumentSources = [];
     const answering = visionActive || textActive;
     const stream = answering && state.streaming ? beginStreamingMessage(typing) : null;
+    replyFinishReason = "";
     const workspaceContext = options.workspaceContext === false ? "" : codeContextForPrompt(codeMentionedFiles(messageContent));
+    const onDelta = stream
+      ? delta => { stream.update(delta); streamCodeDraft(delta); }
+      : null;
     const answer = answering
-      ? await respond(messageContent, attachments, stream ? delta => stream.update(delta) : null, workspaceContext)
+      ? await respond(messageContent, attachments, onDelta, workspaceContext)
       : MODEL_REQUIRED;
-    if (stream) stream.finish(answer, state.lastDocumentSources);
-    else { typing.remove(); renderMessage("assistant", answer); }
+    const node = stream ? stream.finish(answer, state.lastDocumentSources) : (typing.remove(), renderMessage("assistant", answer));
     addMessage("assistant", answer);
+    settleCodeDrafts();
+    if (replyFinishReason === "length") markReplyTruncated(node);
   } catch (error) {
     typing.remove();
     const message = localizedText("Je n'ai pas pu générer une réponse locale. Vérifiez WebGPU et la mémoire disponible.", "I could not generate a local reply. Check WebGPU and available memory.", "No se ha podido generar una respuesta local. Comprueba WebGPU y la memoria disponible.");
@@ -9157,6 +9587,17 @@ function chatReplyTokens() {
   return state.replyLength === "short" ? 320 : state.replyLength === "long" ? 1024 : CHAT_REPLY_TOKENS;
 }
 
+/* Le budget de sortie d'un tour. Une conversation se contente de 640 jetons ;
+   un tour de Vibe en demande beaucoup plus, sans jamais depasser la place
+   laissee par le prompt dans la fenetre du modele : un depassement fait
+   echouer llama-server comme WebLLM au lieu de repondre. */
+function replyTokensFor(prepared, codeTurn) {
+  if (!codeTurn) return chatReplyTokens();
+  const wanted = CODE_REPLY_TOKENS[state.replyLength] || CODE_REPLY_TOKENS.normal;
+  const used = prepared.reduce((sum, message) => sum + messageTokens(message), 0);
+  return Math.max(320, Math.min(wanted, CODE_CTX_TOKENS - used - REPLY_TOKEN_MARGIN));
+}
+
 function chatTemperature() {
   return Number.isFinite(state.temperature) ? state.temperature : 0.7;
 }
@@ -9556,6 +9997,8 @@ ui.codeLang?.addEventListener("change", () => applyCodeLanguage(ui.codeLang.valu
 
 /* --- Projet : arborescence, import, export, disque ---------------------- */
 ui.codeTreeToggle?.addEventListener("click", () => setCodeTreeVisible(!state.code.treeVisible));
+ui.codeDraftAccept?.addEventListener("click", acceptCodeDraft);
+ui.codeDraftRefuse?.addEventListener("click", refuseCodeDraft);
 /* La largeur des deux colonnes se regle a la souris, au clavier et au doigt. */
 bindCodeSplitter();
 ui.codeTreeList?.addEventListener("click", event => {
