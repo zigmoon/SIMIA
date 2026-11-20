@@ -1,9 +1,0 @@
-modeles : la veille de version suit le catalogue v4
-
-Le catalogue est passe en v4 avec les deux Mistral europeens, mais
-versions.json est reste en v3. Le lanceur compare les deux : chaque
-installation de bureau affichait donc une banniere bleue annoncant une
-nouvelle version du catalogue en v3 alors que le catalogue embarque etait
-deja en v4, et l'alerte ne pouvait jamais disparaitre.
-
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
