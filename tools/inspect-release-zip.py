@@ -51,6 +51,7 @@ MARKERS = {
         "Conversation seule, pleine largeur",
         'if (!NATIVE && document.querySelector(".update-bar")) return;',
         "remoteCatalog > localCatalog",
+        'element.setAttribute("aria-busy", "true");',
     ],
     "web/styles.css": [
         '[data-code-pane="chat"] .code-pane',

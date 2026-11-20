@@ -6772,21 +6772,31 @@ function beginStreamingMessage(typing) {
   let pending = "";
   let lastPaint = 0;
   let scheduled = 0;
+  /* Le premier fragment peut mettre longtemps a venir : chargement du modele,
+     lecture du prompt, premier jeton. Tant qu'il n'est pas la, les trois points
+     restent affiches. Un cadre vide se lisait comme une application figee. */
+  let started = false;
   const paint = () => {
     scheduled = 0;
     lastPaint = performance.now();
     const stick = chatNearBottom();
-    textNode.innerHTML = `${formatMessageContent(pending, { apply: true })}<span class="stream-caret" aria-hidden="true"></span>`;
+    textNode.innerHTML = started
+      ? `${formatMessageContent(pending, { apply: true })}<span class="stream-caret" aria-hidden="true"></span>`
+      : '<div class="typing" aria-hidden="true"><span></span><span></span><span></span></div>';
     if (stick) scrollChatToLatest();
   };
+  element.setAttribute("aria-busy", "true");
+  paint();
   const update = partial => {
     pending = partial;
+    if (partial) started = true;
     if (scheduled) return;
     const wait = Math.max(0, 90 - (performance.now() - lastPaint));
     scheduled = setTimeout(paint, wait);
   };
   const finish = (finalText, sources) => {
     if (scheduled) clearTimeout(scheduled);
+    element.removeAttribute("aria-busy");
     element.remove();
     return renderMessage("assistant", finalText ?? pending, true, [], sources);
   };

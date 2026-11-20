@@ -1,6 +1,14 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.29": {
+      "title": "Les trois points restent affiches pendant l'attente",
+      "highlights": [
+        "Des l'envoi du message, l'indicateur a trois points etait remplace par un cadre encore vide : il n'etait rempli qu'a l'arrivee du premier mot du modele. Or c'est justement le moment le plus long, chargement du modele, lecture du prompt, premier jeton. Pendant ces secondes, la conversation n'affichait qu'un cadre avec le S et SIMIA, sans rien qui bouge : on croyait SIMIA fige.",
+        "Les trois points animes restent maintenant affiches tant que le premier mot n'est pas arrive, puis laissent place au texte au fil de l'eau, avec son curseur de frappe. Le cadre porte aussi aria-busy, pour que les lecteurs d'ecran annoncent une reponse en cours.",
+        "Meme chose pour les reponses qui n'utilisent pas l'affichage au fil de l'eau : l'indicateur reste en place jusqu'a la reponse complete."
+      ]
+    },
     "0.1.28": {
       "title": "Le bandeau de catalogue ne peut plus annoncer un recul",
       "highlights": [
