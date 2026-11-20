@@ -1,6 +1,14 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.27": {
+      "title": "Une seule barre de mise a jour, et elle repond",
+      "highlights": [
+        "Deux barres « Recharger » pouvaient se poser en meme temps en bas de l'ecran : celle du cache hors ligne et celle qui annonce une nouvelle version. Elles se recouvraient, et celle du dessus avalait les clics de l'autre, dont les boutons devenaient inutilisables. Les deux ne disent pourtant qu'une chose sur le web : rechargez. Il n'en reste donc qu'une seule.",
+        "En version de bureau, les deux messages sont differents : l'un parle du cache de l'interface, l'autre d'une nouvelle archive a telecharger. Les barres gardent alors chacune leur role, et s'empilent proprement au lieu de se superposer.",
+        "L'onglet Chat de Vibe, livre en 0.1.25 puis corrige en 0.1.26, est inclus dans ces archives."
+      ]
+    },
     "0.1.26": {
       "title": "Vibe : l'onglet Chat ramene la conversation seule",
       "highlights": [

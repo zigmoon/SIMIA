@@ -10863,6 +10863,11 @@ function newerRelease(tag) {
 
 function showReleaseBar(tag) {
   if (document.querySelector(".release-bar")) return;
+  /* Sur le web, la barre du cache hors ligne propose deja le rechargement :
+     une deuxieme barre au meme endroit masquait ses boutons. En version de
+     bureau, la barre de release parle d'autre chose (telecharger la nouvelle
+     archive) : on la garde, la mise en page les empile. */
+  if (!NATIVE && document.querySelector(".update-bar")) return;
   const bar = document.createElement("div");
   bar.className = "update-bar release-bar";
   bar.setAttribute("role", "status");

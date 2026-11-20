@@ -812,6 +812,9 @@ body[data-allow-steps="1"] .code-block .code-copy.is-skip { display:inline-flex;
   flex:none; border:0; border-radius:6px; padding:7px 12px;
   background:#4c6b1f; color:#fff; font-size:11.5px; font-weight:800; cursor:pointer;
 }
+/* Deux barres a la fois (bureau : cache et nouvelle archive) : elles
+   s'empilent au lieu de se recouvrir, sinon celle du haut avale les clics. */
+.update-bar + .update-bar{bottom:calc(12px + 62px)}
 .update-bar button[disabled]{opacity:.6; cursor:default}
 .update-bar .update-dismiss{
   background:transparent; color:#6e7771; padding:2px 4px;
