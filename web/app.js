@@ -7172,7 +7172,16 @@ async function renderNativeStatus() {
     /* Le bandeau annonce une difference entre le catalogue du poste et celui du
        serveur. Il doit donc disparaitre quand les deux concordent, et rester
        unique quel que soit le nombre de rafraichissements. */
-    const catalogueChanged = Boolean(info.remote?.reachable) && String(info.remote.version) !== String(info.catalog);
+    /* `catalog` arrive en nombre, `remote.version` en chaine. Une simple
+       difference suffisait a annoncer un recul quand le fichier du serveur
+       n'avait pas encore ete remplace : on compare des nombres, et seulement
+       dans le sens d'une nouveaute. */
+    const remoteCatalog = Number.parseInt(info.remote?.version ?? "", 10);
+    const localCatalog = Number.parseInt(info.catalog ?? "", 10);
+    const catalogueChanged = Boolean(info.remote?.reachable)
+      && Number.isFinite(remoteCatalog)
+      && Number.isFinite(localCatalog)
+      && remoteCatalog > localCatalog;
     if (info.remote?.reachable && info.remote.version) {
       parts.push(
         catalogueChanged

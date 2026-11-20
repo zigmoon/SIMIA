@@ -50,6 +50,7 @@ MARKERS = {
         "state.code.focus === \"chat\"",
         "Conversation seule, pleine largeur",
         'if (!NATIVE && document.querySelector(".update-bar")) return;',
+        "remoteCatalog > localCatalog",
     ],
     "web/styles.css": [
         '[data-code-pane="chat"] .code-pane',

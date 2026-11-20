@@ -1,6 +1,13 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.28": {
+      "title": "Le bandeau de catalogue ne peut plus annoncer un recul",
+      "highlights": [
+        "Le bandeau bleu de la bibliotheque compare le catalogue du poste a celui du serveur. Il se contentait d'une difference : des que le fichier du serveur n'avait pas ete remplace, il annoncait « Nouvelle version du catalogue sur le serveur : v3 » alors que le poste avait deja la v4, et l'alerte ne pouvait plus disparaitre. Il ne parle plus que d'une vraie nouveaute, quand le serveur est en avance.",
+        "La veille de version des modeles (models/versions.json) est repassee en v4, en phase avec le catalogue qui contient deja les quatre modeles europeens : Ministral 3B Instruct et Reasoning, Mistral 7B Instruct, Mistral Nemo 12B."
+      ]
+    },
     "0.1.27": {
       "title": "Une seule barre de mise a jour, et elle repond",
       "highlights": [
