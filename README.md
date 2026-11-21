@@ -35,6 +35,9 @@ navigateur, s'arrête à 1,9 Go par modèle et sert surtout à essayer.
 - [La version web, installable](#la-version-web-installable)
 - [Versions publiées](#versions-publiées)
 - [Les modèles](#les-modèles)
+- [Les modèles vidéo](#les-modeles-video)
+- [Importer un fichier depuis l'interface](#importer-un-fichier-depuis-linterface)
+- [Télécharger 14 Go sans tout perdre](#telecharger-14-go-sans-tout-perdre)
 - [Architecture](#architecture)
 - [Utilisation](#utilisation)
 - [Ajouter un modèle](#ajouter-un-modèle)
@@ -416,6 +419,47 @@ quantifié, il occupe donc plus de mémoire graphique que son équivalent `.gguf
 demandent des fichiers séparés — Z-Image, Flux, SD 3 — ont besoin de leur
 encodeur de texte et de leur VAE à côté du modèle, comme le pack Z-Image du
 catalogue.
+
+### Importer un fichier depuis l'interface
+
+Le bouton **« Importer un fichier… »** des réglages, et le glisser-déposer
+n'importe où dans la fenêtre, envoient le fichier au lanceur. Nul besoin
+d'ouvrir un explorateur ni de connaître l'arborescence : SIMIA lit l'en-tête du
+fichier et le range lui-même — un modèle complet à la racine de
+`models/image/`, un LoRA dans `models/image/loras/` — puis relit la liste. Un
+style importé est sélectionné dans la foulée.
+
+Le corps de la requête **est** le fichier : il est écrit au fil de l'eau, par
+blocs de 1 Mo, jamais gardé en mémoire. Un checkpoint de 6 Go ne fait donc pas
+gonfler la mémoire du lanceur. Une barre montre l'avancee de l'envoi, parce
+qu'un transfert de plusieurs minutes sans retour se lit comme un plantage.
+
+Le nom reçu est réduit à un nom de fichier sûr : pas de dossier, pas de `..`,
+pas de caractère interdit par Windows, et une extension parmi `.safetensors`,
+`.gguf`, `.ckpt`, `.pt`.
+
+### Telecharger 14 Go sans tout perdre
+
+Un pack video pese 14 Go. Sur une vraie machine, un telephone qui sonne, une
+mise en veille ou un WiFi qui vacille suffisent a tout perdre — c'est pourquoi
+le telechargement reprend au lieu de recommencer :
+
+- `curl -C -` reprend au dernier octet deja ecrit ;
+- cinq essais avec trois secondes d'ecart, `--retry-all-errors` ;
+- un transfert qui ne depasse plus 2 Ko/s pendant une minute est declare mort
+  au lieu de rester bloque des heures ;
+- le fichier `.part` est **conservé** en cas d'echec, avec un message qui dit
+  que relancer reprendra ou l'on s'est arrete ;
+- le bouton **« Arrêter »** de la carte tue le transfert immediatement et garde
+  le partiel ;
+- un fichier tronque ne passe jamais pour complet : la taille annoncee par le
+  catalogue est comparee a celle du disque, et l'ecart est traite comme une
+  absence — sinon un pack s'affichait « pret » avec un transformateur
+  incomplet, et le moteur echouait au chargement sans explication ;
+- l'espace disque est verifie **avant** de commencer, avec une marge d'un Go.
+
+La progression est cumulee sur les quatre fichiers : une seule barre pour un
+seul pack, avec le total exact (15 261 380 800 octets pour MiniMax-H3).
 
 ## Architecture
 

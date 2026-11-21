@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "packs": [
     {
       "id": "sd-turbo",
@@ -13,7 +13,8 @@
       "px": 512,
       "recommended": true,
       "model": "sdturbo/sd_turbo_q4_0.gguf",
-      "url": "https://huggingface.co/samoudi/sd-turbo-gguf/resolve/main/sd_turbo_q4_0.gguf"
+      "url": "https://huggingface.co/samoudi/sd-turbo-gguf/resolve/main/sd_turbo_q4_0.gguf",
+      "modelBytes": 1847909248
     },
     {
       "id": "sdxs-512",
@@ -26,7 +27,8 @@
       "cfg": 1.0,
       "px": 512,
       "model": "sdxs/sdxs-512-tinySDdistilled_Q8_0.gguf",
-      "url": "https://huggingface.co/concedo/sdxs-512-tinySDdistilled-GGUF/resolve/main/sdxs-512-tinySDdistilled_Q8_0.gguf"
+      "url": "https://huggingface.co/concedo/sdxs-512-tinySDdistilled-GGUF/resolve/main/sdxs-512-tinySDdistilled_Q8_0.gguf",
+      "modelBytes": 682847200
     },
     {
       "id": "sd15-q4",
@@ -40,7 +42,8 @@
       "cfg": 7.0,
       "px": 512,
       "model": "sd15/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
-      "url": "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf"
+      "url": "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+      "modelBytes": 1566768416
     },
     {
       "id": "sd15-simia",
@@ -56,7 +59,8 @@
       "lora": "simia-gravure.safetensors",
       "loraWeight": 1.4,
       "promptPrefix": "s1mia vintage botanical engraving plate",
-      "loraUrl": "https://app.zigmoon.com/SIMIA/models/image/loras/simia-gravure.safetensors"
+      "loraUrl": "https://app.zigmoon.com/SIMIA/models/image/loras/simia-gravure.safetensors",
+      "modelBytes": 1566768416
     },
     {
       "id": "sdxl-turbo",
@@ -69,7 +73,8 @@
       "cfg": 1.0,
       "px": 1024,
       "model": "sdxl/stable-diffusion-xl-1.0-turbo-Q4_0.gguf",
-      "url": "https://huggingface.co/gpustack/stable-diffusion-xl-1.0-turbo-GGUF/resolve/main/stable-diffusion-xl-1.0-turbo-Q4_0.gguf"
+      "url": "https://huggingface.co/gpustack/stable-diffusion-xl-1.0-turbo-GGUF/resolve/main/stable-diffusion-xl-1.0-turbo-Q4_0.gguf",
+      "modelBytes": 3940010720
     },
     {
       "id": "sdxl-base",
@@ -82,7 +87,8 @@
       "cfg": 7.0,
       "px": 1024,
       "model": "sdxl/stable-diffusion-xl-base-1.0-Q4_0.gguf",
-      "url": "https://huggingface.co/gpustack/stable-diffusion-xl-base-1.0-GGUF/resolve/main/stable-diffusion-xl-base-1.0-Q4_0.gguf"
+      "url": "https://huggingface.co/gpustack/stable-diffusion-xl-base-1.0-GGUF/resolve/main/stable-diffusion-xl-base-1.0-Q4_0.gguf",
+      "modelBytes": 3940010720
     },
     {
       "id": "sdxl-lightning",
@@ -121,7 +127,8 @@
       "cfg": 1.5,
       "px": 512,
       "model": "dreamshaper8-lcm/dreamshaper_8LCM-iq4_nl.gguf",
-      "url": "https://huggingface.co/stduhpf/dreamshaper-8LCM-im-GGUF-sdcpp/resolve/main/dreamshaper_8LCM-iq4_nl.gguf"
+      "url": "https://huggingface.co/stduhpf/dreamshaper-8LCM-im-GGUF-sdcpp/resolve/main/dreamshaper_8LCM-iq4_nl.gguf",
+      "modelBytes": 1570742432
     },
     {
       "id": "anything-v5",
@@ -148,7 +155,8 @@
       "px": 1024,
       "promptPrefix": "score_9, score_8_up, score_7_up",
       "model": "pony-xl/pony-diffusion-v6-xl-Q4_K.gguf",
-      "url": "https://huggingface.co/off-grid-ai/pony-diffusion-v6-xl-GGUF/resolve/main/pony-diffusion-v6-xl-Q4_K.gguf"
+      "url": "https://huggingface.co/off-grid-ai/pony-diffusion-v6-xl-GGUF/resolve/main/pony-diffusion-v6-xl-Q4_K.gguf",
+      "modelBytes": 2797752960
     },
     {
       "id": "pony-xl-q8",
@@ -211,7 +219,11 @@
       "diffusionUrl": "https://huggingface.co/leejet/MiniMax-H3-GGUF/resolve/main/minimax_h3_ref2va_pruned-Q2_K_M.gguf",
       "llmUrl": "https://huggingface.co/PrunaAI/P-H3-Image-Comfy/resolve/main/text_encoders/p-h3-image_text_encoder_int8_convrot.safetensors",
       "vaeUrl": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_int8_convrot.safetensors",
-      "audioVaeUrl": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors"
+      "audioVaeUrl": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors",
+      "diffusionBytes": 6724190304,
+      "llmBytes": 5120870504,
+      "vaeBytes": 2811065184,
+      "audioVaeBytes": 605254808
     }
   ]
 }

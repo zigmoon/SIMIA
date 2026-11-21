@@ -11,6 +11,7 @@ use std::io::{IsTerminal, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -155,6 +156,20 @@ struct ImagePack {
     vae_url: String,
     #[serde(default, rename = "audioVaeUrl")]
     audio_vae_url: String,
+    /* Taille attendue de chaque fichier, en octets. Elle sert a deux choses :
+       calculer une progression juste sur un pack de quatre fichiers, et refuser
+       un fichier tronque comme s'il etait complet. Un pack sans ces tailles
+       continue de fonctionner, avec une progression estimee. */
+    #[serde(default, rename = "modelBytes")]
+    model_bytes: u64,
+    #[serde(default, rename = "diffusionBytes")]
+    diffusion_bytes: u64,
+    #[serde(default, rename = "llmBytes")]
+    llm_bytes: u64,
+    #[serde(default, rename = "vaeBytes")]
+    vae_bytes: u64,
+    #[serde(default, rename = "audioVaeBytes")]
+    audio_vae_bytes: u64,
     /// Fichier depose a la main dans `models/image/` : SIMIA l'a reconnu seul,
     /// sans entree de catalogue. L'interface le signale, sinon un fichier ajoute
     /// se confondrait avec un modele fourni.
@@ -216,6 +231,48 @@ impl ImagePack {
 
     fn lora_file(&self) -> Option<&str> {
         if self.lora.is_empty() { None } else { Some(self.lora.as_str()) }
+    }
+
+    /// Tout ce qu'il faut telecharger pour que ce pack fonctionne : le chemin
+    /// relatif au dossier des images, l'adresse, et la taille annoncee (0 quand
+    /// le catalogue ne la donne pas). Un pack video en compte quatre, un
+    /// checkpoint un seul.
+    fn components(&self) -> Vec<(&str, &str, u64)> {
+        let mut list: Vec<(&str, &str, u64)> = Vec::new();
+        if !self.model.is_empty() && !self.url.is_empty() {
+            list.push((self.model.as_str(), self.url.as_str(), self.model_bytes));
+        }
+        if !self.diffusion.is_empty() && !self.diffusion_url.is_empty() {
+            list.push((
+                self.diffusion.as_str(),
+                self.diffusion_url.as_str(),
+                self.diffusion_bytes,
+            ));
+        }
+        if !self.llm.is_empty() && !self.llm_url.is_empty() {
+            list.push((self.llm.as_str(), self.llm_url.as_str(), self.llm_bytes));
+        }
+        if !self.vae.is_empty() && !self.vae_url.is_empty() {
+            list.push((self.vae.as_str(), self.vae_url.as_str(), self.vae_bytes));
+        }
+        if !self.audio_vae.is_empty() && !self.audio_vae_url.is_empty() {
+            list.push((
+                self.audio_vae.as_str(),
+                self.audio_vae_url.as_str(),
+                self.audio_vae_bytes,
+            ));
+        }
+        list
+    }
+
+    /// Somme des tailles annoncees. Zero des qu'une seule manque : une
+    /// progression totale fausse vaut moins qu'une progression estimee.
+    fn declared_bytes(&self) -> u64 {
+        let components = self.components();
+        if components.is_empty() || components.iter().any(|(_, _, bytes)| *bytes == 0) {
+            return 0;
+        }
+        components.iter().map(|(_, _, bytes)| *bytes).sum()
     }
 }
 
@@ -544,6 +601,12 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
         llm_url: String::new(),
         vae_url: String::new(),
         audio_vae_url: String::new(),
+        // Un fichier depose a la main : sa taille est celle du disque.
+        model_bytes: bytes,
+        diffusion_bytes: 0,
+        llm_bytes: 0,
+        vae_bytes: 0,
+        audio_vae_bytes: 0,
         added: true,
     })
 }
@@ -693,6 +756,11 @@ struct ImageEngine {
     last_used: Option<Instant>,
     size_override: Option<u32>,
     steps_override: Option<u32>,
+    /// Un telechargement de 14 Go se lance pour une heure : il doit pouvoir
+    /// s'arreter. Le drapeau est lu par la boucle de transfert, et le pid
+    /// permet de tuer curl sur-le-champ au lieu d'attendre le prochain tour.
+    download_cancel: Arc<AtomicBool>,
+    download_pid: Option<u32>,
 }
 
 impl ImageEngine {
@@ -713,10 +781,25 @@ impl ImageEngine {
     }
 
     fn missing_of(&self, pack: &ImagePack) -> Vec<String> {
+        /* Un fichier tronque par une coupure compte comme absent : sinon un
+           pack video de 14 Go s'affichait « pret » avec un transformateur
+           incomplet, et le moteur echouait au chargement sans explication. */
+        let expected: Vec<(String, u64)> = pack
+            .components()
+            .iter()
+            .map(|(name, _, bytes)| (name.to_string(), *bytes))
+            .collect();
         let mut missing: Vec<String> = pack
             .file_names()
             .into_iter()
-            .filter(|name| !self.path_of(name).is_file())
+            .filter(|name| {
+                let want = expected
+                    .iter()
+                    .find(|(candidate, _)| candidate == name)
+                    .map(|(_, bytes)| *bytes)
+                    .unwrap_or(0);
+                !is_complete(&self.path_of(name), want)
+            })
             .collect();
         if let Some(lora) = pack.lora_file() {
             if !self.loras_dir().join(lora).is_file() {
@@ -1216,6 +1299,8 @@ fn main() {
         last_used: None,
         size_override,
         steps_override,
+        download_cancel: Arc::new(AtomicBool::new(false)),
+        download_pid: None,
     };
     image_engine.resolve_selection();
     let image_available = image_engine.available();
@@ -1946,64 +2031,18 @@ where
 
     let mut last_error = String::new();
     for url in urls {
-        let mut command = Command::new(if cfg!(windows) { "curl.exe" } else { "curl" });
-        command
-            .arg("-L")
-            .arg("--fail")
-            .arg("--retry")
-            .arg("2")
-            .arg("--connect-timeout")
-            .arg("20")
-            .arg("-o")
-            .arg(&partial)
-            .arg(&url)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            command.creation_flags(CREATE_NO_WINDOW);
-        }
-
-        let mut child = match command.spawn() {
-            Ok(child) => child,
-            Err(err) => {
-                last_error = format!("curl indisponible : {err}");
-                continue;
+        match fetch_to_partial(&url, &partial, &mut on_progress, &|_| {}, &|| false) {
+            Ok(()) => {
+                fs::rename(&partial, &target)
+                    .map_err(|err| format!("fichier non deplacable : {err}"))?;
+                on_progress(total, total);
+                return Ok(());
             }
-        };
-        let mut failed = false;
-        loop {
-            match child.try_wait() {
-                Ok(Some(status)) => {
-                    if !status.success() {
-                        failed = true;
-                    }
-                    break;
-                }
-                Ok(None) => {
-                    let downloaded = fs::metadata(&partial).map(|meta| meta.len()).unwrap_or(0);
-                    on_progress(downloaded, total);
-                    thread::sleep(Duration::from_millis(500));
-                }
-                Err(err) => {
-                    let _ = child.kill();
-                    last_error = err.to_string();
-                    failed = true;
-                    break;
-                }
+            Err(TransferError::Cancelled) => {
+                return Err("telechargement interrompu".to_string());
             }
+            Err(TransferError::Failed(reason)) => last_error = reason,
         }
-
-        if failed {
-            let _ = fs::remove_file(&partial);
-            continue;
-        }
-        fs::rename(&partial, &target).map_err(|err| format!("fichier non deplacable : {err}"))?;
-        on_progress(total, total);
-        return Ok(());
     }
 
     Err(if last_error.is_empty() {
@@ -2011,6 +2050,106 @@ where
     } else {
         last_error
     })
+}
+
+/// Pourquoi un transfert s'est arrete. La difference compte : annule par
+/// l'utilisateur, ce n'est pas une panne, et le fichier partiel doit rester.
+enum TransferError {
+    Cancelled,
+    Failed(String),
+}
+
+/// Ecrit `url` dans `partial` en reprenant ou le fichier s'est arrete.
+///
+/// Un pack video pese 14 Go : un telephone qui sonne, une mise en veille, et
+/// le transfert tombe. Sans reprise, tout etait perdu et il fallait repartir
+/// de zero. `curl -C -` reprend au dernier octet deja ecrit, et le fichier
+/// partiel est conserve en cas d'echec, justement pour cela.
+///
+/// `on_progress` recoit (octets ecrits, taille attendue). `on_child` recoit le
+/// pid pour qu'une annulation puisse tuer curl immediatement.
+fn fetch_to_partial<F, G>(
+    url: &str,
+    partial: &Path,
+    on_progress: &mut F,
+    on_child: &G,
+    cancelled: &dyn Fn() -> bool,
+) -> Result<(), TransferError>
+where
+    F: FnMut(u64, u64),
+    G: Fn(Option<u32>),
+{
+    let known = fs::metadata(partial).map(|meta| meta.len()).unwrap_or(0);
+    let mut command = Command::new(if cfg!(windows) { "curl.exe" } else { "curl" });
+    command
+        .arg("-L")
+        .arg("--fail")
+        /* Cinq essais plutot que deux : une coupure WiFi de dix secondes sur un
+           fichier de 6 Go ne doit pas condamner le telechargement. */
+        .arg("--retry")
+        .arg("5")
+        .arg("--retry-delay")
+        .arg("3")
+        .arg("--retry-all-errors")
+        .arg("--connect-timeout")
+        .arg("20")
+        /* Un transfert qui ne bouge plus de 2 Ko/s pendant une minute est
+           considere comme mort : sans cela curl peut rester bloque des heures. */
+        .arg("--speed-limit")
+        .arg("2048")
+        .arg("--speed-time")
+        .arg("60");
+    if known > 0 {
+        command.arg("-C").arg("-");
+    }
+    command
+        .arg("-o")
+        .arg(partial)
+        .arg(url)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let mut child = command
+        .spawn()
+        .map_err(|err| TransferError::Failed(format!("curl indisponible : {err}")))?;
+    on_child(Some(child.id()));
+    let mut last_progress = Instant::now();
+    let outcome = loop {
+        if cancelled() {
+            let _ = child.kill();
+            let _ = child.wait();
+            break Err(TransferError::Cancelled);
+        }
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => break Ok(()),
+            Ok(Some(status)) => {
+                break Err(TransferError::Failed(format!(
+                    "le transfert s'est arrete ({status})"
+                )))
+            }
+            Ok(None) => {
+                if last_progress.elapsed() >= Duration::from_millis(500) {
+                    last_progress = Instant::now();
+                    let written = fs::metadata(partial).map(|meta| meta.len()).unwrap_or(0);
+                    on_progress(written, 0);
+                }
+                thread::sleep(Duration::from_millis(200));
+            }
+            Err(err) => {
+                let _ = child.kill();
+                break Err(TransferError::Failed(err.to_string()));
+            }
+        }
+    };
+    on_child(None);
+    outcome
 }
 
 /// Le serveur publie versions.json a cote des modeles : version, date et notes.
@@ -2368,6 +2507,191 @@ fn start_image(state: &Shared) -> String {
     "loading".to_string()
 }
 
+/// Tue un processus par son pid. Sans crate systeme : `taskkill` sous Windows,
+/// `kill` ailleurs. Les deux existent sur toutes les installations visees.
+fn kill_pid(pid: u32) {
+    #[cfg(windows)]
+    {
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/F", "/T"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = Command::new("kill")
+            .args(["-9", &pid.to_string()])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+    }
+}
+
+/// Decode un nom de fichier envoye en en-tete HTTP. Le client l'encode en
+/// pourcent : un en-tete HTTP ne transporte pas d'accent, et un fichier
+/// « planche_botanique_été.safetensors » doit garder son nom.
+fn percent_decode(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if byte == b'%' && index + 2 < bytes.len() {
+            let pair = [bytes[index + 1], bytes[index + 2]];
+            if let Ok(text) = std::str::from_utf8(&pair) {
+                if let Ok(code) = u8::from_str_radix(text, 16) {
+                    out.push(code);
+                    index += 3;
+                    continue;
+                }
+            }
+        }
+        out.push(byte);
+        index += 1;
+    }
+    String::from_utf8_lossy(&out).to_string()
+}
+
+/// Reduit un nom recu a un nom de fichier sur : pas de dossier, pas de `..`,
+/// pas de caractere interdit par Windows, et une extension connue.
+fn safe_import_name(raw: &str) -> Option<String> {
+    let decoded = percent_decode(raw);
+    let base = decoded
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if base.is_empty() || base.starts_with('.') {
+        return None;
+    }
+    let cleaned: String = base
+        .chars()
+        .map(|character| {
+            if character.is_control() || matches!(character, '<' | '>' | ':' | '"' | '|' | '?' | '*') {
+                '_'
+            } else {
+                character
+            }
+        })
+        .collect();
+    let extension = Path::new(&cleaned)
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase())?;
+    if !matches!(extension.as_str(), "safetensors" | "gguf" | "ckpt" | "pt") {
+        return None;
+    }
+    Some(cleaned)
+}
+
+/// Recoit un fichier depose depuis l'interface et le range au bon endroit.
+///
+/// Le corps est ecrit au fil de l'eau : un checkpoint de 6 Go ne peut pas
+/// transiter par un tampon en memoire. Une fois le transfert fini, l'en-tete du
+/// fichier dit s'il s'agit d'un style (LoRA) ou d'un modele complet, et la
+/// destination suit : `loras/` pour un style, la racine pour un modele.
+fn import_image_request(state: &Shared, request: &mut tiny_http::Request) -> (u16, String) {
+    let raw_name = request
+        .headers()
+        .iter()
+        .find(|header| header.field.equiv("x-simia-filename"))
+        .map(|header| header.value.as_str().to_string())
+        .unwrap_or_default();
+    let Some(name) = safe_import_name(&raw_name) else {
+        return (400, "{\"error\":\"nom de fichier absent ou extension non reconnue (.safetensors, .gguf, .ckpt, .pt)\"}"
+                .to_string(),);
+    };
+    let dir = match state.lock() {
+        Ok(guard) => guard.image.dir.clone(),
+        Err(_) => PathBuf::from("models/image"),
+    };
+    let loras = dir.join("loras");
+    let _ = fs::create_dir_all(&loras);
+
+    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|value| value.as_nanos()).unwrap_or(0);
+    let temp = dir.join(format!(".import-{}-{stamp}.part", std::process::id()));
+    let reader = request.as_reader();
+    let mut file = match fs::File::create(&temp) {
+        Ok(file) => file,
+        Err(error) => {
+            return (500, format!("{{\"error\":{}}}", js_escape(&format!("fichier temporaire : {error}"))),);
+        }
+    };
+    /* Le corps est lu par blocs de 1 Mo : assez gros pour ne pas faire de
+       milliers d'appels systeme, assez petit pour que l'annulation et l'etat
+       de progression restent vivants pendant le transfert. */
+    let mut buffer = vec![0u8; 1024 * 1024];
+    let mut written: u64 = 0;
+    let result = loop {
+        match reader.read(&mut buffer) {
+            Ok(0) => break Ok(()),
+            Ok(count) => {
+                if let Err(error) = file.write_all(&buffer[..count]) {
+                    break Err(format!("ecriture : {error}"));
+                }
+                written += count as u64;
+                set_progress(state, "import", written, 0, "import", None);
+            }
+            Err(error) => break Err(format!("lecture : {error}")),
+        }
+        if let Ok(guard) = state.lock() {
+            if guard.image.download_cancel.load(Ordering::SeqCst) {
+                break Err("import annule".to_string());
+            }
+        }
+    };
+    let flushed = file.flush().is_ok();
+    drop(file);
+    if let Err(error) = result {
+        let _ = fs::remove_file(&temp);
+        if let Ok(mut guard) = state.lock() {
+            guard.progress = None;
+        }
+        return (400, format!("{{\"error\":{}}}", js_escape(&error)));
+    }
+    if !flushed {
+        let _ = fs::remove_file(&temp);
+        return (500, "{\"error\":\"le fichier n'a pas pu etre ecrit en entier\"}".to_string(),);
+    }
+
+    let header = read_tensor_header(&temp);
+    let is_lora = header.as_ref().map(|info| info.lora).unwrap_or(false);
+    let family = header
+        .as_ref()
+        .map(|info| info.family)
+        .unwrap_or(ImageFamily::Unknown);
+    let destination = if is_lora { loras.join(&name) } else { dir.join(&name) };
+    if let Err(error) = fs::rename(&temp, &destination) {
+        // Un rename echoue si le fichier existe deja sous Windows : on remplace.
+        if fs::copy(&temp, &destination).is_err() {
+            let _ = fs::remove_file(&temp);
+            return (500, format!("{{\"error\":{}}}", js_escape(&format!("deplacement : {error}"))),);
+        }
+        let _ = fs::remove_file(&temp);
+    }
+
+    let body = match state.lock() {
+        Ok(mut guard) => {
+            guard.progress = None;
+            guard.image.refresh();
+            format!(
+                "{{\"ok\":true,\"name\":{},\"kind\":{},\"family\":{},\"bytes\":{},\"lora\":{}}}",
+                js_escape(&name),
+                js_escape(if is_lora { "lora" } else { "model" }),
+                js_escape(family.key()),
+                written,
+                is_lora
+            )
+        }
+        Err(_) => format!("{{\"ok\":true,\"name\":{}}}", js_escape(&name)),
+    };
+    (200, body)
+}
+
 fn image_status_json(state: &Shared) -> String {
     match state.lock() {
         Ok(guard) => {
@@ -2524,76 +2848,41 @@ fn select_image_pack(state: &Shared, id: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Telecharge un fichier d'un pack vers `dest` en suivant la progression.
-fn fetch_pack_file(
-    state: &Shared,
-    id: &str,
-    pack: &ImagePack,
-    dest: &Path,
-    url: &str,
-    total: u64,
-) -> Result<(), String> {
-    let entry = ModelEntry {
-        id: id.to_string(),
-        name: pack.name.clone(),
-        category: "Image".to_string(),
-        size: pack.size.clone(),
-        path: dest.to_path_buf(),
-        bytes: total,
-        local: false,
-        url: Some(url.to_string()),
-        mirror: None,
-        hosted: false,
-        recommended: false,
-        origin: String::new(),
-        vendor: String::new(),
-        mmproj: None,
-    };
-    let state_for_progress = Arc::clone(state);
-    let progress_id = id.to_string();
-    download_model(&entry, dest.parent().unwrap_or(Path::new(".")), |downloaded, known| {
-        set_progress(&state_for_progress, &progress_id, downloaded, known, "image", None);
-    })
-}
-
-/// Telecharge ce qui manque a un pack (checkpoint, puis LoRA) et le selectionne.
-/// Seuls les packs a fichier unique sont concernes : Z-Image reste manuel.
+/// Telecharge ce qui manque a un pack et le selectionne.
+///
+/// Un pack video demande quatre fichiers de plusieurs giga-octets : la
+/// progression est cumulee sur l'ensemble, chaque fichier reprend ou il s'etait
+/// arrete, et l'utilisateur peut arreter net.
 fn download_image_pack(state: &Shared, id: &str) -> Result<(), String> {
-    let (pack, dir) = {
+    let (pack, dir, cancel) = {
         let guard = state.lock().map_err(|_| "etat verrouille".to_string())?;
         let pack = guard
             .image
             .pack(id)
             .cloned()
             .ok_or_else(|| format!("jeu d'images inconnu : {id}"))?;
-        (pack, guard.image.dir.clone())
+        (pack, guard.image.dir.clone(), Arc::clone(&guard.image.download_cancel))
     };
+    cancel.store(false, Ordering::SeqCst);
 
-    /* Un pack video compte quatre fichiers, chacun avec son URL : on construit
-       la liste de ce qui manque avant de telecharger, pour tout annoncer d'un
-       coup plutot que d'echouer au troisieme. */
-    let mut jobs: Vec<(std::path::PathBuf, String)> = Vec::new();
+    /* On liste tout ce qui manque avant de commencer : un pack video a quatre
+       fichiers, autant annoncer le total des le depart plutot que d'echouer au
+       troisieme apres une heure. */
+    let mut jobs: Vec<(PathBuf, String, u64)> = Vec::new();
     let mut missing_url: Option<String> = None;
-    let mut queue = |name: &str, url: &str| {
-        if name.is_empty() {
-            return;
-        }
+    let mut queued = 0u64;
+    for (name, url, bytes) in pack.components() {
         let dest = dir.join(name);
-        if dest.is_file() {
-            return;
+        if is_complete(&dest, bytes) {
+            queued += bytes;
+            continue;
         }
         if url.is_empty() {
             missing_url = Some(name.to_string());
-            return;
+            continue;
         }
-        jobs.push((dest, url.to_string()));
-    };
-    queue(&pack.model, &pack.url);
-    if pack.is_video() {
-        queue(&pack.diffusion, &pack.diffusion_url);
-        queue(&pack.llm, &pack.llm_url);
-        queue(&pack.vae, &pack.vae_url);
-        queue(&pack.audio_vae, &pack.audio_vae_url);
+        jobs.push((dest, url.to_string(), bytes));
+        queued += bytes;
     }
     let lora = pack.lora_file().map(|name| dir.join("loras").join(name));
     let needs_lora = lora.as_ref().map(|path| !path.is_file()).unwrap_or(false);
@@ -2605,21 +2894,43 @@ fn download_image_pack(state: &Shared, id: &str) -> Result<(), String> {
         return Err(format!("{name} n'a pas d'URL de telechargement"));
     }
 
-    let total = if jobs.is_empty() { 1 } else { parse_size(&pack.size) };
+    let declared = pack.declared_bytes();
+    let total = if declared > 0 { declared } else { parse_size(&pack.size) };
+    let _ = queued;
     set_progress(state, id, 0, total, "image", None);
 
+    /* Espace disque : un pack de 14 Go sur un disque plein echoue au bout de
+       deux heures, apres avoir tout telecharge. Autant le dire avant. */
+    if let Some(needed) = free_space_shortfall(&dir, declared.saturating_sub(already_present(&pack, &dir))) {
+        return Err(needed);
+    }
+
+    let mut done: u64 = 0;
     let result = (|| -> Result<(), String> {
-        for (dest, url) in &jobs {
+        for (dest, url, bytes) in &jobs {
             if let Some(parent) = dest.parent() {
                 let _ = fs::create_dir_all(parent);
             }
-            fetch_pack_file(state, id, &pack, dest, url, total)?;
+            fetch_pack_file(state, id, dest, url, &cancel, done, &mut |written, base| {
+                set_progress(state, id, base + written, total, "image", None);
+            })?;
+            done += if *bytes > 0 {
+                *bytes
+            } else {
+                fs::metadata(dest).map(|meta| meta.len()).unwrap_or(0)
+            };
         }
         if needs_lora {
             if pack.lora_url.is_empty() {
                 return Err("le style de ce jeu n'a pas d'URL de telechargement".to_string());
             }
-            fetch_pack_file(state, id, &pack, lora.as_deref().unwrap(), &pack.lora_url, total)?;
+            let dest = lora.as_deref().unwrap();
+            if let Some(parent) = dest.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            fetch_pack_file(state, id, dest, &pack.lora_url, &cancel, done, &mut |written, base| {
+                set_progress(state, id, base + written, total, "image", None);
+            })?;
         }
         Ok(())
     })();
@@ -2628,15 +2939,139 @@ fn download_image_pack(state: &Shared, id: &str) -> Result<(), String> {
             set_progress(state, id, 1, 1, "image-ready", None);
             if let Ok(mut guard) = state.lock() {
                 guard.progress = None;
+                guard.image.download_pid = None;
                 guard.image.selected = Some(id.to_string());
                 save_image_selection(&guard.image.dir, id);
             }
             Ok(())
         }
         Err(error) => {
+            if let Ok(mut guard) = state.lock() {
+                guard.image.download_pid = None;
+            }
+            if error == CANCELLED {
+                set_progress(state, id, 0, total, "cancelled", None);
+                return Err(error);
+            }
             set_progress(state, id, 0, total, "error", Some(error.clone()));
             Err(error)
         }
+    }
+}
+
+const CANCELLED: &str = "telechargement interrompu";
+
+/// Vrai quand le fichier est la et fait exactement la taille annoncee. Un
+/// fichier tronque par une coupure passe pour absent : c'est ce qui permet de
+/// reprendre au lieu de croire le pack installe.
+fn is_complete(path: &Path, expected: u64) -> bool {
+    match fs::metadata(path) {
+        Ok(meta) => meta.is_file() && (expected == 0 || meta.len() >= expected),
+        Err(_) => false,
+    }
+}
+
+/// Somme des composants deja sur le disque : sert a demander l'espace qui
+/// manque vraiment, pas la taille totale du pack.
+fn already_present(pack: &ImagePack, dir: &Path) -> u64 {
+    pack.components()
+        .iter()
+        .filter(|(name, _, bytes)| is_complete(&dir.join(name), *bytes))
+        .map(|(_, _, bytes)| *bytes)
+        .sum()
+}
+
+/// Verifie qu'il reste la place pour `needed` octets dans le dossier des
+/// modeles. Rend `None` quand tout va bien, ou le message a montrer.
+fn free_space_shortfall(dir: &Path, needed: u64) -> Option<String> {
+    if needed == 0 {
+        return None;
+    }
+    let free = free_bytes(&dir.to_path_buf())?;
+    // Marge de 1 Go : le disque sert aussi de cache pendant le transfert.
+    if free > needed + 1_073_741_824 {
+        return None;
+    }
+    Some(format!(
+        "espace insuffisant : il faut {} de plus, il reste {} sur le disque",
+        human_size(needed),
+        human_size(free)
+    ))
+}
+
+#[cfg(windows)]
+fn free_bytes(dir: &Path) -> Option<u64> {
+    /* Sans crate systeme, on interroge le disque par une commande : `dir` existe
+       deja (le lanceur l'a cree). `wmic` a disparu de Windows 11 recent, on
+       passe donc par PowerShell. */
+    let output = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            "$d=(Get-PSDrive -Name (Split-Path -Qualifier '",
+        ])
+        .arg(dir.display().to_string())
+        .args(["').TrimEnd(':')).Free"])
+        .output()
+        .ok()?;
+    String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+}
+
+#[cfg(not(windows))]
+fn free_bytes(dir: &Path) -> Option<u64> {
+    let output = Command::new("df").arg("-Pk").arg(dir).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout).to_string();
+    let line = text.lines().nth(1)?;
+    let available_kb: u64 = line.split_whitespace().nth(3)?.parse().ok()?;
+    Some(available_kb * 1024)
+}
+
+/// Telecharge un composant, en reprenant au dernier octet deja ecrit.
+fn fetch_pack_file(
+    state: &Shared,
+    id: &str,
+    dest: &Path,
+    url: &str,
+    cancel: &Arc<AtomicBool>,
+    base: u64,
+    progress: &mut dyn FnMut(u64, u64),
+) -> Result<(), String> {
+    let partial = dest.with_extension("part");
+    if let Some(parent) = dest.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let state_for_child = Arc::clone(state);
+    let look = Arc::clone(cancel);
+    let on_child = |pid: Option<u32>| {
+        if let Ok(mut guard) = state_for_child.lock() {
+            guard.image.download_pid = pid;
+        }
+    };
+    let cancelled = {
+        let flag = Arc::clone(cancel);
+        move || flag.load(Ordering::SeqCst)
+    };
+    let mut report = |written: u64, _total: u64| progress(written, base);
+    match fetch_to_partial(url, &partial, &mut report, &on_child, &cancelled) {
+        Ok(()) => {
+            // Une reprise peut laisser un fichier incomplet si la source ne
+            // gere pas les plages d'octets : on reverifie, sinon on repart.
+            fs::rename(&partial, dest)
+                .map_err(|err| format!("fichier non deplacable : {err}"))?;
+            let _ = id;
+            let _ = look;
+            Ok(())
+        }
+        Err(TransferError::Cancelled) => {
+            // Le partiel reste : relancer reprendra ici.
+            Err(CANCELLED.to_string())
+        }
+        Err(TransferError::Failed(reason)) => Err(format!(
+            "{reason}. Le fichier partiel est garde : relancer reprendra ou il s'est arrete."
+        )),
     }
 }
 
@@ -3299,8 +3734,49 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
         };
         match download_image_pack(&state, &id) {
             Ok(()) => respond_json(request, 200, image_packs_json(&state)),
-            Err(error) => respond_json(request, 500, format!("{{\"error\":{}}}", js_escape(&error))),
+            Err(error) => {
+                /* Une annulation n'est pas une panne : 400 le dit a
+                   l'interface, qui n'affiche alors pas d'erreur. */
+                let code = if error == CANCELLED { 400 } else { 500 };
+                respond_json(request, code, format!("{{\"error\":{}}}", js_escape(&error)))
+            }
         }
+        return;
+    }
+
+    /* Arreter un telechargement de 14 Go. Le drapeau suffit quand curl tourne
+       encore ; le pid permet de le tuer tout de suite, sinon il fallait attendre
+       le tour suivant de la boucle. Le fichier partiel est garde. */
+    if path == "/_simia/image/cancel" {
+        let killed = match state.lock() {
+            Ok(mut guard) => {
+                guard.image.download_cancel.store(true, Ordering::SeqCst);
+                match guard.image.download_pid {
+                    Some(pid) => {
+                        kill_pid(pid);
+                        guard.image.download_pid = None;
+                        true
+                    }
+                    None => false,
+                }
+            }
+            Err(_) => false,
+        };
+        respond_json(
+            request,
+            200,
+            format!("{{\"cancelled\":true,\"killed\":{killed}}}"),
+        );
+        return;
+    }
+
+    /* Importer un fichier depuis l'interface, sans passer par le gestionnaire
+       de fichiers. Le corps de la requete EST le fichier : il est ecrit au fil
+       de l'eau, jamais garde en memoire, parce qu'un safetensors peut peser
+       plusieurs giga-octets. A la fin, l'en-tete decide de la destination. */
+    if path == "/_simia/image/import" {
+        let (code, body) = import_image_request(&state, &mut request);
+        respond_json(request, code, body);
         return;
     }
 
@@ -3657,7 +4133,7 @@ fn native_script(state: &Shared) -> String {
         Ok(guard) => {
             let selected = guard.selected_model.clone();
             let image = format!(
-                "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"apiBase\":\"\",\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"generateUrl\":\"/sdapi/v1/txt2img\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
+                "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"apiBase\":\"\",\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"importUrl\":\"/_simia/image/import\",\"cancelUrl\":\"/_simia/image/cancel\",\"generateUrl\":\"/sdapi/v1/txt2img\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
                 guard.image.available(),
                 guard.image.bin.is_some() && guard.image.probe.is_none(),
                 guard.image.current().map(|pack| match guard.image.size_override {
@@ -3893,6 +4369,11 @@ mod image_pack_tests {
             llm_url: String::new(),
             vae_url: String::new(),
             audio_vae_url: String::new(),
+            model_bytes: 0,
+            diffusion_bytes: 0,
+            llm_bytes: 0,
+            vae_bytes: 0,
+            audio_vae_bytes: 0,
             added: false,
         }
     }
@@ -4197,5 +4678,81 @@ mod image_pack_tests {
         assert_eq!(loras[0].path, "mon-style.safetensors");
         drop(packs);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Un pack de 14 Go se telecharge en plusieurs fois : le fichier partiel
+    /// doit etre reconnu comme tel, sinon il passe pour installe et le moteur
+    /// echoue au chargement.
+    #[test]
+    fn un_fichier_tronque_n_est_pas_complet() {
+        let dir = scratch("tronque");
+        let path = dir.join("poids.gguf");
+        fs::write(&path, vec![0u8; 100]).expect("fichier de test");
+        assert!(is_complete(&path, 100), "un fichier exact est complet");
+        assert!(is_complete(&path, 0), "sans taille annoncee, sa presence suffit");
+        assert!(!is_complete(&path, 200), "un fichier trop court est incomplet");
+        assert!(!is_complete(&dir.join("absent.gguf"), 10));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// La progression d'un pack video doit s'additionner : quatre fichiers, une
+    /// seule barre. Et une taille manquante rend le total inconnu plutot que
+    /// faux, pour ne pas afficher 100 % a la moitie du transfert.
+    #[test]
+    fn la_progression_additionne_les_composants_du_pack() {
+        let mut pack = empty_pack("h3");
+        pack.diffusion = "t.gguf".to_string();
+        pack.diffusion_url = "https://exemple/t".to_string();
+        pack.diffusion_bytes = 100;
+        pack.llm = "e.safetensors".to_string();
+        pack.llm_url = "https://exemple/e".to_string();
+        pack.llm_bytes = 200;
+        pack.vae = "v.safetensors".to_string();
+        pack.vae_url = "https://exemple/v".to_string();
+        pack.vae_bytes = 300;
+        pack.audio_vae = "a.safetensors".to_string();
+        pack.audio_vae_url = "https://exemple/a".to_string();
+        pack.audio_vae_bytes = 400;
+        assert_eq!(pack.components().len(), 4);
+        assert_eq!(pack.declared_bytes(), 1000);
+
+        // Une composante sans URL n'est pas telechargeable : elle ne compte pas.
+        pack.audio_vae_url.clear();
+        assert_eq!(pack.components().len(), 3);
+        assert_eq!(pack.declared_bytes(), 600);
+
+        // Une taille inconnue rend le total inconnu.
+        pack.vae_bytes = 0;
+        assert_eq!(pack.declared_bytes(), 0);
+    }
+
+    /// Le nom d'un fichier importe vient du navigateur : il ne doit pas
+    /// pouvoir sortir du dossier des modeles, et son accent doit survivre.
+    #[test]
+    fn un_nom_importe_est_reduit_a_un_fichier_sur() {
+        assert_eq!(percent_decode("%C3%A9t%C3%A9"), "été");
+        assert_eq!(
+            safe_import_name("planche%20botanique.safetensors").as_deref(),
+            Some("planche botanique.safetensors")
+        );
+        // Un chemin relatif remonte : on ne garde que le dernier morceau.
+        assert_eq!(
+            safe_import_name("..%2F..%2Fsecret.safetensors").as_deref(),
+            Some("secret.safetensors")
+        );
+        // Un chemin Windows absolu aussi.
+        assert_eq!(
+            safe_import_name("C%3A%5CUsers%5Cm.safetensors").as_deref(),
+            Some("m.safetensors")
+        );
+        // Une extension inconnue est refusee, comme un nom vide.
+        assert_eq!(safe_import_name("virus.exe"), None);
+        assert_eq!(safe_import_name(""), None);
+        assert_eq!(safe_import_name(".cache.safetensors"), None);
+        // Un caractere interdit par Windows devient un souligne.
+        assert_eq!(
+            safe_import_name("mo%3Adele.safetensors").as_deref(),
+            Some("mo_dele.safetensors")
+        );
     }
 }

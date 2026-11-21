@@ -460,10 +460,12 @@
                   <span class="setting-name" id="setting-image-folder-name">Dossier des modèles d'image</span>
                   <span class="setting-hint" id="image-folder-hint">Un .safetensors ou un .gguf déposé dans models/image/ apparaît dans la bibliothèque, comme un plugin.</span>
                 </div>
-                <div class="setting-inline">
+                <div class="setting-inline setting-inline-wrap">
+                  <button class="primary-button" type="button" data-import-button>Importer un fichier…</button>
                   <button class="secondary-button" id="image-folder-open" type="button">Ouvrir le dossier</button>
                   <button class="secondary-button" id="image-folder-refresh" type="button">Actualiser</button>
                 </div>
+                <p class="setting-hint import-progress" data-import-progress hidden></p>
               </div>
               <p class="setting-note" id="download-info">The first download can take a few minutes. The model stays cached on this device.</p>
             </section>
@@ -633,8 +635,15 @@
       <div class="model-library-actions"><button class="model-help-button" id="model-recommend" type="button">M'aider à choisir</button><button class="my-model-button" id="my-model-toggle" type="button">Mon assistant</button><button class="icon-button" id="model-library-close" type="button" aria-label="Fermer"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button></div>
     </div>
     <p class="model-library-intro" id="model-library-intro">Choisissez selon votre usage. Vous pourrez télécharger le modèle sélectionné juste après.</p>
+    <div class="model-library-tools">
+      <label class="model-search" for="model-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+        <input id="model-search" type="search" placeholder="Rechercher un modèle" autocomplete="off" aria-label="Rechercher un modèle">
+      </label>
+      <p class="model-summary" id="model-summary" aria-live="polite"></p>
+    </div>
+    <div class="model-active" id="model-active" hidden></div>
     <div class="model-filters" id="model-filters" role="tablist" aria-label="Filtrer les modèles"></div>
-    <p class="model-summary" id="model-summary" aria-live="polite"></p>
     <div class="model-cards" id="model-cards"></div>
   </dialog>
   <dialog class="custom-model-dialog" id="custom-model-dialog" aria-labelledby="custom-model-title">
@@ -677,6 +686,7 @@
     <input id="custom-model-import-file" type="file" accept="application/json,.json" hidden>
   </dialog>
   <div class="drop-veil" id="drop-veil" hidden aria-hidden="true"><span id="drop-veil-label">Déposez les fichiers ici</span></div>
+  <input id="image-import-input" type="file" accept=".safetensors,.gguf,.ckpt,.pt" hidden>
   <script type="module" src="app.js"></script>
 </body>
 </html>

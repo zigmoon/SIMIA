@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.35": {
+      "title": "Modele vs style : on voit ce qui est actif, on importe en un geste, et 14 Go peuvent etre interrompus",
+      "highlights": [
+        "La pastille en haut de la conversation montre maintenant les deux choses qui dessinent : le modele, puis le style pose dessus, separes par un +. Un style qui ne correspond pas a l'architecture du modele passe en couleur d'alerte, et son infobulle dit que le moteur l'ignorera.",
+        "« Importer un fichier… » dans les reglages, ou un glisser-deposer n'importe ou dans la fenetre : SIMIA lit l'en-tete du fichier, range tout seul un modele complet a la racine et un style dans loras/, relit la liste et selectionne le style importe. Le fichier est ecrit au fil de l'eau, jamais charge en memoire, et une barre montre l'avancee de l'envoi.",
+        "Un pack de 14 Go ne se perd plus au milieu : le telechargement reprend au dernier octet deja ecrit, retente cinq fois, abandonne un transfert fige, garde le fichier partiel et le dit. Un bouton « Arreter » le stoppe net. Un fichier tronque n'est plus jamais pris pour un modele installe, et l'espace disque est verifie avant de commencer.",
+        "La progression est desormais exacte : le catalogue donne la taille de chaque fichier, la barre additionne les quatre composants et affiche 15 261 380 800 octets pour MiniMax-H3, au lieu d'une estimation tiree d'un libelle.",
+        "La bibliotheque de modeles est reconstruite. Une bande « Actif maintenant » resume ce qui repond, une recherche retrouve un modele parmi 55, les cartes sont trois fois plus compactes (le defilement passe de 5 887 a 989 pixels), les groupes collent en haut, et un resultat vide le dit sans parler d'onglet.",
+        "MiniMax-H3 est proposé comme les autres packs : quatre fichiers annonces avec leur taille, telecharges depuis Hugging Face, avec l'espace disque verifie avant et la possibilite d'arreter."
+      ]
+    },
     "0.1.34": {
       "title": "Un style qui ne correspond pas a l'image le dit avant de dessiner",
       "highlights": [

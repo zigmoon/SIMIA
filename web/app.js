@@ -300,6 +300,7 @@ const state = {
   gpuFeatures: null,
   webllmAppConfig: null,
   modelFilter: "all",
+  modelSearch: "",
   modelAdvice: "",
   customModelStatus: "",
   customModel: null,
@@ -400,6 +401,8 @@ const ui = {
   modelLibrary: document.querySelector("#model-library"),
   modelFilters: document.querySelector("#model-filters"),
   modelCards: document.querySelector("#model-cards"),
+  modelSearch: document.querySelector("#model-search"),
+  modelActive: document.querySelector("#model-active"),
   customModelDialog: document.querySelector("#custom-model-dialog"),
   customModelToggle: document.querySelector("#my-model-toggle"),
   customModelSettingsToggle: document.querySelector("#my-model-settings-toggle"),
@@ -4406,6 +4409,147 @@ async function refreshImagePacks() {
   return packs;
 }
 
+/* Import d'un fichier depuis l'interface : le corps de la requete EST le
+   fichier, le lanceur l'ecrit au fil de l'eau et le range selon son en-tete.
+   On passe par XHR plutot que fetch pour avoir l'avancee de l'envoi : un
+   checkpoint de 6 Go met plusieurs minutes, et sans barre on croit que rien
+   ne se passe. */
+function importImageFile(file) {
+  return new Promise(resolve => {
+    if (!NATIVE || !IMAGE || !file) {
+      resolve({ ok: false, error: "import indisponible" });
+      return;
+    }
+    const url = IMAGE.importUrl || "/_simia/image/import";
+    const request = new XMLHttpRequest();
+    request.open("POST", url, true);
+    request.setRequestHeader("Content-Type", "application/octet-stream");
+    request.setRequestHeader("X-Simia-Filename", encodeURIComponent(file.name));
+    importState.name = file.name;
+    importState.bytes = file.size;
+    importState.sent = 0;
+    importState.busy = true;
+    paintImportState();
+    request.upload.addEventListener("progress", event => {
+      if (!event.lengthComputable) return;
+      importState.sent = event.loaded;
+      importState.bytes = event.total;
+      paintImportState();
+    });
+    request.addEventListener("load", () => {
+      importState.busy = false;
+      let payload = {};
+      try { payload = JSON.parse(request.responseText || "{}"); } catch { payload = {}; }
+      if (request.status >= 200 && request.status < 300 && payload.ok) {
+        resolve({ ok: true, payload });
+      } else {
+        resolve({ ok: false, error: payload.error || String(request.status) });
+      }
+    });
+    request.addEventListener("error", () => {
+      importState.busy = false;
+      resolve({ ok: false, error: "connexion interrompue" });
+    });
+    request.send(file);
+  });
+}
+
+const importState = { busy: false, name: "", bytes: 0, sent: 0, dragging: false };
+
+function paintImportState() {
+  document.querySelectorAll("[data-import-progress]").forEach(node => {
+    if (!importState.busy) {
+      node.hidden = true;
+      node.textContent = "";
+      return;
+    }
+    node.hidden = false;
+    const percent = importState.bytes ? Math.round((importState.sent / importState.bytes) * 100) : 0;
+    node.textContent = localizedText(
+      `Envoi de ${importState.name} : ${percent} %`,
+      `Uploading ${importState.name}: ${percent}%`,
+      `Enviando ${importState.name}: ${percent} %`,
+      `${importState.name} を送信中: ${percent}%`
+    );
+  });
+  document.querySelectorAll("[data-import-button]").forEach(button => {
+    button.disabled = importState.busy;
+  });
+}
+
+/* Le fichier choisi part vers le lanceur, puis la bibliotheque se relit toute
+   seule : le modele importe doit apparaitre sans redemarrer SIMIA. */
+async function runImageImport(file) {
+  if (!file) return;
+  const result = await importImageFile(file);
+  if (!result.ok) {
+    paintImportState();
+    toast(
+      localizedText(
+        `Import impossible : ${result.error}`,
+        `Import failed: ${result.error}`,
+        `Importación imposible: ${result.error}`,
+        `インポートできません: ${result.error}`
+      ),
+      "error"
+    );
+    return;
+  }
+  const payload = result.payload || {};
+  await refreshImagePacks();
+  const isLora = payload.kind === "lora";
+  if (isLora) {
+    state.imageLora = payload.name;
+    renderImageLoraControls();
+    renderImageEngineUi();
+    saveState();
+  }
+  paintImportState();
+  toast(
+    isLora
+      ? localizedText(
+        `${payload.name} est prêt comme style. Choisissez-le dans les réglages.`,
+        `${payload.name} is ready as a style. Pick it in the settings.`,
+        `${payload.name} está listo como estilo. Elígelo en los ajustes.`,
+        `${payload.name} をスタイルとして登録しました。設定から選べます。`
+      )
+      : localizedText(
+        `${payload.name} est prêt comme modèle d'image.`,
+        `${payload.name} is ready as an image model.`,
+        `${payload.name} está listo como modelo de imagen.`,
+        `${payload.name} を画像モデルとして登録しました。`
+      )
+  );
+}
+
+/* Un fichier de poids d'image : c'est ce qu'on importe au lieu de le joindre
+   a la conversation. */
+function isModelWeight(file) {
+  return /\.(safetensors|gguf|ckpt|pt)$/i.test(file?.name || "");
+}
+
+/* Import par le bouton. Le depot, lui, passe par le glisser-deposer global :
+   un seul voile, une seule route, pour ne pas avoir deux cibles qui se
+   disputent le meme geste. */
+function wireImageImport() {
+  if (!NATIVE) return;
+  const input = document.querySelector("#image-import-input");
+  /* Delegation : la bibliotheque recree ses cartes a chaque ouverture, un
+     ecouteur pose sur la carte disparaitrait avec elle. */
+  document.addEventListener("click", event => {
+    const button = event.target.closest("[data-import-button]");
+    if (!button) return;
+    event.preventDefault();
+    input?.click();
+  });
+  input?.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (file) runImageImport(file);
+  });
+}
+
+
 /* LoRA de style : un fichier .safetensors déposé dans models/image/loras/ se
    choisit ici. Le poids règle son influence ; « Aucun » laisse le style du
    pack, s'il en a un. */
@@ -4690,7 +4834,27 @@ function downloadBlock(id) {
   return `<div class="card-progress" data-download="${escapeHtml(id)}" hidden>
       <p class="card-progress-text"></p>
       <div class="card-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="card-progress-fill"></i></div>
+      <button class="card-progress-stop" type="button" data-download-cancel>${escapeHtml(localizedText("Arrêter", "Stop", "Detener", "停止"))}</button>
     </div>`;
+}
+
+/* Arreter un telechargement de 14 Go : le partiel est garde, relancer reprend
+   ou l'on s'est arrete. Sans ce bouton, la seule issue etait de fermer SIMIA. */
+async function cancelImageDownload() {
+  if (!NATIVE || !downloadState.id) return;
+  try {
+    await fetch(new URL("/_simia/image/cancel", location.href).href, { method: "POST", cache: "no-store" });
+    toast(
+      localizedText(
+        "Téléchargement arrêté. Le fichier partiel est gardé : relancer reprendra où il s'est arrêté.",
+        "Download stopped. The partial file is kept: restarting resumes where it left off.",
+        "Descarga detenida. El archivo parcial se conserva: al reiniciar se reanuda donde se quedó.",
+        "ダウンロードを停止しました。途中までのファイルは保持され、再開すると続きから取得します。"
+      )
+    );
+  } catch {
+    toast(localizedText("Impossible d'arrêter le téléchargement.", "Could not stop the download.", "No se pudo detener la descarga.", "ダウンロードを停止できませんでした。"), "error");
+  }
 }
 
 async function downloadImagePack(id) {
@@ -4699,13 +4863,19 @@ async function downloadImagePack(id) {
   toast(localizedText(`Téléchargement de ${pack?.name || id}…`, `Downloading ${pack?.name || id}…`, `Descargando ${pack?.name || id}…`, `${pack?.name || id} をダウンロード中…`));
   beginDownload(id);
   renderModelLibrary();
+  let cancelled = false;
   try {
     const response = await fetch(IMAGE.downloadPackUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id })
     });
-    if (!response.ok) throw new Error(String(response.status));
+    if (!response.ok) {
+      /* 500 avec un corps : le lanceur dit pourquoi. Un 400 signifie souvent
+         une annulation, traitee comme telle. */
+      cancelled = response.status === 400;
+      throw new Error(String(response.status));
+    }
     const payload = await response.json();
     state.imagePacks = Array.isArray(payload.packs) ? payload.packs : state.imagePacks;
     state.imagePackId = payload.selected || id;
@@ -4722,7 +4892,9 @@ async function downloadImagePack(id) {
     renderImageEngineUi();
     toast(localizedText("Modèle d'image prêt.", "Image model ready.", "Modelo de imagen listo.", "画像モデルの準備ができました。"));
   } catch {
-    toast(localizedText("Le téléchargement a échoué.", "The download failed.", "La descarga falló.", "ダウンロードに失敗しました。"), "error");
+    if (!cancelled) {
+      toast(localizedText("Le téléchargement a échoué.", "The download failed.", "La descarga falló.", "ダウンロードに失敗しました。"), "error");
+    }
   }
   endDownload();
 }
@@ -5121,6 +5293,19 @@ function activeImagePack() {
   return state.imagePacks.find(pack => pack.id === state.imagePackId) || null;
 }
 
+/* Le style choisi dans les reglages, s'il existe encore sur le disque. */
+function activeImageLora() {
+  if (!state.imageLora) return null;
+  return state.imageLoras.find(lora => lora.name === state.imageLora) || null;
+}
+
+/* Nom court d'un style : le fichier sans son extension, sans le prefixe
+   d'entrainement (lora_), et borne pour ne pas ecraser la pastille. */
+function shortLoraName(lora) {
+  const base = String(lora?.name || "").replace(/\.(safetensors|pt|ckpt)$/i, "").replace(/^lora[_-]/i, "");
+  return base.length > 18 ? `${base.slice(0, 17)}…` : base;
+}
+
 /* Nom court : "SD 1.5 · Gravure SIMIA" devient "Gravure SIMIA". Le nom complet
    reste dans l'infobulle et dans les parametres. */
 function shortImageName(pack) {
@@ -5147,12 +5332,32 @@ function renderImageEngineUi() {
   if (ui.imageEngine) {
     ui.imageEngine.hidden = !ready;
     if (ready) {
-      ui.imageEngine.innerHTML = `<svg class="engine-chip-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><b>${escapeHtml(shortImageName(pack))}</b>`;
+      const lora = activeImageLora();
+      const loraMismatch = Boolean(lora && lora.family && pack.family && lora.family !== pack.family);
+      /* Deux informations dans une seule pastille : le modele et le style.
+         Sans le style, on ne savait pas, en haut de la conversation, ce qui
+         allait reellement dessiner. */
+      const loraPart = lora
+        ? `<span class="engine-chip-sep" aria-hidden="true">+</span><b class="engine-chip-lora${loraMismatch ? " is-warning" : ""}">${escapeHtml(shortLoraName(lora))}</b>`
+        : "";
+      const videoPart = pack.video
+        ? `<span class="engine-chip-tag">${escapeHtml(localizedText("vidéo", "video", "vídeo", "動画"))}</span>`
+        : "";
+      ui.imageEngine.classList.toggle("is-warning", loraMismatch);
+      ui.imageEngine.innerHTML = `<svg class="engine-chip-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><b>${escapeHtml(shortImageName(pack))}</b>${videoPart}${loraPart}`;
+      const loraText = lora
+        ? localizedText(
+          ` Style : ${lora.name}${loraMismatch ? " (ne correspond pas à ce modèle, le moteur l'ignorera)" : ""}.`,
+          ` Style: ${lora.name}${loraMismatch ? " (does not match this model, the engine will ignore it)" : ""}.`,
+          ` Estilo: ${lora.name}${loraMismatch ? " (no corresponde a este modelo, el motor lo ignorará)" : ""}.`,
+          ` スタイル: ${lora.name}${loraMismatch ? "（このモデルと不一致のため適用されません）" : ""}。`
+        )
+        : "";
       ui.imageEngine.title = localizedText(
-        `Modèle d'image : ${pack.name} (${meta}). Cliquez pour changer.`,
-        `Image model: ${pack.name} (${meta}). Click to change.`,
-        `Modelo de imagen: ${pack.name} (${meta}). Haz clic para cambiar.`,
-        `画像モデル: ${pack.name}（${meta}）。クリックで変更。`
+        `Modèle d'image : ${pack.name} (${meta}).${loraText} Cliquez pour changer.`,
+        `Image model: ${pack.name} (${meta}).${loraText} Click to change.`,
+        `Modelo de imagen: ${pack.name} (${meta}).${loraText} Haz clic para cambiar.`,
+        `画像モデル: ${pack.name}（${meta}）。${loraText}クリックで変更。`
       );
       ui.imageEngine.setAttribute("aria-label", ui.imageEngine.title);
     }
@@ -9024,7 +9229,60 @@ function renderModelLibrary() {
     button.setAttribute("aria-selected", String(id === state.modelFilter));
     return button;
   }));
-  const visibleModels = MODELS.filter(model => modelIsCompatible(model) && modelMatchesFilter(model)).sort((first, second) => Number(Boolean(second.recommended)) - Number(Boolean(first.recommended)));
+  /* La recherche porte sur les deux familles de cartes : avec 40 modeles de
+     texte et 15 packs d'image, retrouver « qwen » ou « gravure » a la main
+     demandait de faire defiler treize ecrans. */
+  const query = state.modelSearch.trim().toLowerCase();
+  const matches = (...fields) => !query || fields.some(field => String(field || "").toLowerCase().includes(query));
+  /* Ce qui repond en ce moment, en tete de bibliotheque : la conversation et
+     l'image sont deux moteurs distincts, et le style se pose par-dessus. Sans
+     cette bande, il fallait fermer la fenetre et lire la pastille du haut pour
+     savoir ce qui etait actif. */
+  if (ui.modelActive) {
+    const pieces = [];
+    const textActive = NATIVE
+      ? state.customModelActive && state.customModel
+        ? state.customModel.name
+        : (MODELS.find(model => model.id === state.selectedModel)?.name || "")
+      : (state.cachedModelId ? MODELS.find(model => model.id === state.cachedModelId)?.name : "");
+    const textReady = NATIVE ? Boolean(textActive) : Boolean(state.cachedModelId);
+    if (textReady) {
+      pieces.push({
+        kind: localizedText("CONVERSATION", "CONVERSATION", "CONVERSACIÓN", "会話"),
+        name: textActive || localizedText("modèle actif", "active model", "modelo activo", "有効なモデル"),
+        state: "ready"
+      });
+    }
+    const imagePack = activeImagePack();
+    if (imagePack && imagePack.local) {
+      pieces.push({
+        kind: imagePack.video
+          ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画")
+          : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"),
+        name: imagePack.name,
+        state: "ready"
+      });
+      const lora = activeImageLora();
+      if (lora) {
+        const mismatch = Boolean(lora.family && imagePack.family && lora.family !== imagePack.family);
+        pieces.push({
+          kind: localizedText("STYLE", "STYLE", "ESTILO", "スタイル"),
+          name: lora.name,
+          state: mismatch ? "warning" : "ready"
+        });
+      }
+    }
+    if (pieces.length) {
+      ui.modelActive.hidden = false;
+      ui.modelActive.innerHTML = `<p class="model-active-label">${escapeHtml(localizedText("ACTIF MAINTENANT", "ACTIVE NOW", "ACTIVO AHORA", "現在有効"))}</p><ul>${pieces
+        .map(piece => `<li class="model-active-item is-${piece.state}"><span class="model-active-kind">${escapeHtml(piece.kind)}</span><span class="model-active-name">${escapeHtml(piece.name)}</span></li>`)
+        .join("")}</ul>`;
+    } else {
+      ui.modelActive.hidden = true;
+      ui.modelActive.innerHTML = "";
+    }
+  }
+  const visibleModels = MODELS.filter(model => modelIsCompatible(model) && modelMatchesFilter(model) && matches(model.name, model.category, model.origin, model.id)).sort((first, second) => Number(Boolean(second.recommended)) - Number(Boolean(first.recommended)));
   const showImage = Boolean(IMAGE) && (state.modelFilter === "all" || state.modelFilter === "image");
   const recommendedLabel = localizedText("RECOMMANDÉ", "RECOMMENDED", "RECOMENDADO");
   const customCards = [];
@@ -9041,7 +9299,9 @@ function renderModelLibrary() {
      un modele livre avec un modele a telecharger. */
   const packRank = pack => (pack.bundled ? 0 : pack.local ? 1 : 2);
   const orderedPacks = showImage
-    ? [...state.imagePacks].sort((a, b) => packRank(a) - packRank(b) || Number(b.recommended) - Number(a.recommended))
+    ? [...state.imagePacks]
+        .filter(pack => matches(pack.name, pack.note, pack.id, pack.family))
+        .sort((a, b) => packRank(a) - packRank(b) || Number(b.recommended) - Number(a.recommended))
     : [];
   const groupTitle = rank => rank === 0
     ? localizedText("Fournis avec SIMIA", "Shipped with SIMIA", "Incluidos con SIMIA", "SIMIA 同梱")
@@ -9112,7 +9372,7 @@ function renderModelLibrary() {
   /* La possibilite d'ajouter ses propres poids existait deja — le lanceur
      scanne models/ — mais rien ne l'annoncait dans l'interface. Un fichier
      depose la main apparait dans cette liste sous son nom de fichier. */
-  const ownModelCard = !NATIVE
+  const ownModelCard = !NATIVE || Boolean(query)
     ? []
     : [(() => {
         const card = document.createElement("article");
@@ -9122,7 +9382,7 @@ function renderModelLibrary() {
       })()];
   /* Même geste que pour les modèles de texte : un dossier, un fichier déposé,
      et il apparaît. Un .safetensors de Civitai ou un .gguf quantifié, au choix. */
-  const ownImageCard = !IMAGE || !showImage
+  const ownImageCard = !IMAGE || !showImage || Boolean(query)
     ? []
     : [(() => {
         const card = document.createElement("article");
@@ -9130,7 +9390,7 @@ function renderModelLibrary() {
         card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("VOTRE CATALOGUE", "YOUR CATALOG", "TU CATÁLOGO", "あなたのカタログ"))}</p><span class="model-origin model-origin-local">${escapeHtml(localizedText("LIBRE", "OPEN", "LIBRE", "自由"))}</span></div><div><h3>${escapeHtml(localizedText("Ajouter un modèle d'image", "Add an image model", "Añadir un modelo de imagen", "画像モデルを追加"))}</h3><p>${escapeHtml(localizedText("Déposez un .safetensors (Stable Diffusion, Civitai) ou un .gguf dans models/image/ : il apparaît ici sous son nom de fichier, sans redémarrer SIMIA. Les LoRA .safetensors vont dans models/image/loras/ et se choisissent dans les réglages.", "Drop a .safetensors (Stable Diffusion, Civitai) or a .gguf into models/image/: it appears here under its filename, without restarting SIMIA. .safetensors LoRAs go into models/image/loras/ and are picked in the settings.", "Coloca un .safetensors (Stable Diffusion, Civitai) o un .gguf en models/image/: aparece aquí con su nombre de archivo, sin reiniciar SIMIA. Los LoRA .safetensors van en models/image/loras/ y se eligen en los ajustes.", "models/image/ に .safetensors（Stable Diffusion、Civitai）または .gguf を置くと、再起動なしでここに表示されます。.safetensors の LoRA は models/image/loras/ に置き、設定から選びます。"))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("models/image/ sur ce disque", "models/image/ on this disk", "models/image/ en este disco", "この PC の models/image/"))}</span><button type="button" data-open-image-folder>${escapeHtml(localizedText("Ouvrir le dossier", "Open folder", "Abrir carpeta", "フォルダーを開く"))}</button><button type="button" data-refresh-image-packs>${escapeHtml(localizedText("Actualiser", "Refresh", "Actualizar", "更新"))}</button></div>`;
         return card;
       })()];
-  const desktopCard = !oversized.length || state.modelFilter !== "all"
+  const desktopCard = !oversized.length || state.modelFilter !== "all" || Boolean(query)
     ? []
     : [(() => {
         const card = document.createElement("article");
@@ -9178,7 +9438,23 @@ function renderModelLibrary() {
      ce decompte, il fallait compter les badges un par un pour savoir ou l'on
      en etait. */
   const summary = document.querySelector("#model-summary");
-  if (summary) {
+  if (summary && query) {
+    const found = visibleModels.length + (showImage ? orderedPacks.length : 0);
+    summary.textContent = found
+      ? localizedText(
+        `${found} résultat(s) pour « ${state.modelSearch.trim()} »`,
+        `${found} result(s) for “${state.modelSearch.trim()}”`,
+        `${found} resultado(s) para «${state.modelSearch.trim()}»`,
+        `「${state.modelSearch.trim()}」の結果 ${found} 件`
+      )
+      : localizedText(
+        `Aucun résultat pour « ${state.modelSearch.trim()} »`,
+        `No result for “${state.modelSearch.trim()}”`,
+        `Ningún resultado para «${state.modelSearch.trim()}»`,
+        `「${state.modelSearch.trim()}」に一致するモデルはありません`
+      );
+    summary.hidden = false;
+  } else if (summary) {
     if (!showImage) {
       const localCount = MODELS.filter(model => model.nativeLocal).length;
       const remoteCount = NATIVE ? MODELS.length - localCount : 0;
@@ -9211,7 +9487,16 @@ function renderModelLibrary() {
   if (!customCards.length && !visibleModels.length && !imageCards.length && !desktopCard.length && !euDesktopCards.length) {
     const empty = document.createElement("p");
     empty.className = "model-cards-empty";
-    empty.textContent = text.empty;
+    /* Le resume dit deja « aucun resultat pour … » : repeter un message qui
+       parle de compatibilite ou d'onglet serait faux. */
+    empty.textContent = query
+      ? localizedText(
+        "Aucun modèle ne correspond à cette recherche.",
+        "No model matches this search.",
+        "Ningún modelo coincide con esta búsqueda.",
+        "この検索に一致するモデルはありません。"
+      )
+      : text.empty;
     ui.modelCards.append(empty);
   }
   /* Un telechargement peut etre en cours pendant qu'on reconstruit la liste :
@@ -9938,6 +10223,16 @@ document.addEventListener("drop", event => {
   dragDepth = 0;
   ui.form.classList.remove("is-dropping");
   showDropVeil(false);
+  /* Un modele d'image depose se range tout seul : il n'a rien a faire en piece
+     jointe d'une conversation. Ce cas passe avant la fermeture sur boite de
+     dialogue, pour qu'on puisse importer depuis la bibliotheque ouverte. */
+  if (NATIVE && IMAGE) {
+    const weight = Array.from(event.dataTransfer.files || []).find(isModelWeight);
+    if (weight) {
+      runImageImport(weight);
+      return;
+    }
+  }
   if (modalOpen()) return;
   const { files, folders } = droppedEntries(event.dataTransfer);
   if (folders) {
@@ -10324,14 +10619,26 @@ ui.imageLora?.addEventListener("change", () => {
   state.imageLora = ui.imageLora.value;
   /* L'aide sous la liste change de sens selon le style choisi : elle doit se
      reecrire tout de suite, sinon l'incompatibilite ne se voit qu'apres un
-     rechargement de la fenetre. */
+     rechargement de la fenetre. La pastille du haut suit le meme chemin : le
+     style actif doit etre lisible depuis la conversation. */
   renderImageLoraControls();
+  renderImageEngineUi();
   saveState();
 });
 ui.imageLoraWeight?.addEventListener("input", () => {
   const value = Number(ui.imageLoraWeight.value);
   state.imageLoraWeight = Number.isFinite(value) ? Math.min(2, Math.max(0, value)) : 0.8;
   saveState();
+});
+/* Import, glisser-deposer et boutons : une seule mise en place, elle branche
+   aussi les boutons que la bibliotheque recree a chaque ouverture. */
+wireImageImport();
+/* Le bouton d'arret vit dans une carte que la bibliotheque reconstruit : la
+   delegation est le seul branchement qui survit a un rendu. */
+document.addEventListener("click", event => {
+  if (!event.target.closest("[data-download-cancel]")) return;
+  event.preventDefault();
+  cancelImageDownload();
 });
 /* Même geste que dans la bibliothèque : on ouvre le dossier, ou on relit ce
    qu'il contient sans quitter les réglages. */
@@ -10407,6 +10714,15 @@ ui.customModelImportFile.addEventListener("change", event => {
   if (file) importCustomModel(file);
   event.target.value = "";
 });
+ui.modelSearch?.addEventListener("input", () => {
+  state.modelSearch = ui.modelSearch.value;
+  /* On ne reconstruit que la liste : reecrire tout le dialogue ferait perdre
+     le focus a chaque frappe. */
+  renderModelLibrary();
+  ui.modelSearch.focus();
+  ui.modelSearch.setSelectionRange(ui.modelSearch.value.length, ui.modelSearch.value.length);
+});
+
 ui.modelLibrary.addEventListener("click", event => {
   const close = event.target.closest("#model-library-close");  if (close) return ui.modelLibrary.close();
   if (event.target.closest("#model-recommend")) return recommendModel();
