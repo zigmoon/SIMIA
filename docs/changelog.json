@@ -1,6 +1,15 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.33": {
+      "title": "La generation d'images est reparee",
+      "highlights": [
+        "La version 0.1.32 avait casse la generation d'images : en reorganisant le lancement du moteur, les consignes qui lui disent sur quel port ecouter avaient disparu. Le moteur s'installait donc sur son port par defaut, le lanceur interrogeait le sien, et la conversation restait bloquee sur « Preparation du modele d'image ». Les trois consignes sont revenues, avec un test qui refuse leur disparition.",
+        "Le lanceur transmet desormais des chemins absolus aux moteurs. Un chemin relatif se resolvait depuis le dossier du moteur et non depuis celui de SIMIA : le modele passait pour absent alors qu'il etait bien la.",
+        "Quand un fichier de modele manque vraiment, le message le dit maintenant en clair et donne le chemin attendu, au lieu d'inviter a verifier le pilote graphique.",
+        "Verifie en conditions reelles : un portrait demande en mode Image revient en 14 secondes, 512x512, avec le style gravure applique."
+      ]
+    },
     "0.1.32": {
       "title": "MiniMax-H3 : SIMIA genere aussi des videos avec leur son",
       "highlights": [

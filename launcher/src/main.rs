@@ -1176,6 +1176,17 @@ fn main() {
     step(2, 3, &format!("Chargement de {} dans le GPU", start.name));
     if let Err(reason) = wait_healthy(&mut child, llama_port, &llama_log) {
         let _ = fs::remove_file(&pid_file);
+        if reason.contains("introuvable") {
+            fail(&reason);
+        }
+        // Le nom choisi par defaut peut etre absent du disque : le dire ici
+        // evite de chercher un probleme de pilote.
+        if !start.path.is_file() {
+            fail(&format!(
+                "{reason}\n\nLe fichier attendu n'existe pas : {}",
+                absolute(&start.path).display()
+            ));
+        }
         fail(&format!(
             "{reason}\n\nVerifiez que le GPU est disponible (pilote Vulkan / Metal), que le modele n'est pas corrompu, et que le systeme satisfait les versions minimales indiquees dans le LISEZ-MOI."
         ));
@@ -1580,6 +1591,19 @@ fn collect_binaries(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {    if de
     }
 }
 
+/// Les moteurs sont lances depuis leur propre dossier (`vendor/<moteur>/`) :
+/// un chemin relatif qui leur est transmis se resout donc au mauvais endroit.
+/// Tout ce qui part vers un moteur passe d'abord par ici.
+fn absolute(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+    match env::current_dir() {
+        Ok(cwd) => cwd.join(path),
+        Err(_) => path.to_path_buf(),
+    }
+}
+
 fn find_models_dir(web: &Path) -> PathBuf {
     let mut candidates: Vec<PathBuf> = Vec::new();
     if let Some(parent) = web.parent() {
@@ -1591,10 +1615,15 @@ fn find_models_dir(web: &Path) -> PathBuf {
     candidates.push(exe_dir().join("models"));
     for candidate in &candidates {
         if candidate.join("catalog.json").is_file() || candidate.is_dir() {
-            return candidate.clone();
+            return absolute(candidate);
         }
     }
-    let fallback = candidates.first().cloned().unwrap_or_else(|| PathBuf::from("models"));
+    let fallback = absolute(
+        &candidates
+            .first()
+            .cloned()
+            .unwrap_or_else(|| PathBuf::from("models")),
+    );
     let _ = fs::create_dir_all(&fallback);
     fallback
 }
@@ -2109,6 +2138,7 @@ fn sd_log_path(port: u16) -> std::path::PathBuf {
 fn sd_server_args(
     pack: &ImagePack,
     dir: &Path,
+    port: u16,
     steps: u32,
     width: u32,
     height: u32,
@@ -2161,6 +2191,15 @@ fn sd_server_args(
     args.push(width.to_string());
     args.push("-H".to_string());
     args.push(height.to_string());
+    /* Le moteur ecoute 1234 par defaut. Sans ces trois drapeaux, le lanceur
+       interrogeait un port ou personne n'ecoutait : la generation d'images
+       echouait sans le moindre message. Restaures tels quels. */
+    args.push("--listen-ip".to_string());
+    args.push("127.0.0.1".to_string());
+    args.push("--listen-port".to_string());
+    args.push(port.to_string());
+    args.push("--log-level".to_string());
+    args.push("warn".to_string());
     args
 }
 
@@ -2174,7 +2213,7 @@ fn spawn_sd_server(
     height: u32,
 ) -> std::io::Result<Child> {
     let mut command = Command::new(bin);
-    for argument in sd_server_args(pack, dir, steps, width, height) {
+    for argument in sd_server_args(pack, dir, port, steps, width, height) {
         command.arg(argument);
     }
     command
@@ -2675,6 +2714,15 @@ fn tail_of(path: &Path, lines: usize) -> String {
         .join(" | ")
 }
 
+/// Vrai quand le journal du moteur dit que le fichier n'existe pas, plutot
+/// que d'annoncer un probleme de GPU ou de memoire.
+fn log_mentions_missing_file(path: &Path) -> bool {
+    let text = fs::read_to_string(path).unwrap_or_default();
+    text.contains("failed to open GGUF file")
+        || text.contains("No such file or directory")
+        || text.contains("error loading model")
+}
+
 fn spawn_llama(bin: &Path, model: &Path, mmproj: Option<&Path>, port: u16, ctx: u32) -> std::io::Result<(Child, PathBuf)> {
     let log_path = env::temp_dir().join(format!("simia-llama-{port}.log"));
     let log = fs::File::create(&log_path)?;
@@ -2682,9 +2730,9 @@ fn spawn_llama(bin: &Path, model: &Path, mmproj: Option<&Path>, port: u16, ctx: 
     let mut command = Command::new(bin);
     command
         .arg("-m")
-        .arg(model);
+        .arg(absolute(model));
     if let Some(mmproj) = mmproj {
-        command.arg("--mmproj").arg(mmproj);
+        command.arg("--mmproj").arg(absolute(mmproj));
     }
     command
         .arg("-ngl")
@@ -2756,6 +2804,14 @@ fn wait_healthy(child: &mut Child, port: u16, log_path: &Path) -> Result<(), Str
             if !detail.is_empty() {
                 message.push_str(" : ");
                 message.push_str(&detail);
+            }
+            /* Le cas le plus courant n'est pas le GPU : c'est un fichier
+               absent. Sans cette lecture du journal, on envoyait l'utilisateur
+               verifier son pilote Vulkan pour un modele introuvable. */
+            if log_mentions_missing_file(log_path) {
+                message.push_str(
+                    "\nLe fichier du modele est introuvable sur le disque : choisissez un modele deja telecharge ou relancez le telechargement.",
+                );
             }
             return Err(message);
         }
@@ -3768,6 +3824,22 @@ mod console_tests {
         assert_eq!(frames[0], marquee(width + 8, width), "le cycle ne se referme pas");
         assert!(frames[6].starts_with("######"), "le bloc n'est pas en tete : {:?}", frames[6]);
     }
+
+    /// Les moteurs tournent depuis `vendor/<moteur>/` : un chemin relatif leur
+    /// fait chercher le modele au mauvais endroit, et le journal parle alors
+    /// d'un fichier introuvable au lieu d'un vrai probleme de GPU.
+    #[test]
+    fn un_chemin_relatif_devient_absolu_avant_le_moteur() {
+        let relative = Path::new("models/Qwen3.5-2B-Q4_K_M.gguf");
+        let resolved = absolute(relative);
+        assert!(resolved.is_absolute(), "chemin encore relatif : {resolved:?}");
+        assert!(
+            resolved.ends_with(relative),
+            "le chemin a perdu sa fin : {resolved:?}"
+        );
+        let already = env::current_dir().expect("dossier courant").join("modele.gguf");
+        assert_eq!(absolute(&already), already, "un chemin absolu est reecrit");
+    }
 }
 
 #[cfg(test)]
@@ -3856,7 +3928,7 @@ mod image_pack_tests {
         pack.llm = "minimax-h3/encodeur.safetensors".to_string();
         pack.vae = "minimax-h3/vae-video.safetensors".to_string();
         pack.audio_vae = "minimax-h3/vae-audio.safetensors".to_string();
-        let args = sd_server_args(&pack, Path::new("/models/image"), 8, 640, 360);
+        let args = sd_server_args(&pack, Path::new("/models/image"), 8901, 8, 640, 360);
         let line = args.join(" ");
         assert!(line.contains("--diffusion-model"), "{line}");
         assert!(line.contains("transformer.gguf"));
@@ -3872,20 +3944,25 @@ mod image_pack_tests {
         assert!(line.contains("-H 360"));
         // Un seul dossier de LoRA : deux fois, le moteur perd le premier.
         assert_eq!(args.iter().filter(|arg| *arg == "--lora-model-dir").count(), 1, "{line}");
+        // Le port demande par le lanceur, sinon le moteur ecoute 1234 et tout
+        // appel de generation tombe dans le vide.
+        assert!(line.contains("--listen-port 8901"), "{line}");
+        assert!(line.contains("--listen-ip 127.0.0.1"), "{line}");
+        assert!(line.contains("--log-level warn"), "{line}");
     }
 
     #[test]
     fn un_checkpoint_garde_l_appel_historique() {
         let mut pack = empty_pack("checkpoint");
         pack.model = "sd15/modele.gguf".to_string();
-        let args = sd_server_args(&pack, Path::new("/m"), 20, 512, 512);
+        let args = sd_server_args(&pack, Path::new("/m"), 8901, 20, 512, 512);
         assert_eq!(args[0], "-m");
         // Le separateur depend du systeme : on compare un chemin construit.
         assert_eq!(args[1], Path::new("/m").join("sd15/modele.gguf").display().to_string());
         assert!(!args.join(" ").contains("--llm"));
         // Un LoRA de style ne change pas le dossier : il est deja a la racine.
         pack.lora = "gravure.safetensors".to_string();
-        let args = sd_server_args(&pack, Path::new("/m"), 20, 512, 512);
+        let args = sd_server_args(&pack, Path::new("/m"), 8901, 20, 512, 512);
         assert_eq!(args.iter().filter(|arg| *arg == "--lora-model-dir").count(), 1);
     }
 
