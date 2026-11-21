@@ -1,6 +1,15 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.34": {
+      "title": "Un style qui ne correspond pas a l'image le dit avant de dessiner",
+      "highlights": [
+        "Un LoRA depose dans models/image/ apparait maintenant avec son architecture : « HMNSFW-Extreme-Realism · MiniMax-H3 ». Le nom de la famille manquait pour les architectures recentes, si bien que la phrase d'avertissement restait trouee : « Ce style vise : les tenseurs... ». Les six familles ont leur etiquette, et si l'une venait a manquer, SIMIA se tait plutot que d'ecrire a moitie.",
+        "Le message est plus juste : il nomme les deux architectures en clair, « ce style vise MiniMax-H3 : les tenseurs ne correspondent pas a SD 1.5, le moteur refusera de l'appliquer », et s'affiche en couleur d'alerte.",
+        "La raison de cet avertissement, verifiee sur un vrai fichier de 592 Mo : le moteur charge les 420 tenseurs et n'en applique aucun, en annoncant « Only (0 / 420) LoRA tensors have been applied ». Il rend quand meme une image, sans le style. Sans cet avertissement, on croit que le style est applique alors qu'il ne l'est pas.",
+        "Un style de la bonne famille continue de fonctionner normalement : la gravure SIMIA sur SD 1.5 reste appliquee et visible."
+      ]
+    },
     "0.1.33": {
       "title": "La generation d'images est reparee",
       "highlights": [

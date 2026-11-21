@@ -4413,7 +4413,14 @@ async function refreshImagePacks() {
    les tenseurs ne se correspondent pas d'une famille à l'autre, et le moteur
    refuse de l'appliquer. Le dire avant la génération évite d'attendre pour
    rien un message d'erreur. */
-const IMAGE_FAMILY_LABELS = { sd15: "SD 1.5", sdxl: "SDXL", dit: "DiT" };
+const IMAGE_FAMILY_LABELS = {
+  sd15: "SD 1.5",
+  sdxl: "SDXL",
+  h3: "MiniMax-H3",
+  ltx: "LTX-2",
+  zimage: "Z-Image",
+  dit: "DiT",
+};
 
 /* Duree d'un clip. 22 images a 24 i/s font 0,9 s : arrondir a l'entier
    afficherait « 0 s », ce qui laisse croire que rien n'a ete produit. */
@@ -4457,7 +4464,16 @@ function renderImageLoraControls() {
   const hint = document.querySelector("#image-lora-hint");
   const packFamilyKey = activeImagePack()?.family || "";
   const chosen = state.imageLoras.find(lora => lora.name === state.imageLora);
-  const mismatch = Boolean(chosen && chosen.family && packFamilyKey && chosen.family !== packFamilyKey);
+  /* Sans etiquette pour l'une des deux familles, la phrase serait trouee
+     (« Ce style vise : ... ») : on se tait plutot que d'ecrire a moitie. */
+  const mismatch = Boolean(
+    chosen &&
+      chosen.family &&
+      packFamilyKey &&
+      chosen.family !== packFamilyKey &&
+      imageFamilyLabel(chosen.family) &&
+      imageFamilyLabel(packFamilyKey)
+  );
   if (hint) {
     hint.textContent = mismatch
       ? localizedText(

@@ -54,6 +54,7 @@ MARKERS = {
         "renderImageLoraControls",
         "chosenLora",
         "IMAGE_FAMILY_LABELS",
+        'h3: "MiniMax-H3"',
         "is-warning",
         "videoDurationLabel",
         "sdcpp/v1/vid_gen",
