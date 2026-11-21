@@ -52,7 +52,7 @@ MARKERS = {
         'if (!NATIVE && document.querySelector(".update-bar")) return;',
         "remoteCatalog > localCatalog",
         "renderImageLoraControls",
-        "discover_image_packs",
+        "chosenLora",
         'element.setAttribute("aria-busy", "true");',
     ],
     "web/styles.css": [
