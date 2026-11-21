@@ -281,6 +281,11 @@ textarea::placeholder { color:#989e99; }
 .setting-note { margin:6px 0 0; color:var(--muted); font-size:10.5px; line-height:1.45; }
 .setting-note:empty { display:none; }
 .setting-inline { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+/* Poids d'un LoRA : un nombre court, colle a son libelle, plutot qu'un champ
+   pleine largeur qui laisserait croire qu'on saisit du texte. */
+.setting-weight { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11px; }
+.setting-weight input { width:66px; padding:6px 8px; border:1px solid #d5d9d2; border-radius:7px; background:var(--surface); color:var(--ink); font:500 12px "DM Mono",monospace; }
+#image-lora { min-width:150px; max-width:100%; }
 .setting-badge { padding:3px 9px; border-radius:999px; background:#eef4e6; border:1px solid #c9d8bd; color:#3f5b28; font:600 10px "DM Mono",monospace; }
 .setting-badge[hidden] { display:none !important; }
 .setting-row .model-picker { width:100%; }

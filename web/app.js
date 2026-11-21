@@ -308,6 +308,9 @@ const state = {
   imageMode: false,
   imagePacks: [],
   imagePackId: null,
+  imageLoras: [],
+  imageLora: "",
+  imageLoraWeight: 0.8,
   profile: "",
   view: "home"
 };
@@ -335,6 +338,12 @@ const ui = {
   imageEngine: document.querySelector("#image-engine"),
   settingImage: document.querySelector("#setting-image"),
   imagePicker: document.querySelector("#image-picker"),
+  settingImageLora: document.querySelector("#setting-image-lora"),
+  settingImageFolder: document.querySelector("#setting-image-folder"),
+  imageLora: document.querySelector("#image-lora"),
+  imageLoraWeight: document.querySelector("#image-lora-weight"),
+  imageFolderOpen: document.querySelector("#image-folder-open"),
+  imageFolderRefresh: document.querySelector("#image-folder-refresh"),
   infoToggle: document.querySelector("#info-toggle"),
   infoDialog: document.querySelector("#info-dialog"),
   infoContent: document.querySelector("#info-content"),
@@ -4353,13 +4362,60 @@ async function loadImagePacks() {
   try {
     const payload = await fetch(IMAGE.packsUrl, { cache: "no-store" }).then(response => response.json());
     state.imagePacks = Array.isArray(payload.packs) ? payload.packs : [];
+    state.imageLoras = Array.isArray(payload.loras) ? payload.loras : [];
     state.imagePackId = payload.selected || state.imagePacks[0]?.id || null;
     renderImageEngineUi();
     return state.imagePacks;
   } catch {
     state.imagePacks = [];
+    state.imageLoras = [];
     renderImageEngineUi();
     return [];
+  }
+}
+
+/* Relit le dossier des modèles d'image : un .safetensors ou un .gguf déposé
+   entre-temps apparaît, comme un plugin qu'on vient d'installer. Le lanceur
+   refait lui-même la lecture à chaque appel : rien à redémarrer. */
+async function refreshImagePacks() {
+  if (!IMAGE) return [];
+  const packs = await loadImagePacks();
+  renderImageEngineUi();
+  if (ui.modelLibrary?.open) renderModelLibrary();
+  return packs;
+}
+
+/* LoRA de style : un fichier .safetensors déposé dans models/image/loras/ se
+   choisit ici. Le poids règle son influence ; « Aucun » laisse le style du
+   pack, s'il en a un. */
+function renderImageLoraControls() {
+  if (state.imageLora && !state.imageLoras.some(lora => lora.name === state.imageLora)) {
+    state.imageLora = "";
+  }
+  if (ui.imageLora) {
+    const none = `<option value="">${escapeHtml(localizedText("Aucun style", "No style", "Sin estilo", "スタイルなし"))}</option>`;
+    const options = state.imageLoras.map(lora => {
+      const label = lora.name.replace(/\.(safetensors|pt)$/i, "");
+      return `<option value="${escapeHtml(lora.name)}"${lora.name === state.imageLora ? " selected" : ""}>${escapeHtml(label)}</option>`;
+    });
+    ui.imageLora.innerHTML = none + options.join("");
+  }
+  if (ui.imageLoraWeight) ui.imageLoraWeight.value = String(state.imageLoraWeight);
+  const hint = document.querySelector("#image-lora-hint");
+  if (hint) {
+    hint.textContent = state.imageLoras.length
+      ? localizedText(
+        `${state.imageLoras.length} style(s) dans models/image/loras/.`,
+        `${state.imageLoras.length} style(s) in models/image/loras/.`,
+        `${state.imageLoras.length} estilo(s) en models/image/loras/.`,
+        `models/image/loras/ に ${state.imageLoras.length} 件`
+      )
+      : localizedText(
+        "Déposez un LoRA .safetensors dans models/image/loras/ : il apparaît ici.",
+        "Drop a .safetensors LoRA into models/image/loras/: it shows up here.",
+        "Coloca un LoRA .safetensors en models/image/loras/: aparecerá aquí.",
+        "models/image/loras/ に .safetensors の LoRA を置くとここに表示されます。"
+      );
   }
 }
 
@@ -4636,6 +4692,12 @@ async function imageGenerate(prompt, bubble) {
   const steps = pack?.steps || IMAGE.steps;
   const cfg = pack?.cfg ?? IMAGE.cfg ?? 1.0;
   const styledPrompt = pack?.promptPrefix ? `${pack.promptPrefix}, ${prompt}` : prompt;
+  /* Style choisi dans les réglages. Le lanceur transmet la liste telle quelle au
+     moteur, qui applique le fichier de loras/ sans recharger le checkpoint.
+     Sans choix, le LoRA du pack — le style « Gravure SIMIA » — reste appliqué. */
+  const chosenLora = state.imageLora
+    ? [{ path: state.imageLora, multiplier: Number(state.imageLoraWeight) || 0.8 }]
+    : null;
 
   /* Endpoint synchrone volontairement. Le couple
      `img_gen` + `jobs/<id>` de stable-diffusion.cpp tue le serveur au premier
@@ -4679,7 +4741,8 @@ async function imageGenerate(prompt, bubble) {
         batch_size: 1,
         n_iter: 1,
         sampler_name: "Euler a",
-        save_images: false
+        save_images: false,
+        ...(chosenLora ? { lora: chosenLora } : {})
       })
     });
     if (!response.ok) {
@@ -4877,6 +4940,9 @@ function renderImageEngineUi() {
       document.querySelector("#image-picker-name").textContent = pack.name;
       document.querySelector("#image-picker-meta").textContent = meta;
       document.querySelector("#image-info").textContent = pack.note || "";
+      if (ui.settingImageLora) ui.settingImageLora.hidden = false;
+      if (ui.settingImageFolder) ui.settingImageFolder.hidden = false;
+      renderImageLoraControls();
       ui.imagePicker.title = localizedText("Changer de modèle d'image", "Change the image model", "Cambiar el modelo de imagen", "画像モデルを変更");
     }
   }
@@ -6547,6 +6613,8 @@ function saveState() {
     codeAutoPreview: state.codeAutoPreview,
     codePreviewRev: CODE_PREVIEW_REV,
     allowSteps: state.allowSteps,
+    imageLora: state.imageLora,
+    imageLoraWeight: state.imageLoraWeight,
     customModel: state.customModel,
     customModelActive: state.customModelActive,
     codeOpen: state.code.open,
@@ -6598,6 +6666,10 @@ function loadState() {
     state.codeFontSize = [12, 13, 15, 17].includes(Number(backup.codeFontSize)) ? Number(backup.codeFontSize) : 13;
     state.codeAutoPreview = Number(backup.codePreviewRev) >= CODE_PREVIEW_REV && backup.codeAutoPreview === true;
     state.allowSteps = backup.allowSteps !== false;
+    state.imageLora = typeof backup.imageLora === "string" ? backup.imageLora : "";
+    state.imageLoraWeight = Number.isFinite(Number(backup.imageLoraWeight))
+      ? Math.min(2, Math.max(0, Number(backup.imageLoraWeight)))
+      : 0.8;
     state.customModel = normalizedCustomModel(backup.customModel);
     state.customModelActive = Boolean(state.customModel) && Boolean(backup.customModelActive);
     state.profile = typeof backup.profile === "string" ? backup.profile.slice(0, 600) : "";
@@ -8767,6 +8839,8 @@ function renderModelLibrary() {
       ? pack.downloadable
         ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>`
         : `<span class="model-badge model-badge-download">${escapeHtml(localizedText("MANUEL", "MANUAL", "MANUAL", "手動"))}</span>`
+      : pack.added
+        ? `<span class="model-origin model-origin-local">${escapeHtml(localizedText("AJOUTÉ", "ADDED", "AÑADIDO", "追加"))}</span>`
       : pack.bundled
         ? `<span class="model-badge model-badge-bundled">${escapeHtml(localizedText("FOURNI AVEC SIMIA", "SHIPPED WITH SIMIA", "INCLUIDO", "同梱"))}</span>`
       : pack.recommended
@@ -8815,6 +8889,16 @@ function renderModelLibrary() {
         card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("VOTRE CATALOGUE", "YOUR CATALOG", "TU CATÁLOGO", "あなたのカタログ"))}</p><span class="model-origin model-origin-local">${escapeHtml(localizedText("LIBRE", "OPEN", "LIBRE", "自由"))}</span></div><div><h3>${escapeHtml(localizedText("Ajouter un modèle", "Add a model", "Añadir un modelo", "モデルを追加"))}</h3><p>${escapeHtml(localizedText("Déposez n'importe quel fichier .gguf dans le dossier models/ de SIMIA, puis relancez : il apparaît ici sous son nom de fichier et se charge comme les autres. Aucun catalogue à modifier.", "Drop any .gguf file into SIMIA's models/ folder, then restart: it appears here under its filename and loads like the others. No catalogue to edit.", "Coloca cualquier archivo .gguf en la carpeta models/ de SIMIA y reinicia: aparece aquí con su nombre de archivo y se carga como los demás. Sin editar ningún catálogo.", "任意の .gguf を SIMIA の models/ に置いて再起動すると、ここにファイル名で表示され、他のモデルと同じように読み込まれます。"))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("models/ sur ce disque", "models/ on this disk", "models/ en este disco", "この PC の models/"))}</span><button type="button" data-open-models-folder>${escapeHtml(localizedText("Ouvrir le dossier", "Open folder", "Abrir carpeta", "フォルダーを開く"))}</button></div>`;
         return card;
       })()];
+  /* Même geste que pour les modèles de texte : un dossier, un fichier déposé,
+     et il apparaît. Un .safetensors de Civitai ou un .gguf quantifié, au choix. */
+  const ownImageCard = !IMAGE || !showImage
+    ? []
+    : [(() => {
+        const card = document.createElement("article");
+        card.className = "model-card add-model-card";
+        card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("VOTRE CATALOGUE", "YOUR CATALOG", "TU CATÁLOGO", "あなたのカタログ"))}</p><span class="model-origin model-origin-local">${escapeHtml(localizedText("LIBRE", "OPEN", "LIBRE", "自由"))}</span></div><div><h3>${escapeHtml(localizedText("Ajouter un modèle d'image", "Add an image model", "Añadir un modelo de imagen", "画像モデルを追加"))}</h3><p>${escapeHtml(localizedText("Déposez un .safetensors (Stable Diffusion, Civitai) ou un .gguf dans models/image/ : il apparaît ici sous son nom de fichier, sans redémarrer SIMIA. Les LoRA .safetensors vont dans models/image/loras/ et se choisissent dans les réglages.", "Drop a .safetensors (Stable Diffusion, Civitai) or a .gguf into models/image/: it appears here under its filename, without restarting SIMIA. .safetensors LoRAs go into models/image/loras/ and are picked in the settings.", "Coloca un .safetensors (Stable Diffusion, Civitai) o un .gguf en models/image/: aparece aquí con su nombre de archivo, sin reiniciar SIMIA. Los LoRA .safetensors van en models/image/loras/ y se eligen en los ajustes.", "models/image/ に .safetensors（Stable Diffusion、Civitai）または .gguf を置くと、再起動なしでここに表示されます。.safetensors の LoRA は models/image/loras/ に置き、設定から選びます。"))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("models/image/ sur ce disque", "models/image/ on this disk", "models/image/ en este disco", "この PC の models/image/"))}</span><button type="button" data-open-image-folder>${escapeHtml(localizedText("Ouvrir le dossier", "Open folder", "Abrir carpeta", "フォルダーを開く"))}</button><button type="button" data-refresh-image-packs>${escapeHtml(localizedText("Actualiser", "Refresh", "Actualizar", "更新"))}</button></div>`;
+        return card;
+      })()];
   const desktopCard = !oversized.length || state.modelFilter !== "all"
     ? []
     : [(() => {
@@ -8823,7 +8907,7 @@ function renderModelLibrary() {
         card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("HORS LIGNE", "OFFLINE", "SIN CONEXIÓN", "オフライン"))}</p><span class="model-badge model-badge-download">${escapeHtml(localizedText("DESKTOP", "DESKTOP", "DESKTOP", "デスクトップ"))}</span></div><div><h3>${escapeHtml(localizedText("Version desktop", "Desktop version", "Versión de escritorio", "デスクトップ版"))}</h3><p>${escapeHtml(localizedText(`${oversized.length} modèles supplémentaires vous attendent sur PC, Mac et Linux : jusqu'à 9,7 Go, sans limite de navigateur, avec la génération d'images.`, `${oversized.length} more models wait on PC, Mac and Linux: up to 9.7 GB, no browser limit, with image generation.`, `${oversized.length} modelos más te esperan en PC, Mac y Linux: hasta 9,7 GB, sin límite del navegador y con generación de imágenes.`, `PC・Mac・Linux 版では ${oversized.length} 個の追加モデル（最大 9.7GB、ブラウザ制限なし、画像生成対応）が使えます。`))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("Sans téléversement", "Nothing uploaded", "Sin subir nada", "アップロードなし"))}</span><a class="model-card-link" href="${DESKTOP_PAGE_URL}" target="_blank" rel="noopener">${escapeHtml(localizedText("Télécharger", "Download", "Descargar", "ダウンロード"))}</a></div>`;
         return card;
       })()];
-  ui.modelCards.replaceChildren(...imageCards, ...customCards, ...euDesktopCards, ...visibleModels.map(model => {
+  ui.modelCards.replaceChildren(...imageCards, ...ownImageCard, ...customCards, ...euDesktopCards, ...visibleModels.map(model => {
     const details = modelDetails(model);
     const active = model.id === state.selectedModel && !state.customModelActive;
     const remote = NATIVE && model.nativeLocal === false;
@@ -10004,6 +10088,34 @@ ui.modelPicker.addEventListener("click", () => openModelLibrary());
 /* Le nom du moteur d'image, ou qu'on clique dessus, ouvre directement l'onglet Image. */
 ui.imageEngine?.addEventListener("click", () => openModelLibrary("image"));
 ui.imagePicker?.addEventListener("click", () => openModelLibrary("image"));
+ui.imageLora?.addEventListener("change", () => {
+  state.imageLora = ui.imageLora.value;
+  saveState();
+});
+ui.imageLoraWeight?.addEventListener("input", () => {
+  const value = Number(ui.imageLoraWeight.value);
+  state.imageLoraWeight = Number.isFinite(value) ? Math.min(2, Math.max(0, value)) : 0.8;
+  saveState();
+});
+/* Même geste que dans la bibliothèque : on ouvre le dossier, ou on relit ce
+   qu'il contient sans quitter les réglages. */
+ui.imageFolderOpen?.addEventListener("click", () => {
+  ui.imageFolderOpen.disabled = true;
+  fetch(new URL("/_simia/open-image", location.href).href, { method: "POST" })
+    .then(response => response.json())
+    .then(payload => toast(
+      payload?.error
+        ? localizedText(`Impossible d'ouvrir le dossier : ${payload.error}`, `Could not open the folder: ${payload.error}`, `No se pudo abrir la carpeta: ${payload.error}`, `フォルダーを開けません: ${payload.error}`)
+        : localizedText(`Dossier ouvert : ${payload.path}`, `Folder opened: ${payload.path}`, `Carpeta abierta: ${payload.path}`, `フォルダーを開きました: ${payload.path}`),
+      payload?.error ? "error" : "info"
+    ))
+    .catch(() => toast(localizedText("Impossible d'ouvrir le dossier.", "Could not open the folder.", "No se pudo abrir la carpeta.", "フォルダーを開けませんでした。"), "error"))
+    .finally(() => { ui.imageFolderOpen.disabled = false; });
+});
+ui.imageFolderRefresh?.addEventListener("click", () => {
+  ui.imageFolderRefresh.disabled = true;
+  refreshImagePacks().finally(() => { ui.imageFolderRefresh.disabled = false; });
+});
 ui.customModelToggle.addEventListener("click", openCustomModelDialog);
 ui.customModelSettingsToggle.addEventListener("click", openCustomModelDialog);
 document.querySelector("#custom-model-close").addEventListener("click", () => ui.customModelDialog.close());
@@ -10080,6 +10192,38 @@ ui.modelLibrary.addEventListener("click", event => {
   const packDownload = event.target.closest("button[data-image-pack-download]");
   if (packDownload) {
     downloadImagePack(packDownload.dataset.imagePackDownload);
+    return;
+  }
+  const openImageFolder = event.target.closest("button[data-open-image-folder]");
+  if (openImageFolder) {
+    openImageFolder.disabled = true;
+    fetch(new URL("/_simia/open-image", location.href).href, { method: "POST" })
+      .then(response => response.json())
+      .then(payload => toast(
+        payload?.error
+          ? localizedText(`Impossible d'ouvrir le dossier : ${payload.error}`, `Could not open the folder: ${payload.error}`, `No se pudo abrir la carpeta: ${payload.error}`, `フォルダーを開けません: ${payload.error}`)
+          : localizedText(`Dossier ouvert : ${payload.path}`, `Folder opened: ${payload.path}`, `Carpeta abierta: ${payload.path}`, `フォルダーを開きました: ${payload.path}`),
+        payload?.error ? "error" : "info"
+      ))
+      .catch(() => toast(localizedText("Impossible d'ouvrir le dossier.", "Could not open the folder.", "No se pudo abrir la carpeta.", "フォルダーを開けませんでした。"), "error"))
+      .finally(() => { openImageFolder.disabled = false; });
+    return;
+  }
+  const refreshImages = event.target.closest("button[data-refresh-image-packs]");
+  if (refreshImages) {
+    refreshImages.disabled = true;
+    refreshImagePacks()
+      .then(packs => toast(
+        localizedText(
+          `${packs.length} modèle(s) d'image disponible(s).`,
+          `${packs.length} image model(s) available.`,
+          `${packs.length} modelo(s) de imagen disponibles.`,
+          `画像モデル ${packs.length} 件が利用できます。`
+        ),
+        "info"
+      ))
+      .catch(() => toast(localizedText("Lecture du dossier impossible.", "Could not read the folder.", "No se pudo leer la carpeta.", "フォルダーを読み込めませんでした。"), "error"))
+      .finally(() => { refreshImages.disabled = false; });
     return;
   }
   const openFolder = event.target.closest("button[data-open-models-folder]");

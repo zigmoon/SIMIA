@@ -51,6 +51,8 @@ MARKERS = {
         "Conversation seule, pleine largeur",
         'if (!NATIVE && document.querySelector(".update-bar")) return;',
         "remoteCatalog > localCatalog",
+        "renderImageLoraControls",
+        "discover_image_packs",
         'element.setAttribute("aria-busy", "true");',
     ],
     "web/styles.css": [
@@ -63,6 +65,7 @@ MARKERS = {
         "composer-steps",
         '<input id="setting-code-preview" type="checkbox">',
         "code-draft-bar",
+        'id="image-lora"',
     ],
 }
 

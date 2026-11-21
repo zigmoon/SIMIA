@@ -440,6 +440,31 @@
                   <span id="image-picker-name">SD-Turbo</span><span id="image-picker-meta">512 px · 4 pas</span>
                 </button>
               </div>
+              <div class="setting-row setting-row-stack" id="setting-image-lora" hidden>
+                <div class="setting-text">
+                  <span class="setting-name" id="setting-image-lora-name">Style LoRA</span>
+                  <span class="setting-hint" id="image-lora-hint">Déposez un LoRA .safetensors dans models/image/loras/ : il apparaît ici.</span>
+                </div>
+                <div class="setting-inline">
+                  <select id="image-lora" aria-labelledby="setting-image-lora-name">
+                    <option value="">Aucun style</option>
+                  </select>
+                  <label class="setting-weight" for="image-lora-weight">
+                    <input id="image-lora-weight" type="number" min="0" max="2" step="0.1" value="0.8" inputmode="decimal">
+                    <span>poids</span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-row setting-row-stack" id="setting-image-folder" hidden>
+                <div class="setting-text">
+                  <span class="setting-name" id="setting-image-folder-name">Dossier des modèles d'image</span>
+                  <span class="setting-hint" id="image-folder-hint">Un .safetensors ou un .gguf déposé dans models/image/ apparaît dans la bibliothèque, comme un plugin.</span>
+                </div>
+                <div class="setting-inline">
+                  <button class="secondary-button" id="image-folder-open" type="button">Ouvrir le dossier</button>
+                  <button class="secondary-button" id="image-folder-refresh" type="button">Actualiser</button>
+                </div>
+              </div>
               <p class="setting-note" id="download-info">The first download can take a few minutes. The model stays cached on this device.</p>
             </section>
 

@@ -346,6 +346,35 @@ Aucun filtre de contenu n'est appliqué côté SIMIA : ce que le modèle accepte
 dessiner, SIMIA le dessine. Les licences ci-dessus, elles, continuent de
 s'appliquer à l'usage des images produites.
 
+### Ajouter ses propres modèles d'image
+
+Un fichier déposé dans `models/image/` devient une carte dans la bibliothèque,
+sans catalogue à modifier : `.safetensors` (le format que publient Stable
+Diffusion et Civitai), `.gguf`, `.ckpt` ou `.pt`. C'est la même logique que pour
+les modèles de texte dans `models/`, à une différence près : la liste est relue
+à chaque ouverture, donc **aucun redémarrage** n'est nécessaire — le bouton
+« Actualiser » de la carte suffit.
+
+Les réglages de départ sont devinés d'après le nom du fichier, parce qu'un
+checkpoint ne porte pas ses paramètres : `xl`, `sdxl`, `pony`, `illustrious`
+donnent 1024 px et 25 pas ; `turbo`, `lightning`, `lcm`, `dmd`, `hyper`
+donnent 4 pas et CFG 1 ; tout le reste prend 512 px et 20 pas. Un fichier
+nommé `dreamshaperXL_turbo.safetensors` est donc reconnu comme du SDXL
+distillé, et se dessine en 1024 px en 4 pas.
+
+Un LoRA se dépose dans `models/image/loras/` (`.safetensors` ou `.pt`) et se
+choisit dans les réglages, avec son poids : il s'applique à la génération
+suivante sans recharger le checkpoint, puisque le moteur reçoit la liste des
+LoRA avec chaque requête. Laisser « Aucun style » rend la main au LoRA du pack
+— c'est ainsi que « Gravure SIMIA » reste actif sur son propre pack.
+
+Deux limites viennent du moteur, pas de SIMIA : un `.safetensors` n'est pas
+quantifié, il occupe donc plus de mémoire graphique que son équivalent `.gguf`
+(environ 2 Go pour du SD 1.5, 5 à 7 Go pour du SDXL) ; et les architectures qui
+demandent des fichiers séparés — Z-Image, Flux, SD 3 — ont besoin de leur
+encodeur de texte et de leur VAE à côté du modèle, comme le pack Z-Image du
+catalogue.
+
 ## Architecture
 
 L'application de bureau n'est pas une réécriture : c'est la même interface que le

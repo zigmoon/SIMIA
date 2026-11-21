@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.30": {
+      "title": "Modeles d'image : le dossier devient le catalogue",
+      "highlights": [
+        "La generation d'images ne proposait que les packs inscrits dans models/image/catalog.json. Un fichier depose a la main y restait invisible. Desormais SIMIA lit le dossier : un .safetensors, un .gguf, un .ckpt ou un .pt posé dans models/image/ apparait dans la bibliotheque sous son nom, avec sa carte, et se choisit comme les autres. C'est le format que publient Stable Diffusion et Civitai, donc les modeles que l'on possede deja.",
+        "Aucun redemarrage : la liste est relue a chaque ouverture, et le bouton « Actualiser » de la carte reaffiche la bibliotheque sur place. Un fichier efface disparait de la liste, et un pack supprime ne laisse pas de carte fantome.",
+        "Un checkpoint ne porte pas ses parametres dans son nom au hasard : SIMIA les devine. « xl », « sdxl », « pony » ou « illustrious » donnent 1024 px et 25 pas ; « turbo », « lightning », « lcm », « dmd » ou « hyper » donnent 4 pas et CFG 1 ; le reste prend 512 px et 20 pas. La carte affiche ces valeurs et un badge « AJOUTE », pour ne pas confondre un fichier du dossier avec un pack fourni.",
+        "Les LoRA se deposent dans models/image/loras/ et se choisissent dans les reglages, avec leur poids. Le moteur les applique a la generation suivante sans recharger le checkpoint : changer de style ne coute plus qu'un choix dans une liste. « Aucun style » rend la main au LoRA du pack, donc « Gravure SIMIA » reste actif sur son propre pack.",
+        "Les reglages d'image portent aussi le dossier : « Ouvrir le dossier » l'ouvre dans le gestionnaire de fichiers, « Actualiser » relit son contenu. Le meme geste existe en carte dans la bibliotheque, a cote de celle des modeles de texte.",
+        "Deux limites viennent du moteur et sont dites dans le README : un .safetensors n'est pas quantifie, il occupe donc plus de memoire graphique que le meme modele en .gguf, et les architectures a fichiers separes (Z-Image, Flux, SD 3) demandent leur encodeur et leur VAE a cote du checkpoint."
+      ]
+    },
     "0.1.29": {
       "title": "Les trois points restent affiches pendant l'attente",
       "highlights": [

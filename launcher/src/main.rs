@@ -132,6 +132,11 @@ struct ImagePack {
     prompt_prefix: String,
     #[serde(default)]
     lora_url: String,
+    /// Fichier depose a la main dans `models/image/` : SIMIA l'a reconnu seul,
+    /// sans entree de catalogue. L'interface le signale, sinon un fichier ajoute
+    /// se confondrait avec un modele fourni.
+    #[serde(default)]
+    added: bool,
 }
 
 fn default_cfg() -> f32 {
@@ -170,6 +175,222 @@ impl ImagePack {
     fn lora_file(&self) -> Option<&str> {
         if self.lora.is_empty() { None } else { Some(self.lora.as_str()) }
     }
+}
+
+/// Extensions que le moteur d'images sait ouvrir. `-m` accepte aussi bien un
+/// GGUF quantifie qu'un `.safetensors`, un `.ckpt` ou un `.pt` de Stable
+/// Diffusion : le format est reconnu a la lecture du fichier.
+fn image_model_extension(path: &Path) -> Option<String> {
+    let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+    if matches!(extension.as_str(), "gguf" | "safetensors" | "ckpt" | "pt") {
+        Some(extension)
+    } else {
+        None
+    }
+}
+
+/// Reglages de depart d'un checkpoint depose a la main. Le nom du fichier dit
+/// presque toujours de quelle famille il s'agit : SDXL dessine en 1024 px, une
+/// version distillee (turbo, lightning, LCM) tient en 4 pas et CFG 1, tout le
+/// reste est du SD 1.5 en 512 px et 20 pas.
+fn guess_image_settings(stem: &str) -> (u32, u32, f32) {
+    let lower = stem.to_ascii_lowercase();
+    let xl = ["xl", "sdxl", "pony", "illustrious", "noob"]
+        .iter()
+        .any(|key| lower.contains(key));
+    let distilled = [
+        "turbo", "lightning", "lcm", "dmd", "hyper", "schnell", "tiny", "distill",
+    ]
+    .iter()
+    .any(|key| lower.contains(key));
+    let px = if xl { 1024 } else { 512 };
+    let (steps, cfg) = if distilled {
+        (4, 1.0)
+    } else if xl {
+        (25, 7.0)
+    } else {
+        (20, 7.0)
+    };
+    (px, steps, cfg)
+}
+
+/// Nom lisible tire d'un nom de fichier : `dreamshaper_8LCM-iq4_nl` devient
+/// « Dreamshaper 8LCM IQ4 NL ». Les quantificateurs restent en capitales.
+fn image_pack_name(stem: &str) -> String {
+    let cleaned = stem.replace(['_', '-', '.'], " ");
+    let words: Vec<String> = cleaned
+        .split_whitespace()
+        .filter_map(|word| {
+            let lower = word.to_ascii_lowercase();
+            let shout = is_quant_part(word)
+                || matches!(lower.as_str(), "xl" | "sdxl" | "lcm" | "vae")
+                || word.chars().any(|character| character.is_ascii_digit());
+            if shout {
+                Some(word.to_ascii_uppercase())
+            } else {
+                let mut characters = word.chars();
+                characters
+                    .next()
+                    .map(|first| format!("{}{}", first.to_uppercase(), characters.as_str()))
+            }
+        })
+        .collect();
+    if words.is_empty() {
+        "Modele d'image".to_string()
+    } else {
+        words.join(" ")
+    }
+}
+
+/// Identifiant stable d'un pack ajoute a la main : minuscules, chiffres et
+/// tirets. Il sert de cle dans l'interface et dans le fichier de selection.
+fn image_pack_id(stem: &str) -> String {
+    let mut out = String::with_capacity(stem.len());
+    for character in stem.chars() {
+        if character.is_ascii_alphanumeric() {
+            out.push(character.to_ascii_lowercase());
+        } else if !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    let trimmed = out.trim_matches('-').to_string();
+    if trimmed.is_empty() {
+        "image".to_string()
+    } else {
+        trimmed
+    }
+}
+
+/// Un fichier depose dans `models/image/` devient un pack complet : on depose,
+/// on rouvre la bibliotheque, il est la. C'est le chargement « a la WordPress »,
+/// sans catalogue a modifier ni redemarrage.
+fn added_image_pack(path: &Path) -> Option<ImagePack> {
+    let file = path.file_name()?.to_str()?.to_string();
+    let stem = path.file_stem()?.to_str()?.to_string();
+    let bytes = fs::metadata(path).map(|meta| meta.len()).unwrap_or(0);
+    // Un fichier vide est certainement un telechargement en cours : le proposer
+    // ferait echouer le chargement du moteur.
+    if bytes == 0 {
+        return None;
+    }
+    let extension = image_model_extension(path)?;
+    let (px, steps, cfg) = guess_image_settings(&stem);
+    let kind = if extension == "safetensors" {
+        "safetensors".to_string()
+    } else {
+        extension.to_ascii_uppercase()
+    };
+    Some(ImagePack {
+        id: image_pack_id(&stem),
+        name: image_pack_name(&stem),
+        mode: "checkpoint".to_string(),
+        size: format!("~{}", human_size(bytes)),
+        license: String::new(),
+        note: format!(
+            "Depose a la main dans models/image/ ({kind}). Reglages devines d'apres le nom : {px} px, {steps} pas, CFG {cfg}. Un nom contenant « turbo », « lightning » ou « xl » change ces valeurs.",
+        ),
+        bundled: false,
+        recommended: false,
+        steps,
+        cfg,
+        px,
+        model: file,
+        diffusion: String::new(),
+        llm: String::new(),
+        vae: String::new(),
+        url: String::new(),
+        lora: String::new(),
+        lora_weight: default_lora_weight(),
+        prompt_prefix: String::new(),
+        lora_url: String::new(),
+        added: true,
+    })
+}
+
+/// Complete la liste des packs avec les fichiers poses a la main. Rejouee a
+/// chaque affichage de la bibliotheque : deposer un `.safetensors` ou un
+/// `.gguf` dans `models/image/` suffit, sans relancer SIMIA. Un pack ajoute
+/// dont le fichier a disparu est retire.
+fn discover_image_packs(dir: &Path, packs: &mut Vec<ImagePack>) {
+    packs.retain(|pack| !pack.added || dir.join(&pack.model).is_file());
+
+    let declared: Vec<String> = packs
+        .iter()
+        .flat_map(|pack| pack.file_names())
+        .map(|name| name.to_ascii_lowercase())
+        .collect();
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    let mut found: Vec<ImagePack> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() || image_model_extension(&path).is_none() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        let lower = name.to_ascii_lowercase();
+        // Un projecteur multimodal accompagne un modele de texte, ce n'est pas
+        // un checkpoint d'image. Les fichiers deja cites par un pack non plus.
+        if lower.contains("mmproj") || declared.contains(&lower) {
+            continue;
+        }
+        if packs
+            .iter()
+            .chain(found.iter())
+            .any(|pack| pack.model.eq_ignore_ascii_case(name))
+        {
+            continue;
+        }
+        if let Some(pack) = added_image_pack(&path) {
+            if packs.iter().chain(found.iter()).any(|known| known.id == pack.id) {
+                continue;
+            }
+            found.push(pack);
+        }
+    }
+    found.sort_by(|first, second| first.name.to_lowercase().cmp(&second.name.to_lowercase()));
+    packs.extend(found);
+}
+
+/// LoRA disponibles dans `models/image/loras/`. Le moteur les applique quand la
+/// requete porte `lora: [{path, multiplier}]` : on change de style sans
+/// recharger le checkpoint, et un fichier depose la est utilisable tout de suite.
+struct ImageLora {
+    name: String,
+    bytes: u64,
+}
+
+fn discover_image_loras(dir: &Path) -> Vec<ImageLora> {
+    let mut found: Vec<ImageLora> = Vec::new();
+    let Ok(entries) = fs::read_dir(dir.join("loras")) else {
+        return found;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let extension = path
+            .extension()
+            .and_then(|value| value.to_str())
+            .map(|value| value.to_ascii_lowercase());
+        if !matches!(extension.as_deref(), Some("safetensors") | Some("pt")) {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        let bytes = fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+        found.push(ImageLora {
+            name: name.to_string(),
+            bytes,
+        });
+    }
+    found.sort_by(|first, second| first.name.to_lowercase().cmp(&second.name.to_lowercase()));
+    found
 }
 
 /// Generateur d'images (stable-diffusion.cpp). Il partage le meme GPU que
@@ -246,7 +467,9 @@ impl ImageEngine {
             ));
         }
         match self.current() {
-            None => Some("aucun jeu de modeles d'image dans models/image/catalog.json".to_string()),
+            None => Some(
+                "aucun modele d'image : deposez un .safetensors ou un .gguf dans models/image/, ou choisissez un pack du catalogue".to_string(),
+            ),
             Some(pack) => {
                 let missing = self.missing_of(pack);
                 if missing.is_empty() {
@@ -255,6 +478,21 @@ impl ImageEngine {
                     Some(format!("fichiers absents : {}", missing.join(", ")))
                 }
             }
+        }
+    }
+
+    /// Relit le dossier avant d'afficher la bibliotheque : un fichier depose
+    /// entre-temps apparait, un fichier efface disparait.
+    fn refresh(&mut self) {
+        discover_image_packs(&self.dir, &mut self.packs);
+        let lost = self
+            .selected
+            .as_deref()
+            .map(|id| self.pack(id).is_none())
+            .unwrap_or(false);
+        if lost {
+            self.selected = None;
+            self.resolve_selection();
         }
     }
 
@@ -670,7 +908,9 @@ fn main() {
         .as_ref()
         .and_then(|bin| probe_binary(bin, "--help", Duration::from_secs(15)).err());
     let image_dir = models_dir.join("image");
-    let image_packs = load_image_packs(&image_dir);
+    let _ = fs::create_dir_all(image_dir.join("loras"));
+    let mut image_packs = load_image_packs(&image_dir);
+    discover_image_packs(&image_dir, &mut image_packs);
     let mut image_engine = ImageEngine {
         bin: sd_bin,
         probe: sd_probe,
@@ -1562,6 +1802,22 @@ fn ensure_llama(state: &Shared) -> Result<(), String> {
     Ok(())
 }
 
+/// Ouvre un dossier dans le gestionnaire de fichiers du systeme.
+fn open_in_file_manager(dir: &Path) -> std::io::Result<Child> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer").arg(dir).spawn()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").arg(dir).spawn()
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        Command::new("xdg-open").arg(dir).spawn()
+    }
+}
+
 fn sd_log_path(port: u16) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("simia-sd-{port}.log"))
 }
@@ -1589,7 +1845,10 @@ fn spawn_sd_server(
     } else {
         command.arg("-m").arg(dir.join(&pack.model));
     }
-    if pack.lora_file().is_some() {
+    /* Toujours transmis, meme sans LoRA par defaut : un fichier depose dans
+       loras/ doit pouvoir s'appliquer a la generation suivante, sans relancer
+       le moteur. Le style choisi part dans le champ `lora` de la requete. */
+    if dir.join("loras").is_dir() {
         command.arg("--lora-model-dir").arg(dir.join("loras"));
     }
     command
@@ -1794,7 +2053,7 @@ fn image_packs_json(state: &Shared) -> String {
                     let local = guard.image.local_of(pack);
                     let bytes = pack_bytes(&guard.image.dir, pack);
                     format!(
-                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{}}}",
                         js_escape(&pack.id),
                         js_escape(&pack.name),
                         js_escape(&pack.mode),
@@ -1811,16 +2070,29 @@ fn image_packs_json(state: &Shared) -> String {
                         pack.bundled,
                         js_escape(&pack.lora),
                         pack.lora_weight,
-                        js_escape(&pack.prompt_prefix)
+                        js_escape(&pack.prompt_prefix),
+                        pack.added
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",");
+            let loras = discover_image_loras(&guard.image.dir)
+                .iter()
+                .map(|lora| {
+                    format!(
+                        "{{\"name\":{},\"bytes\":{}}}",
+                        js_escape(&lora.name),
+                        lora.bytes
                     )
                 })
                 .collect::<Vec<_>>()
                 .join(",");
             format!(
-                "{{\"selected\":{},\"bin\":{},\"packs\":[{}]}}",
+                "{{\"selected\":{},\"bin\":{},\"packs\":[{}],\"loras\":[{}]}}",
                 js_escape(&selected),
                 guard.image.bin.is_some(),
-                entries
+                entries,
+                loras
             )
         }
         Err(_) => "{\"selected\":\"\",\"packs\":[]}".to_string(),
@@ -2546,6 +2818,9 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
     }
 
     if path == "/_simia/image/packs" {
+        if let Ok(mut guard) = state.lock() {
+            guard.image.refresh();
+        }
         respond_json(request, 200, image_packs_json(&state));
         return;
     }
@@ -2585,6 +2860,33 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
         return;
     }
 
+    /* Le dossier des modeles d'image : on y depose un `.safetensors` ou un
+       `.gguf`, un LoRA dans `loras/`, et la bibliotheque les propose. */
+    if path == "/_simia/open-image" {
+        let dir = match state.lock() {
+            Ok(guard) => guard.image.dir.clone(),
+            Err(_) => PathBuf::new(),
+        };
+        if dir.as_os_str().is_empty() {
+            respond_json(request, 500, "{\"error\":\"dossier inconnu\"}".to_string());
+            return;
+        }
+        let _ = fs::create_dir_all(dir.join("loras"));
+        match open_in_file_manager(&dir) {
+            Ok(_) => respond_json(
+                request,
+                200,
+                format!("{{\"path\":{}}}", js_escape(&dir.display().to_string())),
+            ),
+            Err(error) => respond_json(
+                request,
+                500,
+                format!("{{\"error\":{}}}", js_escape(&error.to_string())),
+            ),
+        }
+        return;
+    }
+
     /* Ouvre le dossier models/ dans le gestionnaire de fichiers du systeme.
        L'utilisateur peut y deposer n'importe quel .gguf : le lanceur le
        decouvre au prochain demarrage, sans passer par le catalogue. */
@@ -2598,13 +2900,7 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
             return;
         }
         let _ = fs::create_dir_all(&dir);
-        #[cfg(target_os = "windows")]
-        let opener = Command::new("explorer").arg(&dir).spawn();
-        #[cfg(target_os = "macos")]
-        let opener = Command::new("open").arg(&dir).spawn();
-        #[cfg(all(unix, not(target_os = "macos")))]
-        let opener = Command::new("xdg-open").arg(&dir).spawn();
-        match opener {
+        match open_in_file_manager(&dir) {
             Ok(_) => respond_json(request, 200, format!("{{\"path\":{}}}", js_escape(&dir.display().to_string()))),
             Err(error) => respond_json(request, 500, format!("{{\"error\":{}}}", js_escape(&error.to_string()))),
         }
@@ -3063,5 +3359,104 @@ mod console_tests {
         assert_ne!(frames[0], frames[6], "le bloc ne bouge pas");
         assert_eq!(frames[0], marquee(width + 8, width), "le cycle ne se referme pas");
         assert!(frames[6].starts_with("######"), "le bloc n'est pas en tete : {:?}", frames[6]);
+    }
+}
+
+#[cfg(test)]
+mod image_pack_tests {
+    use super::*;
+
+    fn scratch(label: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("simia-image-{label}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("dossier de test");
+        dir
+    }
+
+    fn touch(dir: &Path, name: &str, bytes: usize) -> PathBuf {
+        let path = dir.join(name);
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        fs::write(&path, vec![0u8; bytes]).expect("fichier de test");
+        path
+    }
+
+    #[test]
+    fn devine_les_reglages_d_apres_le_nom() {
+        assert_eq!(guess_image_settings("dreamshaper_8"), (512, 20, 7.0));
+        assert_eq!(guess_image_settings("pony-diffusion-v6-xl"), (1024, 25, 7.0));
+        assert_eq!(guess_image_settings("sdxl-turbo"), (1024, 4, 1.0));
+        assert_eq!(guess_image_settings("anything-v5-lcm"), (512, 4, 1.0));
+    }
+
+    #[test]
+    fn identifiant_stable_et_lisible() {
+        assert_eq!(image_pack_id("DreamShaper 8 LCM"), "dreamshaper-8-lcm");
+        assert_eq!(image_pack_id("__weird__"), "weird");
+        assert_eq!(image_pack_name("dreamshaper_8LCM-v2"), "Dreamshaper 8LCM V2");
+    }
+
+    #[test]
+    fn un_safetensors_depose_devient_un_pack() {
+        let dir = scratch("safetensors");
+        let path = touch(&dir, "dreamshaperXL_turbo.safetensors", 2048);
+        let pack = added_image_pack(&path).expect("pack reconnu");
+        assert!(pack.added);
+        assert_eq!(pack.mode, "checkpoint");
+        assert_eq!(pack.model, "dreamshaperXL_turbo.safetensors");
+        assert_eq!(pack.px, 1024);
+        assert_eq!(pack.steps, 4);
+        assert!(pack.note.contains("safetensors"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn un_fichier_vide_est_ignore() {
+        let dir = scratch("vide");
+        let path = touch(&dir, "encours.safetensors", 0);
+        assert!(added_image_pack(&path).is_none());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn le_dossier_complete_sans_doublon_ni_fichier_etranger() {
+        let dir = scratch("dossier");
+        let graine = touch(&dir, "graine.safetensors", 16);
+        let mut packs = vec![ImagePack {
+            id: "catalog".to_string(),
+            model: "sd15.gguf".to_string(),
+            ..added_image_pack(&graine).expect("graine")
+        }];
+        packs[0].added = false;
+        fs::remove_file(&graine).expect("retrait de la graine");
+        touch(&dir, "sd15.gguf", 32);
+        touch(&dir, "maison.safetensors", 64);
+        touch(&dir, "notes.txt", 8);
+        touch(&dir, "mmproj-vision.gguf", 8);
+        touch(&dir, "loras/style.safetensors", 8);
+
+        discover_image_packs(&dir, &mut packs);
+        discover_image_packs(&dir, &mut packs);
+
+        let ids: Vec<&str> = packs.iter().map(|pack| pack.id.as_str()).collect();
+        assert_eq!(ids, vec!["catalog", "maison"]);
+        assert!(packs[1].added);
+
+        fs::remove_file(dir.join("maison.safetensors")).expect("suppression");
+        discover_image_packs(&dir, &mut packs);
+        assert_eq!(packs.len(), 1);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn les_lora_du_dossier_sont_listes() {
+        let dir = scratch("loras");
+        touch(&dir, "loras/simia-gravure.safetensors", 32);
+        touch(&dir, "loras/photo.pt", 16);
+        touch(&dir, "loras/readme.txt", 4);
+        let names: Vec<String> = discover_image_loras(&dir).into_iter().map(|lora| lora.name).collect();
+        assert_eq!(names, vec!["photo.pt", "simia-gravure.safetensors"]);
+        let _ = fs::remove_dir_all(&dir);
     }
 }
