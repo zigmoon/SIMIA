@@ -53,6 +53,8 @@ MARKERS = {
         "remoteCatalog > localCatalog",
         "renderImageLoraControls",
         "chosenLora",
+        "read_tensor_header",
+        "ImageFamily",
         'element.setAttribute("aria-busy", "true");',
     ],
     "web/styles.css": [

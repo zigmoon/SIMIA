@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.31": {
+      "title": "Modeles d'image : SIMIA lit l'en-tete du fichier",
+      "highlights": [
+        "Un fichier .safetensors contient son propre inventaire : SIMIA le lit avant de proposer quoi que ce soit. Il en deduit la famille d'architecture — SD 1.5, SDXL, ou DiT — puis la resolution et le nombre de pas, au lieu de les deviner d'apres le nom. Un checkpoint nomme « xl » qui contient du SD 1.5 se dessine desormais en 512 px, comme il doit.",
+        "Un LoRA n'est pas un modele complet : ses seuls tenseurs sont des paires lora_A/lora_B. Le proposer comme checkpoint donnait une carte qui ne dessinait rien. SIMIA le reconnait, ne cree pas de carte pour lui, et le range parmi les styles, meme depose a la racine de models/image/.",
+        "Les styles affichent leur famille quand elle differe de celle du modele d'image actif : « HMNSFW-Extreme-Realism · DiT » a cote d'un pack SDXL. Et le moteur ne se contente pas d'ignorer un style incompatible — il applique zero tenseur et le dit seulement dans un journal. L'aide sous la liste l'annonce donc en couleur avant la generation.",
+        "Les LoRA se cherchent maintenant depuis la racine de models/image/, avec un chemin relatif : loras/<fichier> pour ceux qui sont ranges, leur nom seul pour les autres. Corrige au passage une regression : le moteur ne retient qu'un dossier de LoRA, et le passer deux fois faisait perdre le premier — les styles de loras/ devenaient introuvables et la generation repondait 400 sans explication.",
+        "Verifie sur une carte reelle avec un fichier de 592 Mo depose sur le Bureau : reconnu comme LoRA DiT, absent des modeles, present parmi les styles ; applique a un SDXL, le moteur a rapporte 0 tenseur sur 420 applique, ce que l'avertissement annoncait. Le meme fichier range dans loras/ et applique a son pack SD 1.5 fonctionne."
+      ]
+    },
     "0.1.30": {
       "title": "Modeles d'image : le dossier devient le catalogue",
       "highlights": [

@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.30",
+      "softwareVersion": "0.1.31",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.30",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.31",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -1286,7 +1286,7 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.30/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.31/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
           <p class="dl-note"><b>Avant de décompresser</b> : clic droit sur le <b>.zip</b> → <b>Propriétés</b> → <b>Débloquer</b>. Windows oublie ainsi que le fichier vient d'Internet, et l'application démarre sans demande. Fait après extraction, cela ne sert à rien.</p>
         </article>
@@ -1301,8 +1301,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.30/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.30/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.31/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.31/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1317,7 +1317,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.30/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.31/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1613,14 +1613,14 @@
      fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
      préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
-  const RELEASE_TAG = "v0.1.30";
+  const RELEASE_TAG = "v0.1.31";
   const RELEASE_BASE = `https://github.com/zigmoon/SIMIA/releases/download/${RELEASE_TAG}`;
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   const RELEASE_API = `https://api.github.com/repos/zigmoon/SIMIA/releases/tags/${RELEASE_TAG}`;
 
   /* Les paquets viennent tous de GitHub, et d'une version nommee : chaque lien
-     porte l'etiquette `releases/download/v0.1.30/<nom>`. Rien ne resout
+     porte l'etiquette `releases/download/v0.1.31/<nom>`. Rien ne resout
      « latest » a notre place : ce que le visiteur telecharge est exactement la
      version annoncee sur la page, et une publication ulterieure ne remplace pas
      sous ses pieds le fichier derriere un bouton deja affiche.

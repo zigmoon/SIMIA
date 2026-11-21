@@ -278,6 +278,8 @@ textarea::placeholder { color:#989e99; }
 .setting-name { display:flex; align-items:baseline; gap:7px; color:var(--ink); font-size:12.5px; font-weight:700; line-height:1.35; }
 .setting-value { padding:1px 6px; border-radius:999px; background:#eef4e6; color:#3f5b28; font:600 10px "DM Mono",monospace; }
 .setting-hint { color:var(--muted); font-size:10.5px; line-height:1.45; }
+/* Un reglage qui ne peut pas fonctionner le dit en couleur, pas en silence. */
+.setting-hint.is-warning { color:#8a4b1f; }
 .setting-note { margin:6px 0 0; color:var(--muted); font-size:10.5px; line-height:1.45; }
 .setting-note:empty { display:none; }
 .setting-inline { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }

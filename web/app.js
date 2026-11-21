@@ -4388,34 +4388,61 @@ async function refreshImagePacks() {
 /* LoRA de style : un fichier .safetensors déposé dans models/image/loras/ se
    choisit ici. Le poids règle son influence ; « Aucun » laisse le style du
    pack, s'il en a un. */
+/* Familles d'architectures d'image. Un LoRA n'est fait que pour la sienne :
+   les tenseurs ne se correspondent pas d'une famille à l'autre, et le moteur
+   refuse de l'appliquer. Le dire avant la génération évite d'attendre pour
+   rien un message d'erreur. */
+const IMAGE_FAMILY_LABELS = { sd15: "SD 1.5", sdxl: "SDXL", dit: "DiT" };
+
+function imageFamilyLabel(key) {
+  return IMAGE_FAMILY_LABELS[key] || "";
+}
+
 function renderImageLoraControls() {
   if (state.imageLora && !state.imageLoras.some(lora => lora.name === state.imageLora)) {
     state.imageLora = "";
   }
   if (ui.imageLora) {
     const none = `<option value="">${escapeHtml(localizedText("Aucun style", "No style", "Sin estilo", "スタイルなし"))}</option>`;
+    const packFamily = imageFamilyLabel(activeImagePack()?.family);
     const options = state.imageLoras.map(lora => {
-      const label = lora.name.replace(/\.(safetensors|pt)$/i, "");
+      const base = lora.name.replace(/\.(safetensors|pt|ckpt)$/i, "");
+      const family = imageFamilyLabel(lora.family);
+      /* La famille n'est ajoutée que si elle apporte quelque chose : inutile
+         de répéter « SD 1.5 » sur chaque style d'un pack SD 1.5. */
+      const suffix = family && family !== packFamily ? ` · ${family}` : "";
+      const label = `${base}${suffix}`;
       return `<option value="${escapeHtml(lora.name)}"${lora.name === state.imageLora ? " selected" : ""}>${escapeHtml(label)}</option>`;
     });
     ui.imageLora.innerHTML = none + options.join("");
   }
   if (ui.imageLoraWeight) ui.imageLoraWeight.value = String(state.imageLoraWeight);
   const hint = document.querySelector("#image-lora-hint");
+  const packFamilyKey = activeImagePack()?.family || "";
+  const chosen = state.imageLoras.find(lora => lora.name === state.imageLora);
+  const mismatch = Boolean(chosen && chosen.family && packFamilyKey && chosen.family !== packFamilyKey);
   if (hint) {
-    hint.textContent = state.imageLoras.length
+    hint.textContent = mismatch
       ? localizedText(
-        `${state.imageLoras.length} style(s) dans models/image/loras/.`,
-        `${state.imageLoras.length} style(s) in models/image/loras/.`,
-        `${state.imageLoras.length} estilo(s) en models/image/loras/.`,
-        `models/image/loras/ に ${state.imageLoras.length} 件`
+        `Ce style vise ${imageFamilyLabel(chosen.family)} : les tenseurs ne correspondent pas à ${imageFamilyLabel(packFamilyKey)}, le moteur refusera de l'appliquer.`,
+        `This style targets ${imageFamilyLabel(chosen.family)}: its tensors do not match ${imageFamilyLabel(packFamilyKey)}, so the engine will refuse it.`,
+        `Este estilo apunta a ${imageFamilyLabel(chosen.family)}: sus tensores no corresponden a ${imageFamilyLabel(packFamilyKey)}, el motor lo rechazará.`,
+        `このスタイルは ${imageFamilyLabel(chosen.family)} 向けで、${imageFamilyLabel(packFamilyKey)} とはテンソルが一致しないため適用できません。`
+      )
+      : state.imageLoras.length
+      ? localizedText(
+        `${state.imageLoras.length} style(s) prêt(s) : le fichier se dépose dans models/image/ ou models/image/loras/.`,
+        `${state.imageLoras.length} style(s) ready: drop the file in models/image/ or models/image/loras/.`,
+        `${state.imageLoras.length} estilo(s) listo(s): el archivo se coloca en models/image/ o models/image/loras/.`,
+        `スタイル ${state.imageLoras.length} 件：models/image/ または models/image/loras/ に置きます。`
       )
       : localizedText(
-        "Déposez un LoRA .safetensors dans models/image/loras/ : il apparaît ici.",
-        "Drop a .safetensors LoRA into models/image/loras/: it shows up here.",
-        "Coloca un LoRA .safetensors en models/image/loras/: aparecerá aquí.",
-        "models/image/loras/ に .safetensors の LoRA を置くとここに表示されます。"
+        "Déposez un LoRA .safetensors dans models/image/ : il apparaît ici.",
+        "Drop a .safetensors LoRA into models/image/: it shows up here.",
+        "Coloca un LoRA .safetensors en models/image/: aparecerá aquí.",
+        "models/image/ に .safetensors の LoRA を置くとここに表示されます。"
       );
+    hint.classList.toggle("is-warning", mismatch);
   }
 }
 
@@ -4695,8 +4722,12 @@ async function imageGenerate(prompt, bubble) {
   /* Style choisi dans les réglages. Le lanceur transmet la liste telle quelle au
      moteur, qui applique le fichier de loras/ sans recharger le checkpoint.
      Sans choix, le LoRA du pack — le style « Gravure SIMIA » — reste appliqué. */
-  const chosenLora = state.imageLora
-    ? [{ path: state.imageLora, multiplier: Number(state.imageLoraWeight) || 0.8 }]
+  const loraEntry = state.imageLoras.find(item => item.name === state.imageLora);
+  /* Le moteur cherche les styles depuis models/image/ : un fichier range dans
+     loras/ doit s'annoncer « loras/<fichier> ». Le lanceur fournit ce chemin,
+     on ne le recompose pas ici. */
+  const chosenLora = loraEntry
+    ? [{ path: loraEntry.path || loraEntry.name, multiplier: Number(state.imageLoraWeight) || 0.8 }]
     : null;
 
   /* Endpoint synchrone volontairement. Le couple
@@ -10090,6 +10121,10 @@ ui.imageEngine?.addEventListener("click", () => openModelLibrary("image"));
 ui.imagePicker?.addEventListener("click", () => openModelLibrary("image"));
 ui.imageLora?.addEventListener("change", () => {
   state.imageLora = ui.imageLora.value;
+  /* L'aide sous la liste change de sens selon le style choisi : elle doit se
+     reecrire tout de suite, sinon l'incompatibilite ne se voit qu'apres un
+     rechargement de la fenetre. */
+  renderImageLoraControls();
   saveState();
 });
 ui.imageLoraWeight?.addEventListener("input", () => {

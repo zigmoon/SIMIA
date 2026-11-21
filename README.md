@@ -355,12 +355,20 @@ les modèles de texte dans `models/`, à une différence près : la liste est re
 à chaque ouverture, donc **aucun redémarrage** n'est nécessaire — le bouton
 « Actualiser » de la carte suffit.
 
-Les réglages de départ sont devinés d'après le nom du fichier, parce qu'un
-checkpoint ne porte pas ses paramètres : `xl`, `sdxl`, `pony`, `illustrious`
-donnent 1024 px et 25 pas ; `turbo`, `lightning`, `lcm`, `dmd`, `hyper`
-donnent 4 pas et CFG 1 ; tout le reste prend 512 px et 20 pas. Un fichier
-nommé `dreamshaperXL_turbo.safetensors` est donc reconnu comme du SDXL
-distillé, et se dessine en 1024 px en 4 pas.
+Un `.safetensors` porte son propre inventaire : l'en-tête du fichier liste ses
+tenseurs, et SIMIA le lit avant de proposer quoi que ce soit. Il en tire la
+famille d'architecture — SD 1.5 (`cond_stage_model.transformer`), SDXL
+(`conditioner.embedders.1`), ou DiT (`joint_blocks`, `audio_patch_proj`) — et
+donc les réglages : 512 px et 20 pas pour SD 1.5, 1024 px et 25 pas pour SDXL,
+1024 px et 8 pas pour une architecture DiT. Le nom ne sert plus qu'à un chose
+que l'en-tête ne peut pas dire : une version distillée (`turbo`, `lightning`,
+`lcm`, `dmd`, `hyper`) tient en 4 pas et CFG 1.
+
+**Un fichier qui n'est pas un modèle complet n'est pas proposé comme tel.** Un
+LoRA ne contient que des paires `lora_A`/`lora_B` : le donner à `sd-server -m`
+échoue au chargement. SIMIA le reconnaît à son en-tête, ne crée pas de carte
+pour lui, et le range dans les styles — y compris quand le fichier est posé à
+la racine de `models/image/` plutôt que dans `loras/`.
 
 Un LoRA se dépose dans `models/image/loras/` (`.safetensors` ou `.pt`) et se
 choisit dans les réglages, avec son poids : il s'applique à la génération

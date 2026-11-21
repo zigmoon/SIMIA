@@ -177,6 +177,142 @@ impl ImagePack {
     }
 }
 
+/// Famille d'architecture d'un modele ou d'un LoRA. Elle decide des reglages de
+/// depart (resolution, pas) et permet de prevenir qu'un LoRA ne vise pas le
+/// modele charge : les tenseurs ne se correspondent pas, le moteur refuse.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ImageFamily {
+    Sd15,
+    Sdxl,
+    /// Architecture a blocs de transformation (Flux, Z-Image, LTX-AV) : elle
+    /// demande son encodeur de texte et son VAE a cote du checkpoint.
+    Dit,
+    Unknown,
+}
+
+impl ImageFamily {
+    fn key(self) -> &'static str {
+        match self {
+            ImageFamily::Sd15 => "sd15",
+            ImageFamily::Sdxl => "sdxl",
+            ImageFamily::Dit => "dit",
+            ImageFamily::Unknown => "",
+        }
+    }
+
+    /// Etiquette lisible, montree telle quelle quand deux familles ne
+    /// concordent pas.
+    fn label(self) -> &'static str {
+        match self {
+            ImageFamily::Sd15 => "SD 1.5",
+            ImageFamily::Sdxl => "SDXL",
+            ImageFamily::Dit => "DiT",
+            ImageFamily::Unknown => "?",
+        }
+    }
+
+    /// Reglages de depart : resolution, pas, CFG.
+    fn defaults(self) -> (u32, u32, f32) {
+        match self {
+            ImageFamily::Sdxl => (1024, 25, 7.0),
+            ImageFamily::Sd15 => (512, 20, 7.0),
+            // Une architecture DiT complete est presque toujours distillee, et
+            // de toute facon on ne peut pas la dessiner sans son VAE.
+            ImageFamily::Dit => (1024, 8, 1.0),
+            ImageFamily::Unknown => (512, 20, 7.0),
+        }
+    }
+}
+
+/// Ce que l'en-tete d'un `.safetensors` apprend sur le fichier.
+struct TensorHeader {
+    tensors: usize,
+    lora: bool,
+    family: ImageFamily,
+}
+
+/// Lit l'en-tete d'un `.safetensors` : huit octets de longueur, puis du JSON.
+/// Seuls ces octets sont lus, jamais les poids : un fichier de 6 Go se decrit
+/// en quelques millisecondes.
+fn read_tensor_header(path: &Path) -> Option<TensorHeader> {
+    use std::io::Read;
+    let mut file = fs::File::open(path).ok()?;
+    let mut size = [0u8; 8];
+    file.read_exact(&mut size).ok()?;
+    let length = u64::from_le_bytes(size);
+    // Un en-tete realiste tient sous quelques mega-octets ; au-dela, ce n'est
+    // pas un safetensors et on ne gaspille pas la lecture.
+    if length == 0 || length > 64 * 1024 * 1024 {
+        return None;
+    }
+    let mut buffer = vec![0u8; length as usize];
+    file.read_exact(&mut buffer).ok()?;
+    let text = String::from_utf8_lossy(&buffer).to_string();
+
+    let lora = text.contains("lora_A") || text.contains("lora_B") || text.contains("lora_unet_");
+    let family = if text.contains("conditioner.embedders.1") || text.contains("conditioner.embedders.2") {
+        ImageFamily::Sdxl
+    } else if text.contains("cond_stage_model.transformer") || text.contains("cond_stage_model.model") {
+        ImageFamily::Sd15
+    } else if text.contains("joint_blocks")
+        || text.contains("double_blocks")
+        || text.contains("single_transformer_blocks")
+        || text.contains("audio_patch_proj")
+        || text.contains("diffusion_model.blocks.")
+    {
+        ImageFamily::Dit
+    } else {
+        ImageFamily::Unknown
+    };
+    /* Un LoRA DiT ecrit ses cles en `blocks.N...` la ou un LoRA Stable
+       Diffusion passe par `lora_unet_` ou `unet.down_blocks`. Sans ce repli, un
+       style destine a une architecture video restait sans famille, et le moteur
+       refusait de l'appliquer sans qu'on sache pourquoi. */
+    /* Un LoRA kohya ne porte pas les noms du modele complet : `lora_te2_`
+       signale le second encodeur de texte, donc SDXL ; `lora_te_` seul, SD 1.5.
+       C'est le format de la plupart des styles telecharges. */
+    let family = if family == ImageFamily::Unknown
+        && (text.contains("lora_te2_") || text.contains("text_encoder_2"))
+    {
+        ImageFamily::Sdxl
+    } else if family == ImageFamily::Unknown
+        && (text.contains("lora_te_") || text.contains("text_model"))
+        && !text.contains("lora_te2_")
+    {
+        ImageFamily::Sd15
+    } else {
+        family
+    };
+    /* Un LoRA kohya peut ne couvrir que le UNet, sans tenseur d'encodeur de
+       texte a nommer. SDXL porte alors `label_emb`, que SD 1.5 n'a pas : c'est
+       le seul reste pour les distinguer. */
+    let family = if family == ImageFamily::Unknown
+        && text.contains("down_blocks")
+        && !text.contains("label_emb")
+    {
+        ImageFamily::Sd15
+    } else {
+        family
+    };
+    let family = if family == ImageFamily::Unknown
+        && text.contains("blocks.")
+        && !text.contains("down_blocks")
+        && !text.contains("up_blocks")
+        && !text.contains("input_blocks")
+    {
+        ImageFamily::Dit
+    } else {
+        family
+    };
+    // Une entree par tenseur, plus la cle de metadonnees.
+    let tensors = text.matches("\"dtype\"").count().saturating_sub(0);
+    Some(TensorHeader {
+        tensors,
+        lora,
+        family,
+    })
+}
+
 /// Extensions que le moteur d'images sait ouvrir. `-m` accepte aussi bien un
 /// GGUF quantifie qu'un `.safetensors`, un `.ckpt` ou un `.pt` de Stable
 /// Diffusion : le format est reconnu a la lecture du fichier.
@@ -189,28 +325,35 @@ fn image_model_extension(path: &Path) -> Option<String> {
     }
 }
 
-/// Reglages de depart d'un checkpoint depose a la main. Le nom du fichier dit
-/// presque toujours de quelle famille il s'agit : SDXL dessine en 1024 px, une
-/// version distillee (turbo, lightning, LCM) tient en 4 pas et CFG 1, tout le
-/// reste est du SD 1.5 en 512 px et 20 pas.
-fn guess_image_settings(stem: &str) -> (u32, u32, f32) {
+/// Reglages de depart d'un checkpoint depose a la main.
+///
+/// L'en-tete du fichier dit la famille d'architecture, quand il est lisible ;
+/// le nom sert de repli, et reste le seul indice pour une version distillee
+/// (« turbo », « lightning », « lcm ») : aucun tenseur ne la distingue.
+fn guess_image_settings(stem: &str, family: ImageFamily) -> (u32, u32, f32) {
     let lower = stem.to_ascii_lowercase();
-    let xl = ["xl", "sdxl", "pony", "illustrious", "noob"]
-        .iter()
-        .any(|key| lower.contains(key));
+    let family = if family == ImageFamily::Unknown {
+        let xl = ["xl", "sdxl", "pony", "illustrious", "noob"]
+            .iter()
+            .any(|key| lower.contains(key));
+        if xl { ImageFamily::Sdxl } else { ImageFamily::Sd15 }
+    } else {
+        family
+    };
     let distilled = [
         "turbo", "lightning", "lcm", "dmd", "hyper", "schnell", "tiny", "distill",
     ]
     .iter()
     .any(|key| lower.contains(key));
-    let px = if xl { 1024 } else { 512 };
-    let (steps, cfg) = if distilled {
-        (4, 1.0)
-    } else if xl {
-        (25, 7.0)
-    } else {
-        (20, 7.0)
-    };
+    let (px, steps, mut cfg) = family.defaults();
+    if distilled {
+        // Une version distillee tient en 4 pas ; CFG 1, sauf sur SD 1.5 ou
+        // certains LCM demandent 1,5.
+        return (px, 4, if family == ImageFamily::Sd15 { 1.5 } else { 1.0 });
+    }
+    if family == ImageFamily::Sd15 {
+        cfg = 7.0;
+    }
     (px, steps, cfg)
 }
 
@@ -274,11 +417,36 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
         return None;
     }
     let extension = image_model_extension(path)?;
-    let (px, steps, cfg) = guess_image_settings(&stem);
+    let header = if extension == "safetensors" {
+        read_tensor_header(path)
+    } else {
+        None
+    };
+    /* Un LoRA n'est pas un modele complet : `sd-server -m` echoue a le charger.
+       Le proposer comme checkpoint donnait une carte qui ne dessinait rien. Il
+       rejoint la liste des styles, ou il a sa place. */
+    if header.as_ref().map(|info| info.lora).unwrap_or(false) {
+        return None;
+    }
+    let family = header
+        .as_ref()
+        .map(|info| info.family)
+        .unwrap_or(ImageFamily::Unknown);
+    let (px, steps, cfg) = guess_image_settings(&stem, family);
     let kind = if extension == "safetensors" {
         "safetensors".to_string()
     } else {
         extension.to_ascii_uppercase()
+    };
+    let detected = match (family, header.as_ref().map(|info| info.tensors)) {
+        (ImageFamily::Unknown, _) => String::new(),
+        (family, Some(tensors)) => format!(", {} tenseurs, famille {}", tensors, family.label()),
+        (family, None) => format!(", famille {}", family.label()),
+    };
+    let caveat = if family == ImageFamily::Dit {
+        "\n\nCette famille (DiT) demande son encodeur de texte et son VAE a cote du checkpoint : sans eux, le moteur ne peut pas dessiner. Voyez le pack Z-Image du catalogue pour la disposition attendue."
+    } else {
+        ""
     };
     Some(ImagePack {
         id: image_pack_id(&stem),
@@ -287,7 +455,7 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
         size: format!("~{}", human_size(bytes)),
         license: String::new(),
         note: format!(
-            "Depose a la main dans models/image/ ({kind}). Reglages devines d'apres le nom : {px} px, {steps} pas, CFG {cfg}. Un nom contenant « turbo », « lightning » ou « xl » change ces valeurs.",
+            "Depose a la main dans models/image/ ({kind}{detected}). Reglages : {px} px, {steps} pas, CFG {cfg}.{caveat}",
         ),
         bundled: false,
         recommended: false,
@@ -355,19 +523,24 @@ fn discover_image_packs(dir: &Path, packs: &mut Vec<ImagePack>) {
     packs.extend(found);
 }
 
-/// LoRA disponibles dans `models/image/loras/`. Le moteur les applique quand la
-/// requete porte `lora: [{path, multiplier}]` : on change de style sans
-/// recharger le checkpoint, et un fichier depose la est utilisable tout de suite.
+/// LoRA disponibles dans `models/image/loras/` et a la racine de
+/// `models/image/`. Le moteur les applique quand la requete porte
+/// `lora: [{path, multiplier}]` : on change de style sans recharger le
+/// checkpoint, et un fichier depose la est utilisable tout de suite.
+///
+/// La famille visee est lue dans l'en-tete : un LoRA entraine pour une autre
+/// architecture que le modele charge ne s'applique pas, autant le dire avant
+/// de lancer une generation qui echouera.
 struct ImageLora {
     name: String,
+    /// Chemin relatif a `models/image/`, tel que le moteur l'attend : un style
+    /// range dans `loras/` s'ecrit `loras/<fichier>`.
+    path: String,
     bytes: u64,
+    family: ImageFamily,
 }
 
-fn discover_image_loras(dir: &Path) -> Vec<ImageLora> {
-    let mut found: Vec<ImageLora> = Vec::new();
-    let Ok(entries) = fs::read_dir(dir.join("loras")) else {
-        return found;
-    };
+fn collect_loras(entries: impl Iterator<Item = std::io::Result<fs::DirEntry>>, found: &mut Vec<ImageLora>) {
     for entry in entries.flatten() {
         let path = entry.path();
         if !path.is_file() {
@@ -377,17 +550,52 @@ fn discover_image_loras(dir: &Path) -> Vec<ImageLora> {
             .extension()
             .and_then(|value| value.to_str())
             .map(|value| value.to_ascii_lowercase());
-        if !matches!(extension.as_deref(), Some("safetensors") | Some("pt")) {
+        if !matches!(extension.as_deref(), Some("safetensors") | Some("pt") | Some("ckpt")) {
             continue;
         }
         let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
             continue;
         };
+        let header = read_tensor_header(&path);
+        /* A la racine, seuls les fichiers qui sont vraiment des LoRA sont
+           retenus : un checkpoint complet y est deja une carte. Dans loras/,
+           tout est accepte, comme avant, pour ne rien faire disparaitre d'un
+           dossier que l'utilisateur a rempli exprès. */
+        let in_loras_dir = path
+            .parent()
+            .and_then(|parent| parent.file_name())
+            .and_then(|value| value.to_str())
+            .map(|value| value.eq_ignore_ascii_case("loras"))
+            .unwrap_or(false);
+        if !in_loras_dir && !header.as_ref().map(|info| info.lora).unwrap_or(false) {
+            continue;
+        }
+        if found.iter().any(|lora| lora.name == name) {
+            continue;
+        }
         let bytes = fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
         found.push(ImageLora {
             name: name.to_string(),
+            path: if in_loras_dir {
+                format!("loras/{name}")
+            } else {
+                name.to_string()
+            },
             bytes,
+            family: header
+                .map(|info| info.family)
+                .unwrap_or(ImageFamily::Unknown),
         });
+    }
+}
+
+fn discover_image_loras(dir: &Path) -> Vec<ImageLora> {
+    let mut found: Vec<ImageLora> = Vec::new();
+    if let Ok(entries) = fs::read_dir(dir.join("loras")) {
+        collect_loras(entries, &mut found);
+    }
+    if let Ok(entries) = fs::read_dir(dir) {
+        collect_loras(entries, &mut found);
     }
     found.sort_by(|first, second| first.name.to_lowercase().cmp(&second.name.to_lowercase()));
     found
@@ -1848,9 +2056,12 @@ fn spawn_sd_server(
     /* Toujours transmis, meme sans LoRA par defaut : un fichier depose dans
        loras/ doit pouvoir s'appliquer a la generation suivante, sans relancer
        le moteur. Le style choisi part dans le champ `lora` de la requete. */
-    if dir.join("loras").is_dir() {
-        command.arg("--lora-model-dir").arg(dir.join("loras"));
-    }
+    /* Un seul dossier, et c'est la racine : le moteur n'en retient qu'un, et
+       passer `--lora-model-dir` deux fois faisait perdre le premier — les LoRA
+       de `loras/` devenaient introuvables. Depuis la racine, un style range
+       dans `loras/` se designe par `loras/<fichier>`, et un style depose a la
+       racine par son seul nom. */
+    command.arg("--lora-model-dir").arg(dir);
     command
         .arg("--steps")
         .arg(steps.to_string())
@@ -2041,6 +2252,22 @@ fn image_status_json(state: &Shared) -> String {
     }
 }
 
+/// Famille d'un pack du catalogue, deduite de sa forme : un pack a trois
+/// fichiers (Z-Image) est un DiT, un pack en 1024 px est du SDXL, le reste du
+/// SD 1.5. Un fichier ajoute a la main a deja sa famille, lue dans l'en-tete.
+fn pack_family(pack: &ImagePack) -> ImageFamily {
+    if pack.mode == "zimage" {
+        return ImageFamily::Dit;
+    }
+    if pack.px >= 768 {
+        ImageFamily::Sdxl
+    } else if pack.px > 0 {
+        ImageFamily::Sd15
+    } else {
+        ImageFamily::Unknown
+    }
+}
+
 fn image_packs_json(state: &Shared) -> String {
     match state.lock() {
         Ok(guard) => {
@@ -2053,7 +2280,7 @@ fn image_packs_json(state: &Shared) -> String {
                     let local = guard.image.local_of(pack);
                     let bytes = pack_bytes(&guard.image.dir, pack);
                     format!(
-                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{},\"family\":{}}}",
                         js_escape(&pack.id),
                         js_escape(&pack.name),
                         js_escape(&pack.mode),
@@ -2071,7 +2298,8 @@ fn image_packs_json(state: &Shared) -> String {
                         js_escape(&pack.lora),
                         pack.lora_weight,
                         js_escape(&pack.prompt_prefix),
-                        pack.added
+                        pack.added,
+                        js_escape(pack_family(pack).key())
                     )
                 })
                 .collect::<Vec<_>>()
@@ -2080,9 +2308,11 @@ fn image_packs_json(state: &Shared) -> String {
                 .iter()
                 .map(|lora| {
                     format!(
-                        "{{\"name\":{},\"bytes\":{}}}",
+                        "{{\"name\":{},\"path\":{},\"bytes\":{},\"family\":{}}}",
                         js_escape(&lora.name),
-                        lora.bytes
+                        js_escape(&lora.path),
+                        lora.bytes,
+                        js_escape(lora.family.key())
                     )
                 })
                 .collect::<Vec<_>>()
@@ -3048,7 +3278,12 @@ fn with_lora(body: &[u8], file: &str, weight: f32) -> Option<Vec<u8>> {
         return None;
     }
     let inner = &trimmed[1..trimmed.len() - 1];
-    let entry = format!("{{\"path\":{},\"multiplier\":{}}}", js_escape(file), weight);
+    // Les fichiers du catalogue sont ranges dans `loras/` : le chemin doit le dire.
+    let entry = format!(
+        "{{\"path\":{},\"multiplier\":{}}}",
+        js_escape(&format!("loras/{file}")),
+        weight
+    );
     let mut out = String::with_capacity(text.len() + entry.len() + 16);
     out.push('{');
     out.push_str(inner);
@@ -3382,12 +3617,103 @@ mod image_pack_tests {
         path
     }
 
+    /// Ecrit un .safetensors minimal : longueur, puis en-tete JSON.
+    fn fake_safetensors(dir: &Path, name: &str, keys: &[&str]) -> PathBuf {
+        let mut header = String::from("{");
+        for (index, key) in keys.iter().enumerate() {
+            if index > 0 {
+                header.push(',');
+            }
+            header.push_str(&format!(
+                "\"{key}\":{{\"dtype\":\"F16\",\"shape\":[2],\"data_offsets\":[0,4]}}"
+            ));
+        }
+        header.push('}');
+        let path = dir.join(name);
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let mut bytes = (header.len() as u64).to_le_bytes().to_vec();
+        bytes.extend_from_slice(header.as_bytes());
+        bytes.extend_from_slice(&[0u8; 4]);
+        fs::write(&path, bytes).expect("safetensors de test");
+        path
+    }
+
     #[test]
     fn devine_les_reglages_d_apres_le_nom() {
-        assert_eq!(guess_image_settings("dreamshaper_8"), (512, 20, 7.0));
-        assert_eq!(guess_image_settings("pony-diffusion-v6-xl"), (1024, 25, 7.0));
-        assert_eq!(guess_image_settings("sdxl-turbo"), (1024, 4, 1.0));
-        assert_eq!(guess_image_settings("anything-v5-lcm"), (512, 4, 1.0));
+        assert_eq!(guess_image_settings("dreamshaper_8", ImageFamily::Unknown), (512, 20, 7.0));
+        assert_eq!(
+            guess_image_settings("pony-diffusion-v6-xl", ImageFamily::Unknown),
+            (1024, 25, 7.0)
+        );
+        assert_eq!(guess_image_settings("sdxl-turbo", ImageFamily::Unknown), (1024, 4, 1.0));
+        assert_eq!(
+            guess_image_settings("anything-v5-lcm", ImageFamily::Unknown),
+            (512, 4, 1.5)
+        );
+        // L'en-tete prime sur le nom : un fichier nomme « xl » qui contient du
+        // SD 1.5 se dessine en 512 px.
+        assert_eq!(guess_image_settings("mon-modele-xl", ImageFamily::Sd15), (512, 20, 7.0));
+    }
+
+    #[test]
+    fn l_en_tete_distingue_un_lora_d_un_checkpoint() {
+        let dir = scratch("en-tete");
+
+        let lora = fake_safetensors(
+            &dir,
+            "mon-style.safetensors",
+            &[
+                "diffusion_model.blocks.0.attn.qkv_proj.lora_A.weight",
+                "diffusion_model.blocks.0.attn.qkv_proj.lora_B.weight",
+            ],
+        );
+        let info = read_tensor_header(&lora).expect("en-tete lisible");
+        assert!(info.lora);
+        assert_eq!(info.family, ImageFamily::Dit);
+        assert_eq!(info.tensors, 2);
+        // Un LoRA n'est pas un checkpoint : pas de carte.
+        assert!(added_image_pack(&lora).is_none());
+
+        let sdxl = fake_safetensors(
+            &dir,
+            "mon-modele.safetensors",
+            &[
+                "conditioner.embedders.1_model_embed.weight",
+                "model.diffusion_model.input_blocks.0.weight",
+            ],
+        );
+        let info = read_tensor_header(&sdxl).expect("en-tete lisible");
+        assert!(!info.lora);
+        assert_eq!(info.family, ImageFamily::Sdxl);
+        let pack = added_image_pack(&sdxl).expect("checkpoint reconnu");
+        assert_eq!(pack.px, 1024);
+        assert!(pack.note.contains("famille SDXL"));
+
+        let sd15 = fake_safetensors(
+            &dir,
+            "vieux-modele.safetensors",
+            &["cond_stage_model.transformer.text_model.embeddings.token_embedding.weight"],
+        );
+        assert_eq!(
+            read_tensor_header(&sd15).map(|info| info.family),
+            Some(ImageFamily::Sd15)
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn un_fichier_qui_n_est_pas_un_safetensors_est_ignore_proprement() {
+        let dir = scratch("binaire");
+        let path = dir.join("tronque.safetensors");
+        fs::write(&path, [1u8, 2, 3]).expect("fichier court");
+        assert!(read_tensor_header(&path).is_none());
+        // Repli sur le nom, sans paniquer.
+        let pack = added_image_pack(&path);
+        assert!(pack.is_some(), "un fichier court reste propose, faute de mieux");
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -3450,13 +3776,67 @@ mod image_pack_tests {
     }
 
     #[test]
+    fn les_lora_kohya_sont_rattaches_a_leur_famille() {
+        let dir = scratch("kohya");
+        // SD 1.5 : down_blocks, aucun label_emb, aucun second encodeur.
+        let sd15 = fake_safetensors(
+            &dir,
+            "gravure.safetensors",
+            &[
+                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_attn1_to_k.lora_down.weight",
+                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_attn1_to_k.lora_up.weight",
+            ],
+        );
+        assert_eq!(
+            read_tensor_header(&sd15).map(|info| info.family),
+            Some(ImageFamily::Sd15)
+        );
+
+        // SDXL : le second encodeur suffit a le dire.
+        let sdxl = fake_safetensors(
+            &dir,
+            "pony-style.safetensors",
+            &["lora_te2_text_model_encoder_layers_0_mlp_fc1.lora_down.weight"],
+        );
+        assert_eq!(
+            read_tensor_header(&sdxl).map(|info| info.family),
+            Some(ImageFamily::Sdxl)
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn les_lora_du_dossier_sont_listes() {
         let dir = scratch("loras");
         touch(&dir, "loras/simia-gravure.safetensors", 32);
         touch(&dir, "loras/photo.pt", 16);
         touch(&dir, "loras/readme.txt", 4);
-        let names: Vec<String> = discover_image_loras(&dir).into_iter().map(|lora| lora.name).collect();
+        let loras = discover_image_loras(&dir);
+        let names: Vec<String> = loras.iter().map(|lora| lora.name.clone()).collect();
         assert_eq!(names, vec!["photo.pt", "simia-gravure.safetensors"]);
+        assert_eq!(loras[1].path, "loras/simia-gravure.safetensors");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn un_lora_a_la_racine_rejoint_les_styles_et_pas_les_packs() {
+        let dir = scratch("racine");
+        fake_safetensors(&dir, "mon-style.safetensors", &["blocks.0.attn.qkv_proj.lora_A.weight"]);
+        // Un vrai checkpoint a la racine ne doit pas se retrouver dans les styles.
+        fake_safetensors(&dir, "mon-modele.safetensors", &["cond_stage_model.transformer.x"]);
+
+        let mut packs: Vec<ImagePack> = Vec::new();
+        discover_image_packs(&dir, &mut packs);
+        let ids: Vec<&str> = packs.iter().map(|pack| pack.id.as_str()).collect();
+        assert_eq!(ids, vec!["mon-modele"]);
+
+        let loras = discover_image_loras(&dir);
+        let names: Vec<&str> = loras.iter().map(|lora| lora.name.as_str()).collect();
+        assert_eq!(names, vec!["mon-style.safetensors"]);
+        assert_eq!(loras[0].family, ImageFamily::Dit);
+        // A la racine, le nom suffit ; dans loras/, le chemin doit le dire.
+        assert_eq!(loras[0].path, "mon-style.safetensors");
+        drop(packs);
         let _ = fs::remove_dir_all(&dir);
     }
 }
