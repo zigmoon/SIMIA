@@ -346,6 +346,40 @@ Aucun filtre de contenu n'est appliqué côté SIMIA : ce que le modèle accepte
 dessiner, SIMIA le dessine. Les licences ci-dessus, elles, continuent de
 s'appliquer à l'usage des images produites.
 
+### Les modeles video
+
+Un pack video ne se charge pas comme un checkpoint : il lui faut plusieurs
+fichiers et une generation asynchrone.
+
+**MiniMax-H3** dessine des images animees et le son qui va avec, dans le meme
+modele. Quatre fichiers, telecharges un par un par la bibliotheque :
+
+| Role | Fichier | Taille |
+|---|---|---|
+| Transformateur | `minimax_h3_ref2va_pruned-Q2_K_M.gguf` | 6,3 Go |
+| Encodeur de texte | `p-h3-image_text_encoder_int8_convrot.safetensors` | 4,8 Go |
+| VAE video | `minimax_h3_video_vae_int8_convrot.safetensors` | 2,6 Go |
+| VAE audio | `minimax_h3_audio_vae_fp32.safetensors` | 0,6 Go |
+
+Le moteur recoit les quatre chemins au demarrage, avec `--offload-to-cpu` et
+`--rng cpu` : les poids pesent plus lourd que la memoire graphique d'une carte
+courante, ils restent donc en RAM et circulent bloc par bloc.
+
+La generation passe par la file de taches du moteur (`/sdcpp/v1/vid_gen`), pas
+par une requete synchrone : elle dure des minutes. SIMIA interroge l'avancement
+etage par etage — lecture du prompt, dessin, creation du son, encodage — et
+affiche les pas faits sur le total. Le resultat est un fichier `.webm` rendu
+dans la conversation avec ses commandes.
+
+Comptez plusieurs minutes par clip sur une carte de 6 Go : c'est un modele de
+22 milliards de parametres, fait pour une machine confortable.
+
+Un LoRA n'est applique que si sa famille correspond a celle du pack charge. Le
+moteur, lui, se contente d'ignorer les tenseurs qui ne correspondent pas —
+`Only (0 / 420) LoRA tensors have been applied` — et rend une image sans le
+style, sans autre message. C'est pourquoi la famille est lue dans l'en-tete du
+fichier et affichee dans les reglages.
+
 ### Ajouter ses propres modèles d'image
 
 Un fichier déposé dans `models/image/` devient une carte dans la bibliothèque,

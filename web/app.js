@@ -4306,12 +4306,12 @@ async function hydrateImages(root) {
   const frames = root.querySelectorAll("[data-image-id]");
   for (const frame of frames) {
     const id = frame.dataset.imageId;
-    const image = frame.querySelector("img");
-    if (!image || image.dataset.hydrated === id) continue;
+    const media = frame.querySelector("img, video");
+    if (!media || media.dataset.hydrated === id) continue;
     const url = await imageObjectUrl(id);
     if (!url) { frame.dataset.missing = "true"; continue; }
-    image.src = url;
-    image.dataset.hydrated = id;
+    media.src = url;
+    media.dataset.hydrated = id;
     frame.removeAttribute("data-loading");
   }
 }
@@ -4320,12 +4320,33 @@ function imageMetaLine(image) {
   const stepsLabel = localizedText("pas", "steps", "pasos", "ステップ");
   const parts = [];
   if (image.model) parts.push(image.model);
-  parts.push(`${image.width}×${image.height}`, `${image.steps} ${stepsLabel}`);
+  parts.push(`${image.width}×${image.height}`);
+  if (image.video) {
+    const seconds = Number(image.seconds || 0);
+    parts.push(seconds > 0 ? `${seconds.toFixed(1)} s` : localizedText("vidéo", "video", "vídeo", "動画"));
+  } else {
+    parts.push(`${image.steps} ${stepsLabel}`);
+  }
   return parts.join(" · ");
 }
 
 function imageFigureMarkup(image) {
   const download = localizedText("Télécharger", "Download", "Descargar", "ダウンロード");
+  if (image.video) {
+    const regenerate = localizedText("Regénérer", "Regenerate", "Regenerar", "再生成");
+    const remove = localizedText("Supprimer la vidéo", "Delete video", "Eliminar el vídeo", "動画を削除");
+    /* Sans son au départ : un navigateur refuse de lancer une vidéo avec piste
+       audio sans geste de l'utilisateur. Les commandes permettent de l'activer. */
+    return `<figure class="message-image message-video" data-image-id="${escapeHtml(image.id)}" data-loading="true">
+      <div class="image-frame"><video controls playsinline loop muted preload="metadata" aria-label="${escapeHtml(image.prompt.slice(0, 120))}"></video></div>
+      <figcaption><span class="image-prompt">${escapeHtml(image.prompt)}</span><span class="image-meta">${escapeHtml(imageMetaLine(image))}</span></figcaption>
+      <div class="image-actions">
+        <button type="button" data-image-action="download">${escapeHtml(download)}</button>
+        <button type="button" data-image-action="regenerate">${escapeHtml(regenerate)}</button>
+        <button type="button" data-image-action="delete" aria-label="${escapeHtml(remove)}">✕</button>
+      </div>
+    </figure>`;
+  }
   const regenerate = localizedText("Régénérer", "Regenerate", "Regenerar", "再生成");
   const remove = localizedText("Supprimer l'image", "Delete image", "Eliminar la imagen", "画像を削除");
   return `<figure class="message-image" data-image-id="${escapeHtml(image.id)}" data-loading="true">
@@ -4393,6 +4414,22 @@ async function refreshImagePacks() {
    refuse de l'appliquer. Le dire avant la génération évite d'attendre pour
    rien un message d'erreur. */
 const IMAGE_FAMILY_LABELS = { sd15: "SD 1.5", sdxl: "SDXL", dit: "DiT" };
+
+/* Duree d'un clip. 22 images a 24 i/s font 0,9 s : arrondir a l'entier
+   afficherait « 0 s », ce qui laisse croire que rien n'a ete produit. */
+function videoSeconds(pack) {
+  const frames = Number(pack?.frames) || 0;
+  const fps = Number(pack?.fps) || 24;
+  if (!frames) return 0;
+  return frames / fps;
+}
+
+function videoDurationLabel(pack) {
+  const seconds = videoSeconds(pack);
+  if (!seconds) return "";
+  const text = seconds >= 10 ? String(Math.round(seconds)) : seconds.toFixed(1).replace(".", ",");
+  return `${text} s`;
+}
 
 function imageFamilyLabel(key) {
   return IMAGE_FAMILY_LABELS[key] || "";
@@ -4703,6 +4740,93 @@ async function imageEngineReady(onStage) {
   throw new Error("timeout");
 }
 
+/* Une vidéo n'a ni la même durée de calcul ni la même réponse que le reste :
+   le moteur la produit dans une file de tâches (`vid_gen`), puis la rend sous
+   forme de fichier encodé. On interroge la file, on lit son avancement, et on
+   récupère le fichier entier en base64. */
+const VIDEO_STAGE_LABELS = {
+  queued: ["En file d'attente…", "Queued…", "En cola…", "順番待ち…"],
+  waiting: ["Le moteur se prépare…", "The engine is getting ready…", "El motor se prepara…", "エンジンを準備中…"],
+  preparing: ["Préparation…", "Preparing…", "Preparando…", "準備中…"],
+  conditioning: ["Lecture du prompt…", "Reading the prompt…", "Leyendo el prompt…", "プロンプトを解析中…"],
+  sampling: ["Dessin en cours…", "Drawing…", "Dibujando…", "描写中…"],
+  vae_encode: ["Encodage…", "Encoding…", "Codificando…", "エンコード中…"],
+  vae_decode: ["Révélation des images…", "Revealing the frames…", "Revelando los fotogramas…", "フレームを生成中…"],
+  audio_decode: ["Création du son…", "Building the sound…", "Creando el sonido…", "音声を生成中…"],
+  upscaling: ["Agrandissement…", "Upscaling…", "Ampliando…", "拡大中…"],
+  encoding: ["Encodage vidéo…", "Encoding the video…", "Codificando el vídeo…", "動画を書き出し中…"]
+};
+
+function videoStageText(progress) {
+  const stage = String(progress?.stage || "");
+  const entry = VIDEO_STAGE_LABELS[stage];
+  const label = entry ? localizedText(entry[0], entry[1], entry[2], entry[3]) : localizedText("Génération…", "Generating…", "Generando…", "生成中…");
+  const done = Number(progress?.completed);
+  const total = Number(progress?.total);
+  if (progress?.unit === "steps" && Number.isFinite(done) && Number.isFinite(total) && total > 0) {
+    return `${label.replace(/…$/, "")} ${done}/${total}`;
+  }
+  return label;
+}
+
+async function imageGenerateVideo({ apiBase, prompt, pack, width, height, steps, cfg, chosenLora, setStage, controller }) {
+  const frames = Number(pack?.frames) || 22;
+  const fps = Number(pack?.fps) || 24;
+  const response = await fetch(`${apiBase}/sdcpp/v1/vid_gen`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: controller.signal,
+    body: JSON.stringify({
+      prompt,
+      negative_prompt: "",
+      width,
+      height,
+      seed: -1,
+      video_frames: frames,
+      fps,
+      output_format: "webm",
+      sample_params: {
+        sample_steps: steps,
+        sample_method: "euler",
+        guidance: { txt_cfg: cfg }
+      },
+      ...(chosenLora ? { lora: chosenLora } : {})
+    })
+  });
+  if (!response.ok) {
+    const failure = new Error(`image_engine_${response.status}`);
+    failure.detail = await response.text().then(text => text.slice(0, 300)).catch(() => "");
+    failure.status = response.status;
+    throw failure;
+  }
+  const job = await response.json();
+  const id = job?.id;
+  if (!id) throw new Error("tache sans identifiant");
+  imageJobId = id;
+  const pollUrl = job.poll_url || `${apiBase}/sdcpp/v1/jobs/${id}`;
+  const deadline = Date.now() + 60 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, IMAGE_POLL_MS));
+    const state = await fetch(pollUrl, { cache: "no-store" }).then(item => item.json()).catch(() => null);
+    if (!state) continue;
+    if (state.status === "completed") {
+      const encoded = state.result?.b64_json;
+      if (!encoded) throw new Error("vidéo vide");
+      const blob = base64ToBlob(encoded, state.result?.mime_type || "video/webm");
+      return { blob, seconds: Number(state.result?.frame_count || frames) / fps };
+    }
+    if (state.status === "failed" || state.status === "cancelled") {
+      const failure = new Error(state.status === "cancelled" ? "cancel" : "echec");
+      failure.detail = String(state.error?.message || state.error || "").slice(0, 300);
+      throw failure;
+    }
+    const done = Number(state.progress?.completed);
+    const total = Number(state.progress?.total);
+    setStage(videoStageText(state.progress), Number.isFinite(done) && Number.isFinite(total) && total > 0 ? Math.max(0.05, done / total) : 0.08);
+  }
+  throw new Error("timeout");
+}
+
 async function imageGenerate(prompt, bubble) {
   const label = bubble.querySelector(".image-progress-label");
   const bar = bubble.querySelector(".image-progress-bar i");
@@ -4716,6 +4840,8 @@ async function imageGenerate(prompt, bubble) {
 
   const pack = state.imagePacks.find(item => item.id === state.imagePackId);
   const px = pack?.px || IMAGE.width;
+  const videoHeight = Number(pack?.height) || px;
+  const isVideo = Boolean(pack?.video);
   const steps = pack?.steps || IMAGE.steps;
   const cfg = pack?.cfg ?? IMAGE.cfg ?? 1.0;
   const styledPrompt = pack?.promptPrefix ? `${pack.promptPrefix}, ${prompt}` : prompt;
@@ -4729,6 +4855,46 @@ async function imageGenerate(prompt, bubble) {
   const chosenLora = loraEntry
     ? [{ path: loraEntry.path || loraEntry.name, multiplier: Number(state.imageLoraWeight) || 0.8 }]
     : null;
+
+  /* Pack vidéo : la génération passe par une file de tâches, pas par une
+     requête synchrone. On s'arrête ici, tout le reste est commun. */
+  if (isVideo) {
+    const controller = new AbortController();
+    imageAbort = controller;
+    const result = await imageGenerateVideo({
+      apiBase: String(IMAGE.apiBase || "").replace(/\/$/, ""),
+      prompt: styledPrompt,
+      pack,
+      width: px,
+      height: videoHeight,
+      steps,
+      cfg,
+      chosenLora,
+      setStage,
+      controller
+    }).finally(() => {
+      imageAbort = null;
+      imageJobId = null;
+    });
+    const id = globalThis.crypto?.randomUUID?.() || `vid${Date.now()}`;
+    const record = {
+      id,
+      prompt,
+      blob: result.blob,
+      video: true,
+      width: px,
+      height: videoHeight,
+      steps,
+      cfg,
+      seconds: result.seconds,
+      pack: pack?.id || null,
+      packName: pack?.name || "",
+      createdAt: new Date().toISOString()
+    };
+    await imageRecordSave(record);
+    imageUrls.set(id, URL.createObjectURL(result.blob));
+    return { id, prompt, width: px, height: videoHeight, steps, model: pack?.name || "", video: true, seconds: result.seconds };
+  }
 
   /* Endpoint synchrone volontairement. Le couple
      `img_gen` + `jobs/<id>` de stable-diffusion.cpp tue le serveur au premier
@@ -4765,7 +4931,7 @@ async function imageGenerate(prompt, bubble) {
         prompt: styledPrompt,
         negative_prompt: "",
         width: px,
-        height: px,
+        height: videoHeight,
         steps,
         cfg_scale: cfg,
         seed: -1,
@@ -4917,8 +5083,16 @@ function setImageMode(active) {
   }
   if (ui.agentToggle) ui.agentToggle.classList.toggle("is-disabled", state.imageMode);
   ui.composer?.setAttribute("data-image-mode", state.imageMode ? "true" : "false");
+  const videoPack = activeImagePack()?.video;
+  if (ui.imageToggle) {
+    ui.imageToggle.textContent = videoPack
+      ? localizedText("Vidéo", "Video", "Vídeo", "動画")
+      : localizedText("Image", "Image", "Imagen", "画像");
+  }
   ui.prompt.placeholder = state.imageMode
-    ? localizedText("Décrivez l'image à générer…", "Describe the image to generate…", "Describe la imagen a generar…", "生成する画像を説明してください…")
+    ? videoPack
+      ? localizedText("Décrivez la vidéo à générer…", "Describe the video to generate…", "Describe el vídeo a generar…", "生成する動画を説明してください…")
+      : localizedText("Décrivez l'image à générer…", "Describe the image to generate…", "Describe la imagen a generar…", "生成する画像を説明してください…")
     : copy[state.language].placeholder;
   renderImageEngineUi();
   ui.prompt.focus();
@@ -4944,7 +5118,11 @@ function renderImageEngineUi() {
   const pack = activeImagePack();
   const ready = Boolean(pack && pack.local);
   const stepsLabel = localizedText("pas", "steps", "pasos", "ステップ");
-  const meta = pack ? `${pack.px} px · ${pack.steps} ${stepsLabel}` : "";
+  const meta = pack
+    ? pack.video
+      ? `${pack.px}×${pack.height || pack.px} · ${videoDurationLabel(pack)}`
+      : `${pack.px} px · ${pack.steps} ${stepsLabel}`
+    : "";
 
   /* Le bouton reste visible sans modele installe, mais en pointille : on voit
      que la fonction existe et qu'il reste un telechargement a faire. */
@@ -8858,7 +9036,10 @@ function renderModelLibrary() {
   const imageCards = !showImage ? [] : orderedPacks.flatMap(pack => {
     const active = pack.id === state.imagePackId;
     const ready = Boolean(pack.local);
-    const size = displaySize(`${pack.bytes ? `~${(pack.bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : pack.size} · ${pack.px}px/${pack.steps} ${localizedText("pas", "steps", "pasos", "ステップ")}`);
+    const detail = pack.video
+      ? `${pack.px}×${pack.height || pack.px} · ${videoDurationLabel(pack)}`
+      : `${pack.px}px/${pack.steps} ${localizedText("pas", "steps", "pasos", "ステップ")}`;
+    const size = displaySize(`${pack.bytes ? `~${(pack.bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : pack.size} · ${detail}`);
     const card = document.createElement("article");
     /* Trois familles, trois aspects distincts : ce que SIMIA installe lui-meme
        (accent vert plein), ce qui est deja sur le disque, et ce qu'il reste a
@@ -8866,6 +9047,9 @@ function renderModelLibrary() {
        « a telecharger » se ressemblaient au premier regard. */
     const family = pack.bundled ? "family-bundled" : ready ? "family-local" : "family-remote";
     card.className = `model-card image-card ${family}${active ? " selected" : ""}${pack.recommended ? " recommended" : ""}${ready ? "" : " remote"}`;
+    const videoTag = pack.video
+      ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画"))}</span>`
+      : "";
     const badge = !ready
       ? pack.downloadable
         ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>`
@@ -8885,7 +9069,7 @@ function renderModelLibrary() {
     const styleTag = pack.lora
       ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("STYLE SIMIA", "SIMIA STYLE", "ESTILO SIMIA", "SIMIA スタイル"))}</span>`
       : "";
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(pack.note || "")}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${downloadBlock(pack.id)}`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(pack.note || "")}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${downloadBlock(pack.id)}`;
     const rank = packRank(pack);
     const separator = rank === shownRank ? [] : (() => {
       shownRank = rank;
@@ -9818,9 +10002,10 @@ ui.chat.addEventListener("click", async event => {
   if (action === "download") {
     const url = await imageObjectUrl(id);
     if (!url) return;
+    const record = await imageRecordLoad(id);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `simia-${id.slice(0, 8)}.png`;
+    link.download = `simia-${id.slice(0, 8)}.${record?.video ? "webm" : "png"}`;
     link.click();
     return;
   }

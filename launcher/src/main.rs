@@ -34,6 +34,9 @@ const DEFAULT_UI_PORT: u16 = 8170;
 const IMAGE_IDLE: Duration = Duration::from_secs(300);
 const DEFAULT_IMG_WIDTH: u32 = 1024;
 const DEFAULT_IMG_STEPS: u32 = 8;
+/// Duree par defaut d'une video : deux secondes a 24 images par seconde.
+const DEFAULT_VIDEO_FRAMES: u32 = 49;
+const DEFAULT_VIDEO_FPS: u32 = 24;
 const HEURISTIC_WALK_UP: usize = 6;
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(240);
 
@@ -132,6 +135,26 @@ struct ImagePack {
     prompt_prefix: String,
     #[serde(default)]
     lora_url: String,
+    /// VAE audio des packs qui produisent une piste son (MiniMax-H3).
+    #[serde(default, rename = "audioVae")]
+    audio_vae: String,
+    /// Hauteur de l'image ou de la video ; egale a `px` quand elle est absente.
+    #[serde(default)]
+    height: u32,
+    /// Nombre d'images de la video et cadence de lecture.
+    #[serde(default)]
+    frames: u32,
+    #[serde(default)]
+    fps: u32,
+    /// Une URL par composant : un pack video ne se telecharge pas d'un bloc.
+    #[serde(default, rename = "diffusionUrl")]
+    diffusion_url: String,
+    #[serde(default, rename = "llmUrl")]
+    llm_url: String,
+    #[serde(default, rename = "vaeUrl")]
+    vae_url: String,
+    #[serde(default, rename = "audioVaeUrl")]
+    audio_vae_url: String,
     /// Fichier depose a la main dans `models/image/` : SIMIA l'a reconnu seul,
     /// sans entree de catalogue. L'interface le signale, sinon un fichier ajoute
     /// se confondrait avec un modele fourni.
@@ -154,9 +177,16 @@ struct ImageCatalog {
 }
 
 impl ImagePack {
+    /// Un pack video ne se charge pas comme un checkpoint : il lui faut un
+    /// transformer, un encodeur de texte et deux VAE, et sa generation passe par
+    /// une file de taches (`vid_gen`) au lieu d'une requete synchrone.
+    fn is_video(&self) -> bool {
+        matches!(self.mode.as_str(), "h3" | "ltx" | "video")
+    }
+
     fn file_names(&self) -> Vec<String> {
         let mut names = Vec::new();
-        for value in [&self.model, &self.diffusion, &self.llm, &self.vae] {
+        for value in [&self.model, &self.diffusion, &self.llm, &self.vae, &self.audio_vae] {
             if !value.is_empty() {
                 names.push(value.clone());
             }
@@ -168,8 +198,20 @@ impl ImagePack {
         if self.steps > 0 { self.steps } else { fallback }
     }
 
-    fn px_or(&self, fallback: u32) -> u32 {
-        if self.px > 0 { self.px } else { fallback }
+    /// Largeur et hauteur. Un pack carre n'a pas de `height` : les deux valent
+    /// `px`, comme avant.
+    fn size_or(&self, fallback: u32) -> (u32, u32) {
+        let width = if self.px > 0 { self.px } else { fallback };
+        let height = if self.height > 0 { self.height } else { width };
+        (width, height)
+    }
+
+    fn frames_or(&self, fallback: u32) -> u32 {
+        if self.frames > 0 { self.frames } else { fallback }
+    }
+
+    fn fps_or(&self, fallback: u32) -> u32 {
+        if self.fps > 0 { self.fps } else { fallback }
     }
 
     fn lora_file(&self) -> Option<&str> {
@@ -184,8 +226,13 @@ impl ImagePack {
 enum ImageFamily {
     Sd15,
     Sdxl,
-    /// Architecture a blocs de transformation (Flux, Z-Image, LTX-AV) : elle
-    /// demande son encodeur de texte et son VAE a cote du checkpoint.
+    /// MiniMax-H3 : transformer video et audio, quatre composants.
+    H3,
+    /// LTX-2.x : transformer video, encodeur Gemma, deux VAE.
+    Ltx,
+    /// Z-Image : un DiT et son VAE.
+    ZImage,
+    /// Architecture a blocs de transformation non identifiee.
     Dit,
     Unknown,
 }
@@ -195,6 +242,9 @@ impl ImageFamily {
         match self {
             ImageFamily::Sd15 => "sd15",
             ImageFamily::Sdxl => "sdxl",
+            ImageFamily::H3 => "h3",
+            ImageFamily::Ltx => "ltx",
+            ImageFamily::ZImage => "zimage",
             ImageFamily::Dit => "dit",
             ImageFamily::Unknown => "",
         }
@@ -206,6 +256,9 @@ impl ImageFamily {
         match self {
             ImageFamily::Sd15 => "SD 1.5",
             ImageFamily::Sdxl => "SDXL",
+            ImageFamily::H3 => "MiniMax-H3",
+            ImageFamily::Ltx => "LTX-2",
+            ImageFamily::ZImage => "Z-Image",
             ImageFamily::Dit => "DiT",
             ImageFamily::Unknown => "?",
         }
@@ -218,7 +271,9 @@ impl ImageFamily {
             ImageFamily::Sd15 => (512, 20, 7.0),
             // Une architecture DiT complete est presque toujours distillee, et
             // de toute facon on ne peut pas la dessiner sans son VAE.
-            ImageFamily::Dit => (1024, 8, 1.0),
+            ImageFamily::Dit | ImageFamily::ZImage => (1024, 8, 1.0),
+            ImageFamily::Ltx => (768, 25, 4.0),
+            ImageFamily::H3 => (640, 8, 1.0),
             ImageFamily::Unknown => (512, 20, 7.0),
         }
     }
@@ -250,14 +305,24 @@ fn read_tensor_header(path: &Path) -> Option<TensorHeader> {
     let text = String::from_utf8_lossy(&buffer).to_string();
 
     let lora = text.contains("lora_A") || text.contains("lora_B") || text.contains("lora_unet_");
-    let family = if text.contains("conditioner.embedders.1") || text.contains("conditioner.embedders.2") {
+    /* MiniMax-H3 porte un `token_refiner`, des projections `qkv_proj` et un
+       projecteur audio : trois marques qu'aucune autre famille n'a. Tester
+       avant les regles generiques evite de le confondre avec un DiT anonyme. */
+    let h3 = text.contains("audio_patch_proj")
+        || text.contains("token_refiner")
+        || text.contains("qkv_proj");
+    let family = if h3 {
+        ImageFamily::H3
+    } else if text.contains("conditioner.embedders.1") || text.contains("conditioner.embedders.2") {
         ImageFamily::Sdxl
     } else if text.contains("cond_stage_model.transformer") || text.contains("cond_stage_model.model") {
         ImageFamily::Sd15
+    } else if text.contains("transformer_blocks.") {
+        // LTX-2 nomme ses blocs `transformer_blocks`.
+        ImageFamily::Ltx
     } else if text.contains("joint_blocks")
         || text.contains("double_blocks")
         || text.contains("single_transformer_blocks")
-        || text.contains("audio_patch_proj")
         || text.contains("diffusion_model.blocks.")
     {
         ImageFamily::Dit
@@ -471,6 +536,14 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
         lora_weight: default_lora_weight(),
         prompt_prefix: String::new(),
         lora_url: String::new(),
+        audio_vae: String::new(),
+        height: 0,
+        frames: 0,
+        fps: 0,
+        diffusion_url: String::new(),
+        llm_url: String::new(),
+        vae_url: String::new(),
+        audio_vae_url: String::new(),
         added: true,
     })
 }
@@ -2030,51 +2103,81 @@ fn sd_log_path(port: u16) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("simia-sd-{port}.log"))
 }
 
+/// Ligne de commande du generateur d'images. Isolee pour pouvoir la relire
+/// dans un test : c'est la seule verification possible d'un pack video sans
+/// telecharger ses quatorze gigaoctets de poids.
+fn sd_server_args(
+    pack: &ImagePack,
+    dir: &Path,
+    steps: u32,
+    width: u32,
+    height: u32,
+) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
+    let path = |name: &str| dir.join(name).display().to_string();
+    if pack.is_video() {
+        /* MiniMax-H3 : transformer, encodeur de texte et deux VAE. Les poids
+           pesent plus lourd que la memoire graphique d'une carte courante :
+           `--offload-to-cpu` garde le modele en RAM et fait circuler les blocs,
+           et `--rng cpu` evite de tenir le generateur aleatoire sur le GPU. */
+        args.push("--diffusion-model".to_string());
+        args.push(path(&pack.diffusion));
+        args.push("--vae".to_string());
+        args.push(path(&pack.vae));
+        args.push("--llm".to_string());
+        args.push(path(&pack.llm));
+        args.push("--offload-to-cpu".to_string());
+        args.push("--vae-tiling".to_string());
+        args.push("--rng".to_string());
+        args.push("cpu".to_string());
+        if !pack.audio_vae.is_empty() {
+            args.push("--audio-vae".to_string());
+            args.push(path(&pack.audio_vae));
+        }
+    } else if pack.mode == "zimage" {
+        args.push("--diffusion-model".to_string());
+        args.push(path(&pack.diffusion));
+        args.push("--llm".to_string());
+        args.push(path(&pack.llm));
+        args.push("--vae".to_string());
+        args.push(path(&pack.vae));
+        // Sans ce drapeau, le DiT et l'encodeur ne tiennent pas ensemble dans 6 Go.
+        args.push("--offload-to-cpu".to_string());
+        args.push("--vae-tiling".to_string());
+    } else {
+        args.push("-m".to_string());
+        args.push(path(&pack.model));
+    }
+    /* Un seul dossier, et c'est la racine : le moteur n'en retient qu'un, et
+       passer `--lora-model-dir` deux fois faisait perdre le premier — les LoRA
+       de `loras/` devenaient introuvables. Depuis la racine, un style range
+       dans `loras/` se designe par `loras/<fichier>`, et un style depose a la
+       racine par son seul nom. */
+    args.push("--lora-model-dir".to_string());
+    args.push(dir.display().to_string());
+    args.push("--steps".to_string());
+    args.push(steps.to_string());
+    args.push("-W".to_string());
+    args.push(width.to_string());
+    args.push("-H".to_string());
+    args.push(height.to_string());
+    args
+}
+
 fn spawn_sd_server(
     bin: &Path,
     pack: &ImagePack,
     dir: &Path,
     port: u16,
     steps: u32,
-    size: u32,
+    width: u32,
+    height: u32,
 ) -> std::io::Result<Child> {
     let mut command = Command::new(bin);
-    if pack.mode == "zimage" {
-        command
-            .arg("--diffusion-model")
-            .arg(dir.join(&pack.diffusion))
-            .arg("--llm")
-            .arg(dir.join(&pack.llm))
-            .arg("--vae")
-            .arg(dir.join(&pack.vae))
-            // Sans ce drapeau, le DiT et l'encodeur ne tiennent pas ensemble dans 6 Go.
-            .arg("--offload-to-cpu")
-            .arg("--vae-tiling");
-    } else {
-        command.arg("-m").arg(dir.join(&pack.model));
+    for argument in sd_server_args(pack, dir, steps, width, height) {
+        command.arg(argument);
     }
-    /* Toujours transmis, meme sans LoRA par defaut : un fichier depose dans
-       loras/ doit pouvoir s'appliquer a la generation suivante, sans relancer
-       le moteur. Le style choisi part dans le champ `lora` de la requete. */
-    /* Un seul dossier, et c'est la racine : le moteur n'en retient qu'un, et
-       passer `--lora-model-dir` deux fois faisait perdre le premier — les LoRA
-       de `loras/` devenaient introuvables. Depuis la racine, un style range
-       dans `loras/` se designe par `loras/<fichier>`, et un style depose a la
-       racine par son seul nom. */
-    command.arg("--lora-model-dir").arg(dir);
     command
-        .arg("--steps")
-        .arg(steps.to_string())
-        .arg("-W")
-        .arg(size.to_string())
-        .arg("-H")
-        .arg(size.to_string())
-        .arg("--listen-ip")
-        .arg("127.0.0.1")
-        .arg("--listen-port")
-        .arg(port.to_string())
-        .arg("--log-level")
-        .arg("warn")
         .current_dir(bin.parent().unwrap_or_else(|| Path::new(".")))
         .stdin(Stdio::null());
     // sd-server meurt sans message quand la VRAM manque au moment de dessiner :
@@ -2116,7 +2219,7 @@ fn stop_image(state: &Shared) {
 /// Demarre sd-server en tache de fond : le chargement de 6 Go de poids prend
 /// plusieurs dizaines de secondes, la page interroge l'etat pendant ce temps.
 fn start_image(state: &Shared) -> String {
-    let (bin, pack, dir, port, steps, size) = {
+    let (bin, pack, dir, port, steps, width, height) = {
         let guard = match state.lock() {
             Ok(guard) => guard,
             Err(_) => return "error".to_string(),
@@ -2137,14 +2240,19 @@ fn start_image(state: &Shared) -> String {
             None => return "error".to_string(),
         };
         let steps = guard.image.steps_override.unwrap_or(pack.steps_or(DEFAULT_IMG_STEPS));
-        let size = guard.image.size_override.unwrap_or(pack.px_or(DEFAULT_IMG_WIDTH));
+        let (width, height) = match guard.image.size_override {
+            Some(size) if pack.is_video() => (size, (size * 9 / 16).max(64)),
+            Some(size) => (size, size),
+            None => pack.size_or(DEFAULT_IMG_WIDTH),
+        };
         (
             guard.image.bin.clone().unwrap(),
             pack,
             guard.image.dir.clone(),
             guard.image.port,
             steps,
-            size,
+            width,
+            height,
         )
     };
 
@@ -2156,7 +2264,7 @@ fn start_image(state: &Shared) -> String {
 
     let shared = Arc::clone(state);
     thread::spawn(move || {
-        let child = match spawn_sd_server(&bin, &pack, &dir, port, steps, size) {
+        let child = match spawn_sd_server(&bin, &pack, &dir, port, steps, width, height) {
             Ok(child) => child,
             Err(error) => {
                 if let Ok(mut guard) = shared.lock() {
@@ -2228,14 +2336,23 @@ fn image_status_json(state: &Shared) -> String {
             let available = missing.is_none();
             let pack = guard.image.current();
             let steps = pack.map(|item| guard.image.steps_override.unwrap_or(item.steps_or(DEFAULT_IMG_STEPS))).unwrap_or(0);
-            let size = pack.map(|item| guard.image.size_override.unwrap_or(item.px_or(DEFAULT_IMG_WIDTH))).unwrap_or(0);
+            let (width, height) = pack
+                .map(|item| match guard.image.size_override {
+                    Some(size) if item.is_video() => (size, (size * 9 / 16).max(64)),
+                    Some(size) => (size, size),
+                    None => item.size_or(DEFAULT_IMG_WIDTH),
+                })
+                .unwrap_or((0, 0));
+            let video = pack.map(|item| item.is_video()).unwrap_or(false);
+            let frames = pack.map(|item| item.frames_or(DEFAULT_VIDEO_FRAMES)).unwrap_or(0);
+            let fps = pack.map(|item| item.fps_or(DEFAULT_VIDEO_FPS)).unwrap_or(0);
             format!(
-                "{{\"available\":{},\"state\":{},\"message\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"pack\":{},\"reason\":{}}}",
+                "{{\"available\":{},\"state\":{},\"message\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"pack\":{},\"reason\":{},\"video\":{},\"frames\":{},\"fps\":{}}}",
                 available,
                 js_escape(&guard.image.state),
                 js_escape(&guard.image.message),
-                size,
-                size,
+                width,
+                height,
                 steps,
                 pack.map(|item| item.cfg).unwrap_or(1.0),
                 match pack {
@@ -2245,7 +2362,10 @@ fn image_status_json(state: &Shared) -> String {
                 match missing {
                     Some(reason) => js_escape(&reason),
                     None => "null".to_string(),
-                }
+                },
+                video,
+                frames,
+                fps
             )
         }
         Err(_) => "{\"available\":false,\"state\":\"error\"}".to_string(),
@@ -2256,8 +2376,14 @@ fn image_status_json(state: &Shared) -> String {
 /// fichiers (Z-Image) est un DiT, un pack en 1024 px est du SDXL, le reste du
 /// SD 1.5. Un fichier ajoute a la main a deja sa famille, lue dans l'en-tete.
 fn pack_family(pack: &ImagePack) -> ImageFamily {
+    if pack.mode == "h3" {
+        return ImageFamily::H3;
+    }
+    if pack.mode == "ltx" {
+        return ImageFamily::Ltx;
+    }
     if pack.mode == "zimage" {
-        return ImageFamily::Dit;
+        return ImageFamily::ZImage;
     }
     if pack.px >= 768 {
         ImageFamily::Sdxl
@@ -2280,7 +2406,7 @@ fn image_packs_json(state: &Shared) -> String {
                     let local = guard.image.local_of(pack);
                     let bytes = pack_bytes(&guard.image.dir, pack);
                     format!(
-                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{},\"family\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{},\"family\":{},\"video\":{},\"height\":{},\"frames\":{},\"fps\":{}}}",
                         js_escape(&pack.id),
                         js_escape(&pack.name),
                         js_escape(&pack.mode),
@@ -2292,14 +2418,24 @@ fn image_packs_json(state: &Shared) -> String {
                         pack.px,
                         local,
                         bytes,
-                        local == false && (!pack.url.is_empty() || !pack.lora_url.is_empty()),
+                        local == false
+                            && (!pack.url.is_empty()
+                                || !pack.lora_url.is_empty()
+                                || !pack.diffusion_url.is_empty()
+                                || !pack.llm_url.is_empty()
+                                || !pack.vae_url.is_empty()
+                                || !pack.audio_vae_url.is_empty()),
                         pack.recommended,
                         pack.bundled,
                         js_escape(&pack.lora),
                         pack.lora_weight,
                         js_escape(&pack.prompt_prefix),
                         pack.added,
-                        js_escape(pack_family(pack).key())
+                        js_escape(pack_family(pack).key()),
+                        pack.is_video(),
+                        pack.size_or(0).1,
+                        pack.frames_or(DEFAULT_VIDEO_FRAMES),
+                        pack.fps_or(DEFAULT_VIDEO_FPS)
                     )
                 })
                 .collect::<Vec<_>>()
@@ -2394,24 +2530,51 @@ fn download_image_pack(state: &Shared, id: &str) -> Result<(), String> {
         (pack, guard.image.dir.clone())
     };
 
-    let checkpoint = if pack.model.is_empty() { None } else { Some(dir.join(&pack.model)) };
+    /* Un pack video compte quatre fichiers, chacun avec son URL : on construit
+       la liste de ce qui manque avant de telecharger, pour tout annoncer d'un
+       coup plutot que d'echouer au troisieme. */
+    let mut jobs: Vec<(std::path::PathBuf, String)> = Vec::new();
+    let mut missing_url: Option<String> = None;
+    let mut queue = |name: &str, url: &str| {
+        if name.is_empty() {
+            return;
+        }
+        let dest = dir.join(name);
+        if dest.is_file() {
+            return;
+        }
+        if url.is_empty() {
+            missing_url = Some(name.to_string());
+            return;
+        }
+        jobs.push((dest, url.to_string()));
+    };
+    queue(&pack.model, &pack.url);
+    if pack.is_video() {
+        queue(&pack.diffusion, &pack.diffusion_url);
+        queue(&pack.llm, &pack.llm_url);
+        queue(&pack.vae, &pack.vae_url);
+        queue(&pack.audio_vae, &pack.audio_vae_url);
+    }
     let lora = pack.lora_file().map(|name| dir.join("loras").join(name));
-    let needs_checkpoint = checkpoint.as_ref().map(|path| !path.is_file()).unwrap_or(false);
     let needs_lora = lora.as_ref().map(|path| !path.is_file()).unwrap_or(false);
 
-    if !needs_checkpoint && !needs_lora {
+    if jobs.is_empty() && !needs_lora {
         return select_image_pack(state, id);
     }
+    if let Some(name) = missing_url {
+        return Err(format!("{name} n'a pas d'URL de telechargement"));
+    }
 
-    let total = if needs_checkpoint { parse_size(&pack.size) } else { 1 };
+    let total = if jobs.is_empty() { 1 } else { parse_size(&pack.size) };
     set_progress(state, id, 0, total, "image", None);
 
     let result = (|| -> Result<(), String> {
-        if needs_checkpoint {
-            if pack.url.is_empty() {
-                return Err("ce jeu de fichiers n'a pas d'URL de telechargement".to_string());
+        for (dest, url) in &jobs {
+            if let Some(parent) = dest.parent() {
+                let _ = fs::create_dir_all(parent);
             }
-            fetch_pack_file(state, id, &pack, checkpoint.as_deref().unwrap(), &pack.url, total)?;
+            fetch_pack_file(state, id, &pack, dest, url, total)?;
         }
         if needs_lora {
             if pack.lora_url.is_empty() {
@@ -3192,7 +3355,9 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
             );
             return;
         }
-        let generating = url.ends_with("/v1/img_gen") || url.ends_with("/sdapi/v1/txt2img");
+        let generating = url.ends_with("/v1/img_gen")
+            || url.ends_with("/sdapi/v1/txt2img")
+            || url.ends_with("/v1/vid_gen");
         if generating {
             // Le GPU n'heberge qu'un moteur a la fois. Sans cette liberation,
             // sd-server demarrait avec la VRAM deja prise par llama-server et
@@ -3439,8 +3604,16 @@ fn native_script(state: &Shared) -> String {
                 "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"apiBase\":\"\",\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"generateUrl\":\"/sdapi/v1/txt2img\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
                 guard.image.available(),
                 guard.image.bin.is_some() && guard.image.probe.is_none(),
-                guard.image.current().map(|pack| guard.image.size_override.unwrap_or(pack.px_or(DEFAULT_IMG_WIDTH))).unwrap_or(0),
-                guard.image.current().map(|pack| guard.image.size_override.unwrap_or(pack.px_or(DEFAULT_IMG_WIDTH))).unwrap_or(0),
+                guard.image.current().map(|pack| match guard.image.size_override {
+                    Some(size) if pack.is_video() => size,
+                    Some(size) => size,
+                    None => pack.size_or(DEFAULT_IMG_WIDTH).0,
+                }).unwrap_or(0),
+                guard.image.current().map(|pack| match guard.image.size_override {
+                    Some(size) if pack.is_video() => (size * 9 / 16).max(64),
+                    Some(size) => size,
+                    None => pack.size_or(DEFAULT_IMG_WIDTH).1,
+                }).unwrap_or(0),
                 guard.image.current().map(|pack| guard.image.steps_override.unwrap_or(pack.steps_or(DEFAULT_IMG_STEPS))).unwrap_or(0),
                 guard.image.current().map(|pack| pack.cfg).unwrap_or(1.0),
                 js_escape(
@@ -3617,6 +3790,41 @@ mod image_pack_tests {
         path
     }
 
+    /// Un pack nu, pour les tests : chaque cas ne remplit que ce qu'il verifie.
+    fn empty_pack(mode: &str) -> ImagePack {
+        ImagePack {
+            id: String::new(),
+            name: String::new(),
+            mode: mode.to_string(),
+            size: String::new(),
+            note: String::new(),
+            license: String::new(),
+            recommended: false,
+            bundled: false,
+            steps: 0,
+            cfg: 1.0,
+            px: 0,
+            model: String::new(),
+            diffusion: String::new(),
+            llm: String::new(),
+            vae: String::new(),
+            url: String::new(),
+            lora: String::new(),
+            lora_weight: 0.8,
+            prompt_prefix: String::new(),
+            lora_url: String::new(),
+            audio_vae: String::new(),
+            height: 0,
+            frames: 0,
+            fps: 0,
+            diffusion_url: String::new(),
+            llm_url: String::new(),
+            vae_url: String::new(),
+            audio_vae_url: String::new(),
+            added: false,
+        }
+    }
+
     /// Ecrit un .safetensors minimal : longueur, puis en-tete JSON.
     fn fake_safetensors(dir: &Path, name: &str, keys: &[&str]) -> PathBuf {
         let mut header = String::from("{");
@@ -3638,6 +3846,79 @@ mod image_pack_tests {
         bytes.extend_from_slice(&[0u8; 4]);
         fs::write(&path, bytes).expect("safetensors de test");
         path
+    }
+
+    #[test]
+    fn un_pack_video_recoit_ses_quatre_composants() {
+        let mut pack = empty_pack("h3");
+        pack.id = "minimax-h3".to_string();
+        pack.diffusion = "minimax-h3/transformer.gguf".to_string();
+        pack.llm = "minimax-h3/encodeur.safetensors".to_string();
+        pack.vae = "minimax-h3/vae-video.safetensors".to_string();
+        pack.audio_vae = "minimax-h3/vae-audio.safetensors".to_string();
+        let args = sd_server_args(&pack, Path::new("/models/image"), 8, 640, 360);
+        let line = args.join(" ");
+        assert!(line.contains("--diffusion-model"), "{line}");
+        assert!(line.contains("transformer.gguf"));
+        assert!(line.contains("--llm"));
+        assert!(line.contains("encodeur.safetensors"));
+        let expected_vae = Path::new("/models/image").join("minimax-h3/vae-video.safetensors");
+        assert!(line.contains(&format!("--vae {}", expected_vae.display())), "{line}");
+        assert!(line.contains("--audio-vae"), "{line}");
+        assert!(line.contains("--rng cpu"));
+        assert!(line.contains("--offload-to-cpu"));
+        // Les dimensions arrivent en clair : une video n'est pas carree.
+        assert!(line.contains("-W 640"));
+        assert!(line.contains("-H 360"));
+        // Un seul dossier de LoRA : deux fois, le moteur perd le premier.
+        assert_eq!(args.iter().filter(|arg| *arg == "--lora-model-dir").count(), 1, "{line}");
+    }
+
+    #[test]
+    fn un_checkpoint_garde_l_appel_historique() {
+        let mut pack = empty_pack("checkpoint");
+        pack.model = "sd15/modele.gguf".to_string();
+        let args = sd_server_args(&pack, Path::new("/m"), 20, 512, 512);
+        assert_eq!(args[0], "-m");
+        // Le separateur depend du systeme : on compare un chemin construit.
+        assert_eq!(args[1], Path::new("/m").join("sd15/modele.gguf").display().to_string());
+        assert!(!args.join(" ").contains("--llm"));
+        // Un LoRA de style ne change pas le dossier : il est deja a la racine.
+        pack.lora = "gravure.safetensors".to_string();
+        let args = sd_server_args(&pack, Path::new("/m"), 20, 512, 512);
+        assert_eq!(args.iter().filter(|arg| *arg == "--lora-model-dir").count(), 1);
+    }
+
+    #[test]
+    fn le_catalogue_du_depot_decrit_le_pack_video() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("models")
+            .join("image")
+            .join("catalog.json");
+        let Ok(text) = fs::read_to_string(&path) else {
+            return;
+        };
+        let catalog: ImageCatalog = serde_json::from_str(&text).expect("catalogue lisible");
+        let pack = catalog
+            .packs
+            .iter()
+            .find(|item| item.id == "minimax-h3")
+            .expect("pack video present");
+        assert!(pack.is_video());
+        // Chaque composant a son fichier et son URL : le telechargement se fait
+        // un fichier a la fois, pas d'un bloc.
+        assert!(!pack.diffusion.is_empty() && !pack.diffusion_url.is_empty());
+        assert!(!pack.llm.is_empty() && !pack.llm_url.is_empty());
+        assert!(!pack.vae.is_empty() && !pack.vae_url.is_empty());
+        assert!(!pack.audio_vae.is_empty() && !pack.audio_vae_url.is_empty());
+        // Les quatre fichiers comptent pour la presence sur le disque.
+        assert_eq!(pack.file_names().len(), 4);
+        // Une video a une hauteur et une cadence ; un carre n'en a pas besoin.
+        assert!(pack.height > 0 && pack.px > pack.height);
+        assert!(pack.frames > 0 && pack.fps > 0);
+        let (width, height) = pack.size_or(512);
+        assert_eq!((width, height), (640, 360));
     }
 
     #[test]
@@ -3671,7 +3952,8 @@ mod image_pack_tests {
         );
         let info = read_tensor_header(&lora).expect("en-tete lisible");
         assert!(info.lora);
-        assert_eq!(info.family, ImageFamily::Dit);
+        // `qkv_proj` et `token_refiner` sont les marques de MiniMax-H3.
+        assert_eq!(info.family, ImageFamily::H3);
         assert_eq!(info.tensors, 2);
         // Un LoRA n'est pas un checkpoint : pas de carte.
         assert!(added_image_pack(&lora).is_none());
@@ -3833,7 +4115,7 @@ mod image_pack_tests {
         let loras = discover_image_loras(&dir);
         let names: Vec<&str> = loras.iter().map(|lora| lora.name.as_str()).collect();
         assert_eq!(names, vec!["mon-style.safetensors"]);
-        assert_eq!(loras[0].family, ImageFamily::Dit);
+        assert_eq!(loras[0].family, ImageFamily::H3);
         // A la racine, le nom suffit ; dans loras/, le chemin doit le dire.
         assert_eq!(loras[0].path, "mon-style.safetensors");
         drop(packs);

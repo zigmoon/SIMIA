@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "packs": [
     {
       "id": "sd-turbo",
@@ -190,6 +190,28 @@
       "diffusion": "z_image_turbo-Q3_K.gguf",
       "llm": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
       "vae": "ae.safetensors"
+    },
+    {
+      "id": "minimax-h3",
+      "name": "MiniMax-H3 · video et son",
+      "mode": "h3",
+      "size": "~14,2 GB",
+      "license": "MiniMax H3 Community",
+      "note": "Video avec piste son, generee ensemble. 22 images a 24 images par seconde, soit un peu moins d'une seconde, en 640x360. Quatre fichiers, telecharges un par un. C'est un modele de 22 milliards de parametres : meme quantifie en Q2 et aide par le disque, il lui faut plusieurs minutes par clip sur une carte de 6 Go, et il occupe environ 14 Go de disque. A reserver aux machines avec beaucoup de memoire.",
+      "steps": 8,
+      "cfg": 1.0,
+      "px": 640,
+      "height": 360,
+      "frames": 22,
+      "fps": 24,
+      "diffusion": "minimax-h3/minimax_h3_ref2va_pruned-Q2_K_M.gguf",
+      "llm": "minimax-h3/p-h3-image_text_encoder_int8_convrot.safetensors",
+      "vae": "minimax-h3/minimax_h3_video_vae_int8_convrot.safetensors",
+      "audioVae": "minimax-h3/minimax_h3_audio_vae_fp32.safetensors",
+      "diffusionUrl": "https://huggingface.co/leejet/MiniMax-H3-GGUF/resolve/main/minimax_h3_ref2va_pruned-Q2_K_M.gguf",
+      "llmUrl": "https://huggingface.co/PrunaAI/P-H3-Image-Comfy/resolve/main/text_encoders/p-h3-image_text_encoder_int8_convrot.safetensors",
+      "vaeUrl": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_int8_convrot.safetensors",
+      "audioVaeUrl": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors"
     }
   ]
 }

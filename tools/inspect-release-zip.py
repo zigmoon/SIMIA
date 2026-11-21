@@ -55,6 +55,8 @@ MARKERS = {
         "chosenLora",
         "IMAGE_FAMILY_LABELS",
         "is-warning",
+        "videoDurationLabel",
+        "sdcpp/v1/vid_gen",
         'element.setAttribute("aria-busy", "true");',
     ],
     "web/styles.css": [

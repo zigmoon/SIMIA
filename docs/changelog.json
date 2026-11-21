@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.32": {
+      "title": "MiniMax-H3 : SIMIA genere aussi des videos avec leur son",
+      "highlights": [
+        "Un pack video entre dans la bibliotheque : MiniMax-H3, qui dessine des images animees et le son qui va avec, dans le meme modele. Vous ecrivez une scene, il rend un fichier video de 22 images a 24 images par seconde, en 640x360, avec sa piste audio.",
+        "Ce n'est pas un checkpoint : il lui faut quatre fichiers, le transformateur, son encodeur de texte et deux VAE, un pour l'image et un pour le son. La bibliotheque les telecharge un par un, avec une barre unique, et le moteur recoit les quatre chemins a son demarrage. Le pack est signale « VIDEO » dans la liste, avec sa duree reelle.",
+        "La generation ne peut pas etre synchrone comme celle d'une image : elle prend des minutes. SIMIA passe donc par la file de taches du moteur, interroge son avancement etage par etage — lecture du prompt, dessin, creation du son, encodage — et affiche le nombre de pas faits sur le total. Le bouton Image devient Video quand le pack choisi en produit.",
+        "La video s'affiche dans la conversation avec ses commandes, en muet au depart (un navigateur refuse de lancer une piste audio sans geste), et se telecharge en .webm. Elle se conserve comme une image.",
+        "Le LoRA que vous m'aviez confie n'etait pas destine a LTX : ses tenseurs portent les marques de MiniMax-H3 (token_refiner, qkv_proj, projecteurs audio) et sa dimension cachee est celle de H3. C'est pour cela qu'aucun pack d'images ne pouvait l'appliquer, et c'est la famille que ce pack apporte.",
+        "A savoir avant de telecharger : 14 Go sur le disque, et plusieurs minutes par clip sur une carte de 6 Go, meme quantifie en Q2 et aide par le disque. C'est un modele de 22 milliards de parametres : il est fait pour une machine confortable, pas pour un essai rapide."
+      ]
+    },
     "0.1.31": {
       "title": "Modeles d'image : SIMIA lit l'en-tete du fichier",
       "highlights": [
