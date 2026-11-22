@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.41",
+      "softwareVersion": "0.1.42",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.41",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.42",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -645,6 +645,7 @@
   main, footer{position:relative; z-index:1}
   .releases-offline{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
   .releases-offline a{color:var(--ink); font-weight:800}
+  .releases-newer{margin:0; font-size:12.5px; color:#6b5a20; line-height:1.55; background:#fdf6e0; border:1px solid #efe0b4; border-radius:8px; padding:8px 10px}
 
   .models{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:0; padding:0; list-style:none}
   .model{
@@ -874,26 +875,67 @@
     .eco-card{padding:20px 18px}
     .eco-figure{font-size:26px}
   }
-  /* Selecteur de langue. Il vit dans la barre de navigation : visible sur
-     ordinateur, et range dans le panneau deroulant sur mobile, la ou la place
-     manque. Les codes restent en deux lettres pour ne pas elargir la barre. */
-  .lang-switch{
-    display:inline-flex; align-items:center; gap:2px;
-    padding:3px; border:1px solid var(--line); border-radius:999px;
-    background:#f7f7f2;
+  /* Selecteur de langue. Replie, il n'affiche que la langue en cours ; le
+     survol (ou le clavier, ou le clic au doigt) deplie les quatre, l'une sous
+     l'autre. Cote a cote, les quatre codes prenaient la place d'un lien de
+     navigation pour une action qu'on fait une fois. */
+  .lang-switch{position:relative; display:inline-flex; align-items:center}
+  .lang-current{
+    appearance:none; display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    padding:6px 10px; border:1px solid var(--line); border-radius:999px;
+    background:#f7f7f2; color:#5b635c;
+    font:800 11px/1 Manrope,sans-serif; letter-spacing:.06em;
+    transition:background .15s, color .15s, border-color .15s;
   }
-  .lang-switch button{
-    appearance:none; border:0; background:transparent; cursor:pointer;
-    padding:5px 8px; border-radius:999px;
-    font:800 11px/1 Manrope,sans-serif; letter-spacing:.06em; color:#6d756f;
-    transition:background .15s, color .15s;
+  .lang-current:hover,.lang-switch.is-open .lang-current{background:#fff; color:var(--ink); border-color:#c9d3bc}
+  .lang-current:focus-visible{outline:2px solid #9ab387; outline-offset:2px}
+  .lang-current svg{
+    display:block; flex:none; width:9px; height:9px; fill:none; stroke:currentColor;
+    stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;
+    transition:transform .18s ease;
   }
-  .lang-switch button:hover{background:#e9ece4; color:var(--ink)}
-  .lang-switch button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
-  .lang-switch button:focus-visible{outline:2px solid #9ab387; outline-offset:1px}
+  .lang-switch:hover .lang-current svg,.lang-switch.is-open .lang-current svg{transform:rotate(180deg)}
+  .lang-menu{
+    position:absolute; top:calc(100% + 6px); right:0; z-index:70;
+    display:flex; flex-direction:column; gap:1px; min-width:158px; padding:5px;
+    border:1px solid var(--line); border-radius:12px; background:var(--surface);
+    box-shadow:0 20px 44px rgba(29,37,34,.16);
+    opacity:0; visibility:hidden; transform:translateY(-4px);
+    /* La visibilite bascule a la fin de la fermeture, et tout de suite a
+       l'ouverture : sinon le premier bouton reste non focusable pendant la
+       transition, et la touche Entree n'amenait nulle part. */
+    transition:opacity .14s ease, transform .14s ease, visibility 0s linear .14s;
+  }
+  /* `:hover` pour la souris, `.is-open` pour le clavier et le doigt. Pas de
+     `:focus-within` : il maintenait le menu ouvert après Echap, puisque le
+     focus revenait au bouton, à l'intérieur du selecteur. */
+  .lang-switch:hover .lang-menu,
+  .lang-switch.is-open .lang-menu{opacity:1; visibility:visible; transform:none; transition-delay:0s}
+  /* Pont invisible : la souris traverse l'ecart sans refermer le menu. */
+  .lang-switch:hover::after,
+  .lang-switch.is-open::after{content:""; position:absolute; left:0; right:0; top:100%; height:8px}
+  .lang-menu button{
+    appearance:none; border:0; background:transparent; cursor:pointer; text-align:left;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:8px 10px; border-radius:8px;
+    font:700 12.5px/1.2 Manrope,sans-serif; color:#4d554f;
+    transition:background .12s, color .12s;
+  }
+  .lang-menu button:hover{background:#eef1e8; color:var(--ink)}
+  .lang-menu button:focus-visible{outline:2px solid #9ab387; outline-offset:-2px}
+  .lang-menu button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+  .lang-menu button[aria-pressed="true"]::after{content:"✓"; font-size:11px; opacity:.75}
   @media (max-width:960px){
-    .lang-switch{margin-top:6px; align-self:flex-start; padding:4px}
-    .lang-switch button{padding:7px 12px; font-size:12px}
+    /* Dans le panneau mobile, la place est verticale : les quatre langues sont
+       listees a plat, sans repli ni survol. */
+    .lang-switch{display:block; margin-top:6px; padding-top:6px; border-top:1px solid var(--line)}
+    .lang-current{display:none}
+    .lang-menu{
+      position:static; opacity:1; visibility:visible; transform:none;
+      min-width:0; padding:0; border:0; background:transparent; box-shadow:none;
+    }
+    .lang-switch:hover::after,.lang-switch.is-open::after{content:none}
+    .lang-menu button{padding:12px 12px; border-radius:9px; font-size:14px}
   }
 
   /* --------------------------------------------------------------------------
@@ -1013,11 +1055,18 @@
       <a href="#confidentialite">Confidentialité</a>
       <a href="#faq">FAQ</a>
       <a class="nav-panel-cta" href="./app/">Ouvrir la version web</a>
-      <div class="lang-switch" role="group" aria-label="Langue du site" data-no-i18n>
-        <button type="button" data-language="fr" aria-pressed="true" title="Français">FR</button>
-        <button type="button" data-language="en" aria-pressed="false" title="English">EN</button>
-        <button type="button" data-language="es" aria-pressed="false" title="Español">ES</button>
-        <button type="button" data-language="ja" aria-pressed="false" title="日本語">JA</button>
+      <div class="lang-switch" data-no-i18n>
+        <button class="lang-current" type="button" aria-haspopup="true" aria-expanded="false"
+                aria-controls="lang-menu" aria-label="Langue du site">
+          <span class="lang-current-code">FR</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
+        </button>
+        <div class="lang-menu" id="lang-menu" role="group" aria-label="Langue du site">
+          <button type="button" data-language="fr" aria-pressed="true" lang="fr">Français</button>
+          <button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+          <button type="button" data-language="es" aria-pressed="false" lang="es">Español</button>
+          <button type="button" data-language="ja" aria-pressed="false" lang="ja">日本語</button>
+        </div>
       </div>
     </nav>
     <button class="nav-burger" id="mega-trigger-mobile" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
@@ -1351,8 +1400,8 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a class="file-primary" data-release="windows-x64-setup.exe" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.41/simia-windows-x64-setup.exe" download><span>Installer SIMIA</span><small>exe · recommandé</small></a>
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.41/simia-windows-x64.zip" download><span>Archive portable</span><small>zip</small></a>
+            <a class="file-primary" data-release="windows-x64-setup.exe" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.42/simia-windows-x64-setup.exe" download><span>Installer SIMIA</span><small>exe · recommandé</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.42/simia-windows-x64.zip" download><span>Archive portable</span><small>zip</small></a>
           </div>
           <p class="dl-note">L'installeur place SIMIA dans votre profil, crée le raccourci et le désinstalleur, sans droit administrateur : double-clic, c'est tout. L'archive, elle, se décompresse où vous voulez — sur une clé USB par exemple — mais il faut d'abord la débloquer : clic droit sur le .zip → Propriétés → Débloquer, avant extraction.</p>
         </article>
@@ -1367,8 +1416,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.41/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.41/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.42/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.42/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1383,7 +1432,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.41/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.42/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1740,22 +1789,31 @@
      fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
      préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
-  const RELEASE_TAG = "v0.1.41";
-  const RELEASE_BASE = `https://github.com/zigmoon/SIMIA/releases/download/${RELEASE_TAG}`;
+  const RELEASE_TAG = "v0.1.42";
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
-  const RELEASE_API = `https://api.github.com/repos/zigmoon/SIMIA/releases/tags/${RELEASE_TAG}`;
+  /* La page annonce une version, mais GitHub peut en avoir publie une plus
+     recente depuis : c'est la plus recente qui est servie, sinon un visiteur
+     telecharge une version que l'on a deja remplacee. La liste, et non
+     `/releases/tags/<etiquette>`, permet de le savoir. */
+  const RELEASES_API = `https://api.github.com/repos/zigmoon/SIMIA/releases?per_page=5`;
+  const releaseApiFor = tag => `https://api.github.com/repos/zigmoon/SIMIA/releases/tags/${tag}`;
+  let activeTag = RELEASE_TAG;
 
-  /* Les paquets viennent tous de GitHub, et d'une version nommee : chaque lien
-     porte l'etiquette `releases/download/v0.1.41/<nom>`. Rien ne resout
-     « latest » a notre place : ce que le visiteur telecharge est exactement la
-     version annoncee sur la page, et une publication ulterieure ne remplace pas
-     sous ses pieds le fichier derriere un bouton deja affiche.
+  /* Les paquets viennent tous de GitHub. Chaque lien porte une etiquette
+     explicite, `releases/download/<etiquette>/<nom>` : jamais « latest », qui
+     changerait le fichier derriere un bouton deja affiche.
 
-     L'etiquette est ecrite en dur a trois endroits : les quatre liens du HTML
-     (qui doivent marcher sans JavaScript), la constante ci-dessus, et le bloc
-     de donnees structurees. tools/prepare-ftp.ps1 refuse de preparer le site si
-     l'une de ces copies ne correspond plus a la version du lanceur.
+     L'etiquette de reference ci-dessus sert aux visiteurs sans JavaScript et
+     reste ecrite en dur a trois endroits : les quatre liens du HTML, la
+     constante, et le bloc de donnees structurees. tools/prepare-ftp.ps1 refuse
+     de preparer le site si l'une de ces copies ne correspond plus a la version
+     du lanceur.
+
+     Quand l'API GitHub est joignable avec l'accord du visiteur, la version
+     publiee la plus recente prend le relais de cette reference : sans cela, le
+     site continuait de distribuer la version precedente tant que la page
+     n'etait pas redeployee. Le bloc « Version publiee » le signale.
 
      L'API GitHub ne sert plus qu'a deux choses : afficher la date et la taille
      de cette version dans le bloc « Version publiee » (soumise au consentement,
@@ -1771,7 +1829,7 @@
   const releaseLinks = [...document.querySelectorAll("[data-release]")];
   const targetOf = name => String(name).replace(/\.(zip|tar\.gz)$/i, "");
   const localBuilds = new Map();
-  const releaseUrlFor = name => `${RELEASE_BASE}/${RELEASE_PREFIX}${name}`;
+  const releaseUrlFor = name => `https://github.com/zigmoon/SIMIA/releases/download/${activeTag}/${RELEASE_PREFIX}${name}`;
 
   /* Les ressources externes ne sont chargees qu'avec l'accord du visiteur.
      Tant que la boite cookies n'a pas repondu, on considere que c'est non :
@@ -1822,6 +1880,25 @@
     }
   };
 
+  /* Quelle version est reellement servie. La page annonce RELEASE_TAG, mais
+     GitHub peut en avoir publie une plus recente depuis : servir l'ancienne
+     ferait telecharger au visiteur une version deja remplacee. On garde
+     l'etiquette annoncee si l'API ne repond pas — mieux vaut un lien vers une
+     version connue qu'un lien mort. */
+  async function resolveActiveTag() {
+    const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    const list = Array.isArray(payload) ? payload : [payload];
+    const latest = list.find(item => item && !item.draft && !item.prerelease && item.tag_name);
+    if (!latest) return null;
+    if (latest.tag_name !== activeTag) {
+      activeTag = latest.tag_name;
+      renderDownloads(null);
+    }
+    return latest;
+  }
+
   async function loadDownloads() {
     let githubAssets = null;
     try {
@@ -1838,6 +1915,9 @@
     // externes, meme si un paquet local existe : sinon Windows, heberge ici,
     // masquerait macOS et Linux, qui ne viennent que des releases.
     if (consentExternal()) {
+      try {
+        await resolveActiveTag();
+      } catch { /* API muette : on reste sur la version annoncee */ }
       githubAssets = await fetchGithubAssets();
     }
     renderDownloads(githubAssets);
@@ -1847,13 +1927,13 @@
   async function fetchGithubAssets() {
     if (!consentExternal()) return null;
     try {
-      const response = await fetch(RELEASE_API, { headers: { Accept: "application/vnd.github+json" } });
+      const response = await fetch(releaseApiFor(activeTag), { headers: { Accept: "application/vnd.github+json" } });
       if (!response.ok) return null;
       const payload = await response.json();
       const pinned = Array.isArray(payload) ? payload[0] : payload;
       if (!pinned || pinned.draft) return null;
       const assets = {};
-      (pinned.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name)).forEach(asset => {
+      (pinned.assets || []).filter(asset => /\.(exe|zip|tar\.gz)$/i.test(asset.name)).forEach(asset => {
         assets[asset.name] = asset.browser_download_url;
       });
       return assets;
@@ -1933,6 +2013,60 @@
     });
     megaWrap.addEventListener("mouseleave", () => {
       hoverTimer = setTimeout(() => setMega(false), 240);
+    });
+  }
+
+  /* ---------- selecteur de langue ----------
+     Replie, il n'ouvre que sur demande. Le survol suffit a la souris, mais un
+     menu qui n'existe qu'au survol est inatteignable au clavier et au doigt :
+     Entree, Espace et la fleche bas l'ouvrent et posent le focus sur la
+     premiere langue. Echap referme et rend le focus au bouton. */
+  const langSwitch = document.querySelector(".lang-switch");
+  const langCurrent = langSwitch?.querySelector(".lang-current");
+  const langMenu = langSwitch?.querySelector(".lang-menu");
+  const setLangMenu = open => {
+    if (!langSwitch) return;
+    langSwitch.classList.toggle("is-open", open);
+    langCurrent?.setAttribute("aria-expanded", String(open));
+  };
+  if (langSwitch && langCurrent && langMenu) {
+    langCurrent.addEventListener("click", event => {
+      const next = event.detail > 0 && hoverCapable ? true : !langSwitch.classList.contains("is-open");
+      setLangMenu(next);
+      // Entree et Espace declenchent un clic sans coordonnees : le clavier
+      // demande le focus dans la liste, la souris non.
+      if (next && event.detail === 0) requestAnimationFrame(() => langMenu.querySelector("button")?.focus());
+    });
+    langCurrent.addEventListener("keydown", event => {
+      if (event.key !== "ArrowDown") return;
+      event.preventDefault();
+      setLangMenu(true);
+      langMenu.querySelector("button")?.focus();
+    });
+    langMenu.querySelectorAll("button").forEach(button => {
+      button.addEventListener("click", () => {
+        setLangMenu(false);
+        langCurrent.focus();
+      });
+    });
+    document.addEventListener("click", event => {
+      if (!langSwitch.contains(event.target)) setLangMenu(false);
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && langSwitch.classList.contains("is-open")) {
+        setLangMenu(false);
+        langCurrent.focus();
+      }
+    });
+    // Le panneau mobile se referme : le menu ne doit pas rester ouvert derriere.
+    navToggle?.addEventListener("click", () => setLangMenu(false));
+    if (hoverCapable) langSwitch.addEventListener("mouseleave", () => setLangMenu(false));
+    // Quitter le selecteur au clavier referme la liste, sans laisser le focus
+    // nulle part.
+    langSwitch.addEventListener("focusout", () => {
+      requestAnimationFrame(() => {
+        if (!langSwitch.contains(document.activeElement)) setLangMenu(false);
+      });
     });
   }
 
@@ -2182,7 +2316,12 @@
     if (days <= 0) return "aujourd'hui";
     if (days === 1) return "hier";
     if (days < 30) return `il y a ${days} jours`;
-    return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    // Au-dela d'un mois, la date est ecrite telle quelle : « il y a 47 jours »
+    // ne se lit pas. Le format suit la langue de la page, sinon la landing
+    // anglaise affichait « 22 octobre 2025 ». Les cas courts sont traduits par
+    // les regles de landing-i18n.js.
+    const locale = document.documentElement.lang || "fr";
+    return date.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
   };
 
   const formatSize = bytes => {
@@ -2239,31 +2378,31 @@
         <a href="${REPO_URL}/releases" target="_blank" rel="noopener">la page Releases</a> les donne aussi.`);      return;
     }
     try {
-      const response = await fetch(RELEASE_API, { headers: { Accept: "application/vnd.github+json" } });
-      if (response.status === 404) {
-        releasesEmpty("Aucune version publiée sur GitHub pour le moment.");
-        return;
-      }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
-      const pinned = Array.isArray(payload) ? payload[0] : payload;
-      if (!pinned || pinned.draft) {
+      const pinned = await resolveActiveTag();
+      if (!pinned) {
         releasesEmpty("Aucune version publiée sur GitHub pour le moment.");
         return;
       }
 
-      const assets = (pinned.assets || []).filter(asset => /\.(zip|tar\.gz)$/i.test(asset.name));
+      /* `.exe` : l'installeur Windows. Sans lui, le bloc des versions ignorait
+         le paquet que la carte Windows met en avant. */
+      const assets = (pinned.assets || []).filter(asset => /\.(exe|zip|tar\.gz)$/i.test(asset.name));
       const assetLinks = assets.map(asset => `<a class="release-asset" href="${asset.browser_download_url}" download>
           <span>${escapeHtml(assetLabel(asset.name))}</span><small>${formatSize(asset.size)}</small>
         </a>`).join("");
 
-      /* Seule la version de la page est citee. L'historique complet vit sur
-         GitHub, et le remettre ici allongeait le bloc sans rien apprendre. */
+  /* Seule la version servie est citee. L'historique complet vit sur GitHub, et
+     le remettre ici allongeait le bloc sans rien apprendre. Quand GitHub en
+     propose une plus recente que celle annoncee par la page, le bloc le dit :
+     sans cette phrase, le visiteur ne sait pas pourquoi l'etiquette n'est pas
+     celle du titre de la page. */
+      const newer = pinned.tag_name && pinned.tag_name !== RELEASE_TAG;
       releasesBody.innerHTML = `
         <div class="release-latest">
           <span class="release-pill">${escapeHtml(pinned.tag_name || pinned.name)}</span>
-          <span class="release-date">publiée ${relativeDate(pinned.published_at)}</span>
+          <span class="release-date">publiée <span>${relativeDate(pinned.published_at)}</span></span>
         </div>
+        ${newer ? `<p class="releases-newer">Version plus récente que celle annoncée en haut de page : les liens ci-dessous la servent déjà.</p>` : ""}
         ${assetLinks
           ? `<div class="release-assets">${assetLinks}</div>`
           : `<p class="releases-offline">Cette version n'a pas encore de paquet joint : la compilation est peut-être en cours.</p>`}`;

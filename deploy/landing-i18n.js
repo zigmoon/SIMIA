@@ -385,6 +385,10 @@ var I18N = {
     "exe · recommandé": "exe · recommended",
     "zip": "zip",
     "L'installeur place SIMIA dans votre profil, crée le raccourci et le désinstalleur, sans droit administrateur : double-clic, c'est tout. L'archive, elle, se décompresse où vous voulez — sur une clé USB par exemple — mais il faut d'abord la débloquer : clic droit sur le .zip → Propriétés → Débloquer, avant extraction.": "The installer puts SIMIA in your user profile, creates the shortcut and the uninstaller, with no administrator rights: double-click, done. The archive is extracted wherever you like — on a USB stick, for instance — but you must unblock it first: right-click the .zip → Properties → Unblock, before extracting.",
+    "publiée": "published",
+    "Windows — installeur": "Windows — installer",
+    "Windows — archive": "Windows — archive",
+    "Version plus récente que celle annoncée en haut de page : les liens ci-dessous la servent déjà.": "A newer version than the one announced at the top of this page is published: the links below already serve it.",
   },
   es: {
     "Versions": "Versiones",
@@ -767,6 +771,10 @@ var I18N = {
     "Qui édite SIMIA, et ce qu'il advient de vos données.": "Quién edita SIMIA y qué ocurre con tus datos.",
     "Cette page dit exactement ce qui reste sur votre appareil, ce qui en sort, sur quelle base légale et pendant combien de temps. Elle n'annonce rien qui ne soit vérifiable dans le code, publié et lisible.": "Esta página dice exactamente qué se queda en tu dispositivo, qué sale de él, con qué base legal y durante cuánto tiempo. No anuncia nada que no sea verificable en el código, publicado y legible.",
     "Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite, hors agent web.": "Un asistente en línea consume en cada mensaje: tu frase sale hacia un centro de datos, allí encuentra un modelo y vuelve. SIMIA invierte el trayecto. El cálculo se hace una vez, en la máquina que ya tienes, y después nada circula, salvo el agente web.",
+    "publiée": "publicada",
+    "Windows — installeur": "Windows — instalador",
+    "Windows — archive": "Windows — archivo",
+    "Version plus récente que celle annoncée en haut de page : les liens ci-dessous la servent déjà.": "Hay una versión más reciente que la anunciada arriba: los enlaces de abajo ya la sirven.",
     "Archive portable": "Archivo portable",
     "exe · recommandé": "exe · recomendado",
     "zip": "zip",
@@ -1152,6 +1160,10 @@ var I18N = {
     "Mentions légales & RGPD": "法的情報と GDPR",
     "Qui édite SIMIA, et ce qu'il advient de vos données.": "SIMIA を発行しているのは誰か、あなたのデータがどう扱われるか。",
     "Cette page dit exactement ce qui reste sur votre appareil, ce qui en sort, sur quelle base légale et pendant combien de temps. Elle n'annonce rien qui ne soit vérifiable dans le code, publié et lisible.": "このページは、何が端末に残り、何が外へ出て、どの法的根拠に基づき、どれだけの期間なのかを正確に記します。公開され読めるコードで確認できないことは述べていません。",
+    "publiée": "公開日:",
+    "Windows — installeur": "Windows — インストーラー",
+    "Windows — archive": "Windows — アーカイブ",
+    "Version plus récente que celle annoncée en haut de page : les liens ci-dessous la servent déjà.": "このページ上部の告知より新しいバージョンが公開されています。下のリンクはすでにそちらを配信しています。",
     "Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite, hors agent web.": "オンラインのアシスタントはメッセージごとに消費します。あなたの一文がデータセンターへ行き、そこでモデルに会い、戻ってきます。SIMIA はその経路を逆にします。計算はあなたがすでに持っているマシンで一度だけ行われ、その後は Web エージェントを除いて何も流れません。",
     "Archive portable": "ポータブル版アーカイブ",
     "exe · recommandé": "exe · 推奨",
@@ -1207,6 +1219,10 @@ var I18N = {
      des versions) : ils ne peuvent pas etre dans le dictionnaire, donc ils ont
      des regles. Sans elles, la landing anglaise affichait « il y a 3 jours ». */
   var RULES = [
+    /* Le francais ecrit « 1,7 Go » ; l'anglais et le japonais attendent un
+       point. Les deux regles a virgule passent donc avant les generiques. */
+    { pattern: /^(\d+),(\d+) Go$/, replace: { en: "$1.$2 GB", es: "$1,$2 GB", ja: "$1.$2 GB" } },
+    { pattern: /^(\d+),(\d+) Mo$/, replace: { en: "$1.$2 MB", es: "$1,$2 MB", ja: "$1.$2 MB" } },
     { pattern: /^il y a (\d+) jours?$/, replace: { en: "$1 days ago", es: "hace $1 días", ja: "$1日前" } },
     { pattern: /^hier$/, replace: { en: "yesterday", es: "ayer", ja: "昨日" } },
     { pattern: /^aujourd'hui$/, replace: { en: "today", es: "hoy", ja: "今日" } },
@@ -1375,10 +1391,23 @@ var I18N = {
     document.querySelectorAll("[data-language]").forEach(function (button) {
       var active = button.dataset.language === language;
       button.setAttribute("aria-pressed", active ? "true" : "false");
-      button.title = button.dataset.nativeName || button.textContent;
+      // Le nom de la langue reste ecrit dans sa propre langue : le traduire
+      // rendrait le choix impossible a qui ne lit pas la langue courante.
+      if (!button.dataset.nativeName) button.dataset.nativeName = button.textContent.trim();
+      button.textContent = button.dataset.nativeName;
     });
+    // Replie, le selecteur n'affiche que la langue en cours.
+    var code = document.querySelector(".lang-current-code");
+    if (code) code.textContent = language.toUpperCase();
+    var label = GROUP_LABEL[language] || GROUP_LABEL.fr;
     var group = document.querySelector(".lang-switch");
-    if (group) group.setAttribute("aria-label", GROUP_LABEL[language] || GROUP_LABEL.fr);
+    if (group) group.setAttribute("aria-label", label);
+    var list = document.querySelector(".lang-menu");
+    if (list) list.setAttribute("aria-label", label);
+    var trigger = document.querySelector(".lang-current");
+    // Le bouton n'affiche que deux lettres : sans la langue en clair, un lecteur
+    // d'ecran annoncerait « EN », et rien de plus.
+    if (trigger) trigger.setAttribute("aria-label", label + " : " + language.toUpperCase());
   }
 
   function apply(language) {

@@ -1,6 +1,19 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.42": {
+      "title": "La bibliotheque des modeles respire, et la landing sert la derniere version",
+      "highlights": [
+        "Un style importe a maintenant sa carte dans la bibliotheque, au milieu des modeles : on le depose, on le voit, on l'active. Un style qui ne correspond pas au modele d'image actif est nomme comme tel — « Style MiniMax-H3 : ne s'applique pas a SD 1.5 » — avec un bouton Incompatible plutot qu'un silence.",
+        "Un seul vocabulaire dans toute la fenetre : chaque bouton dit Activer, Actif ou Telecharger. Trois verbes coexistaient pour le meme geste (« Utiliser », « Choisir ce modele », « Image active »), ce qui laissait croire a trois actions differentes.",
+        "Les cartes portent une note de deux lignes au lieu de six, la fiche complete reste dans l'infobulle, et les badges ont cesse de repeter le titre du groupe : un badge « deja sur votre disque » sous un titre « deja sur votre disque » ne disait rien de plus.",
+        "Le bouton d'installation est dans l'en-tete de la bibliotheque, plus au bas d'une grille de quinze modeles. Il s'appelle desormais « Installer un modele ou un style ».",
+        "La pastille du modele d'image est passee a gauche de celle du modele de texte : les deux moteurs se lisent dans l'ordre ou ils travaillent.",
+        "La landing interroge la liste des versions et sert la plus recente, au lieu de rester figee sur celle ecrite dans la page, et l'installeur Windows figure enfin parmi les paquets listes : il etait filtre avec les seules archives .zip et .tar.gz.",
+        "Le selecteur de langue de la landing est un sous-menu : replie sur la langue en cours, il deplie les quatre au survol, et s'ouvre au clavier avec Entree ou la fleche bas.",
+        "Tailles et durees suivent la langue dans les deux sens : « 2,41 Go » en francais, « 2.41 GB » en anglais."
+      ]
+    },
     "0.1.41": {
       "title": "Un vrai installeur Windows, un import qui dit la verite, et la pastille du modele d'image",
       "highlights": [

@@ -243,11 +243,11 @@
     },
     {
       "id": "minimax-h3",
-      "name": "MiniMax-H3 · video et son",
+      "name": "MiniMax-H3 · vidéo et son",
       "mode": "h3",
       "size": "~14,2 GB",
       "license": "MiniMax H3 Community",
-      "note": "Video avec piste son, generee ensemble. 22 images a 24 images par seconde, soit un peu moins d'une seconde, en 640x360. Quatre fichiers, telecharges un par un. C'est un modele de 22 milliards de parametres : meme quantifie en Q2 et aide par le disque, il lui faut plusieurs minutes par clip sur une carte de 6 Go, et il occupe environ 14 Go de disque. A reserver aux machines avec beaucoup de memoire.",
+      "note": "Vidéo avec piste son, générée ensemble. 22 images à 24 images par seconde, soit un peu moins d'une seconde, en 640x360. Quatre fichiers, téléchargés un par un. C'est un modèle de 22 milliards de paramètres : même quantifié en Q2 et aidé par le disque, il lui faut plusieurs minutes par clip sur une carte de 6 Go, et il occupe environ 14 Go de disque. À réserver aux machines avec beaucoup de mémoire.",
       "steps": 8,
       "cfg": 1.0,
       "px": 640,

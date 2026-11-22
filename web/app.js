@@ -923,12 +923,12 @@ function modelDetails(model) {
 
 function modelLibraryText() {
   return state.language === "fr"
-    ? { eyebrow: "BIBLIOTHÈQUE DE MODÈLES", title: "Choisissez un modèle", intro: "Choisissez selon votre usage. Vous pourrez télécharger le modèle sélectionné juste après.", split: "La conversation et la génération d’images sont deux moteurs séparés : un modèle de texte et un modèle d’image peuvent être actifs en même temps.", webLimit: "La version web se limite aux modèles de moins de 1,9 Go, ce que votre navigateur peut héberger. La version desktop donne accès à toute la banque, y compris les modèles lourds, le code et la génération d’images.", close: "Fermer", all: "Tous", general: "Général", documents: "Documents & PDF", writing: "Écriture & création", code: "Code", reasoning: "Raisonnement & maths", vision: "Vision", choose: "Choisir ce modèle", selected: "Sélectionné", requiredTitle: "Choisissez un modèle pour commencer", requiredCopy: "SIMIA a besoin d’un modèle actif pour répondre. Sélectionnez un modèle adapté à votre besoin, puis téléchargez-le.", open: "Choisir un modèle", stored: "téléchargé", empty: "Aucun modèle compatible avec cet appareil dans cette catégorie. Essayez un autre onglet." }
+    ? { eyebrow: "BIBLIOTHÈQUE DE MODÈLES", title: "Choisissez un modèle", intro: "Un modèle par usage : texte pour la conversation, image pour dessiner.", split: "Vous pouvez changer l’un sans l’autre.", webLimit: "La version web se limite aux modèles de moins de 1,9 Go, ce que votre navigateur peut héberger. La version desktop donne accès à toute la banque, y compris les modèles lourds, le code et la génération d’images.", close: "Fermer", all: "Tous", general: "Général", documents: "Documents & PDF", writing: "Écriture & création", code: "Code", reasoning: "Raisonnement & maths", vision: "Vision", choose: "Choisir ce modèle", selected: "Sélectionné", requiredTitle: "Choisissez un modèle pour commencer", requiredCopy: "SIMIA a besoin d’un modèle actif pour répondre. Sélectionnez un modèle adapté à votre besoin, puis téléchargez-le.", open: "Choisir un modèle", stored: "téléchargé", empty: "Aucun modèle compatible avec cet appareil dans cette catégorie. Essayez un autre onglet." }
     : state.language === "ja"
-      ? { eyebrow: "モデルライブラリ", title: "モデルを選ぶ", intro: "用途に合わせて選んでください。選んだモデルはそのあとでダウンロードできます。", split: "会話と画像生成は別々のエンジンです。テキストモデルと画像モデルは同時に有効にできます。", webLimit: "ウェブ版はブラウザが扱える1.9GB未満のモデルのみです。デスクトップ版では大型モデル、コード、画像生成を含むすべてのモデルが使えます。", close: "閉じる", all: "すべて", general: "汎用", documents: "文書・PDF", writing: "文章・創作", code: "コード", reasoning: "推論・数学", vision: "画像", choose: "このモデルを選ぶ", selected: "選択中", requiredTitle: "始めるにはモデルを選んでください", requiredCopy: "SIMIAが回答するにはモデルが必要です。用途に合ったモデルを選び、ダウンロードしてください。", open: "モデルを選ぶ", stored: "ダウンロード済み", empty: "このカテゴリに、この端末で使えるモデルがありません。別のタブをお試しください。" }
+      ? { eyebrow: "モデルライブラリ", title: "モデルを選ぶ", intro: "用途ごとに1つ。会話はテキスト、描画は画像モデル。", split: "片方だけを変えられます。", webLimit: "ウェブ版はブラウザが扱える1.9GB未満のモデルのみです。デスクトップ版では大型モデル、コード、画像生成を含むすべてのモデルが使えます。", close: "閉じる", all: "すべて", general: "汎用", documents: "文書・PDF", writing: "文章・創作", code: "コード", reasoning: "推論・数学", vision: "画像", choose: "このモデルを選ぶ", selected: "選択中", requiredTitle: "始めるにはモデルを選んでください", requiredCopy: "SIMIAが回答するにはモデルが必要です。用途に合ったモデルを選び、ダウンロードしてください。", open: "モデルを選ぶ", stored: "ダウンロード済み", empty: "このカテゴリに、この端末で使えるモデルがありません。別のタブをお試しください。" }
       : state.language === "es"
-      ? { eyebrow: "BIBLIOTECA DE MODELOS", title: "Elige un modelo", intro: "Elige según tu uso. Podrás descargar el modelo seleccionado justo después.", split: "El chat y la generación de imágenes son dos motores separados: un modelo de texto y un modelo de imagen pueden estar activos a la vez.", webLimit: "La versión web se limita a modelos de menos de 1,9 GB, que el navegador puede alojar. La versión de escritorio da acceso a toda la biblioteca, incluidos los modelos pesados, el código y la generación de imágenes.", close: "Cerrar", all: "Todos", general: "General", documents: "Documentos y PDF", writing: "Escritura y creación", code: "Código", reasoning: "Razonamiento y matemáticas", vision: "Visión", choose: "Elegir este modelo", selected: "Seleccionado", requiredTitle: "Elige un modelo para comenzar", requiredCopy: "SIMIA necesita un modelo activo para responder. Elige uno adaptado a tu necesidad y descárgalo.", open: "Elegir un modelo", stored: "descargado", empty: "Ningún modelo compatible con este dispositivo en esta categoría. Prueba otra pestaña." }
-      : { eyebrow: "MODEL LIBRARY", title: "Choose a model", intro: "Choose by task. You can download the selected model right after.", split: "Chat and image generation are two separate engines: one text model and one image model can be active at the same time.", webLimit: "The web version only lists models under 1.9 GB, which your browser can host. The desktop version unlocks the whole library, including heavy models, code and image generation.", close: "Close", all: "All", general: "General", documents: "Documents & PDF", writing: "Writing & creative", code: "Code", reasoning: "Reasoning & math", vision: "Vision", choose: "Choose this model", selected: "Selected", requiredTitle: "Choose a model to get started", requiredCopy: "SIMIA needs an active model to reply. Select one for your task, then download it.", open: "Choose a model", stored: "downloaded", empty: "No model compatible with this device in this category. Try another tab." };
+      ? { eyebrow: "BIBLIOTECA DE MODELOS", title: "Elige un modelo", intro: "Un modelo por uso: texto para el chat, imagen para dibujar.", split: "Puedes cambiar uno sin el otro.", webLimit: "La versión web se limita a modelos de menos de 1,9 GB, que el navegador puede alojar. La versión de escritorio da acceso a toda la biblioteca, incluidos los modelos pesados, el código y la generación de imágenes.", close: "Cerrar", all: "Todos", general: "General", documents: "Documentos y PDF", writing: "Escritura y creación", code: "Código", reasoning: "Razonamiento y matemáticas", vision: "Visión", choose: "Elegir este modelo", selected: "Seleccionado", requiredTitle: "Elige un modelo para comenzar", requiredCopy: "SIMIA necesita un modelo activo para responder. Elige uno adaptado a tu necesidad y descárgalo.", open: "Elegir un modelo", stored: "descargado", empty: "Ningún modelo compatible con este dispositivo en esta categoría. Prueba otra pestaña." }
+      : { eyebrow: "MODEL LIBRARY", title: "Choose a model", intro: "One model per task: text to chat, image to draw.", split: "You can change one without the other.", webLimit: "The web version only lists models under 1.9 GB, which your browser can host. The desktop version unlocks the whole library, including heavy models, code and image generation.", close: "Close", all: "All", general: "General", documents: "Documents & PDF", writing: "Writing & creative", code: "Code", reasoning: "Reasoning & math", vision: "Vision", choose: "Choose this model", selected: "Selected", requiredTitle: "Choose a model to get started", requiredCopy: "SIMIA needs an active model to reply. Select one for your task, then download it.", open: "Choose a model", stored: "downloaded", empty: "No model compatible with this device in this category. Try another tab." };
 }
 
 function modelFilterFor(model) {
@@ -4705,7 +4705,8 @@ function videoSeconds(pack) {
 function videoDurationLabel(pack) {
   const seconds = videoSeconds(pack);
   if (!seconds) return "";
-  const text = seconds >= 10 ? String(Math.round(seconds)) : seconds.toFixed(1).replace(".", ",");
+  const fr = state.language === "fr";
+  const text = seconds >= 10 ? String(Math.round(seconds)) : seconds.toFixed(1).replace(fr ? "." : ",", fr ? "," : ".");
   return `${text} s`;
 }
 
@@ -5478,11 +5479,13 @@ function imagePackNote(pack) {
 function imagePackNoteShort(pack) {
   const full = imagePackNote(pack).replace(/\s+/g, " ").trim();
   if (full.length <= 110) return full;
-  const cut = full.slice(0, 150);
-  const stop = cut.search(/[.!?](\s|$)/);
-  if (stop > 30) return cut.slice(0, stop + 1);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > 60 ? cut.slice(0, space) : full.slice(0, 110)).trim()}…`;
+  /* Une seule limite : deux lignes de carte, pas trois. Couper a la phrase
+     quand il y en a une courte, sinon au dernier mot entier avant la limite. */
+  const head = full.slice(0, 118);
+  const stop = head.search(/[.!?](\s|$)/);
+  if (stop > 40) return head.slice(0, stop + 1);
+  const space = head.lastIndexOf(" ");
+  return `${(space > 60 ? head.slice(0, space) : full.slice(0, 110)).trim()}…`;
 }
 
 function shortImageName(pack) {
@@ -5826,15 +5829,22 @@ function isCodeAttachment(attachment) {
 
 /* Les fichiers du catalogue expriment leurs poids en GB/MB. En francais on
    ecrit Go/Mo et la virgule decimale : un seul endroit decide, plutot que
-   cinquante chaines qui divergent. */
+   cinquante chaines qui divergent. Dans l'autre sens, un catalogue ecrit en
+   francais (« 2,41 Go ») doit devenir « 2.41 GB » en anglais. */
 function displaySize(value) {
   const text = String(value ?? "").trim();
-  if (state.language !== "fr") return text;
+  if (state.language === "fr") {
+    return text
+      .replace(/(\d)\.(\d)/g, "$1,$2")
+      .replace(/(\d)\s*GB\b/g, "$1 Go")
+      .replace(/(\d)\s*MB\b/g, "$1 Mo")
+      .replace(/(\d)\s*KB\b/g, "$1 Ko");
+  }
   return text
-    .replace(/(\d)\.(\d)/g, "$1,$2")
-    .replace(/(\d)\s*GB\b/g, "$1 Go")
-    .replace(/(\d)\s*MB\b/g, "$1 Mo")
-    .replace(/(\d)\s*KB\b/g, "$1 Ko");
+    .replace(/(\d),(\d)/g, "$1.$2")
+    .replace(/(\d)\s*Go\b/g, "$1 GB")
+    .replace(/(\d)\s*Mo\b/g, "$1 MB")
+    .replace(/(\d)\s*Ko\b/g, "$1 KB");
 }
 
 function formatFileSize(bytes) {
@@ -9566,7 +9576,7 @@ function renderModelLibrary() {
     importButton.hidden = !canImport;
     if (canImport) {
       const label = isImageTab
-        ? localizedText("Installer un modèle d'image", "Install an image model", "Instalar un modelo de imagen", "画像モデルをインストール")
+        ? localizedText("Installer un modèle ou un style", "Install a model or a style", "Instalar un modelo o un estilo", "モデルまたはスタイルをインストール")
         : localizedText("Installer un modèle", "Install a model", "Instalar un modelo", "モデルをインストール");
       document.querySelector("#model-import-label").textContent = label;
       importButton.title = isImageTab
@@ -9662,74 +9672,128 @@ function renderModelLibrary() {
     card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(custom.libraryCategory)}</p><span class="model-badge">${escapeHtml(localizedText("ACTIF", "ACTIVE", "ACTIVO"))}</span></div><div><h3>${escapeHtml(state.customModel.name)}</h3><p>${escapeHtml(custom.libraryDescription(base?.name || state.customModel.baseModelId, state.customModel.instructions.length))}</p></div><div class="model-card-footer"><span>${escapeHtml(base?.size || "")}</span><button type="button" data-custom-model="edit">${escapeHtml(localizedText("Modifier", "Edit", "Modificar"))}</button></div>`;
     customCards.push(card);
   }
+  /* Un seul vocabulaire pour toute la fenetre. Trois verbes differents pour le
+     meme geste — « Utiliser », « Choisir ce modele », « Image active » —
+     laissaient croire a trois actions distinctes. */
+  const activateLabel = localizedText("Activer", "Activate", "Activar", "有効化");
+  const activeLabel = localizedText("Actif", "Active", "Activo", "有効");
+  const downloadLabel = localizedText("Télécharger", "Download", "Descargar", "ダウンロード");
+
   /* Ordre de lecture : ce qui est deja pret d'abord, ce qui reste a recuperer
-     ensuite. Un separateur annonce chaque groupe, pour qu'on ne confonde pas
-     un modele livre avec un modele a telecharger. */
+     ensuite. Le groupe porte l'information, donc la carte n'a plus a la
+     repeter — c'est ce doublon qui rendait la fenetre illisible : un badge
+     « deja sur votre disque » sous un titre « deja sur votre disque ». */
   const packRank = pack => (pack.bundled ? 0 : pack.local ? 1 : 2);
-  const orderedPacks = showImage
-    ? [...state.imagePacks]
-        .filter(pack => matches(pack.name, pack.note, pack.id, pack.family))
-        .sort((a, b) => packRank(a) - packRank(b) || Number(b.recommended) - Number(a.recommended))
-    : [];
   const groupTitle = rank => rank === 0
     ? localizedText("Fournis avec SIMIA", "Shipped with SIMIA", "Incluidos con SIMIA", "SIMIA 同梱")
     : rank === 1
-      ? localizedText("Déjà sur votre disque", "Already on your disk", "Ya en tu disco", "この PC に保存済み")
-      : localizedText("À télécharger depuis un CDN", "To download from a CDN", "Para descargar desde un CDN", "CDN からダウンロード");
+      ? localizedText("Sur ce disque", "On this disk", "En este disco", "この PC にあるもの")
+      : localizedText("À télécharger", "To download", "Para descargar", "ダウンロードが必要");
+  const stepsUnit = localizedText("pas", "steps", "pasos", "ステップ");
+  const stepUnit = localizedText("pas", "step", "paso", "ステップ");
+
+  /* Tailles lisibles : « 1,72 Go · 512 px · 4 pas ». La licence et la fiche
+     complete passent dans l'infobulle : sur une carte, elles noyaient le nom.
+     Les unites sont ecrites en GB/MB et `displaySize` les traduit (Go/Mo,
+     virgule decimale) selon la langue. */
+  const packFacts = pack => {
+    const size = pack.bytes ? `~${(pack.bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : pack.size;
+    if (pack.video) return `${size} · ${pack.px}×${pack.height || pack.px} · ${videoDurationLabel(pack)}`;
+    return `${size} · ${pack.px} px · ${pack.steps} ${Number(pack.steps) === 1 ? stepUnit : stepsUnit}`;
+  };
+
+  const entries = [];
+  if (showImage) {
+    [...state.imagePacks]
+      .filter(pack => matches(pack.name, pack.note, pack.id, pack.family))
+      .sort((a, b) => packRank(a) - packRank(b) || Number(b.recommended) - Number(a.recommended))
+      .forEach(pack => {
+        entries.push({ rank: packRank(pack), build: () => {
+          const active = pack.id === state.imagePackId;
+          const ready = Boolean(pack.local);
+          const card = document.createElement("article");
+          const family = pack.bundled ? "family-bundled" : ready ? "family-local" : "family-remote";
+          card.className = `model-card image-card ${family}${active ? " selected" : ""}${pack.recommended ? " recommended" : ""}${ready ? "" : " remote"}`;
+          /* Le badge ne repete plus le groupe : il ne reste que ce qu'il ajoute. */
+          const badge = pack.added
+            ? `<span class="model-origin model-origin-local">${escapeHtml(localizedText("VOTRE FICHIER", "YOUR FILE", "TU ARCHIVO", "自分のファイル"))}</span>`
+            : !ready && !pack.downloadable
+              ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("INCOMPLET", "INCOMPLETE", "INCOMPLETO", "不完全"))}</span>`
+              : pack.recommended
+                ? `<span class="model-badge">${escapeHtml(localizedText("RECOMMANDÉ", "RECOMMENDED", "RECOMENDADO", "おすすめ"))}</span>`
+                : "";
+          const action = active && ready
+            ? `<button type="button" disabled>${escapeHtml(activeLabel)}</button>`
+            : ready
+              ? `<button type="button" data-image-pack="${escapeHtml(pack.id)}">${escapeHtml(activateLabel)}</button>`
+              : pack.downloadable
+                ? `<button type="button" data-image-pack-download="${escapeHtml(pack.id)}">${escapeHtml(downloadLabel)}</button>`
+                : "";
+          /* Ce qui manque est nomme sous la carte : un bouton grise sans phrase
+             se lisait comme une panne. */
+          const missingLine = !ready && !pack.downloadable && Array.isArray(pack.missing) && pack.missing.length
+            ? `<p class="model-missing">${escapeHtml(localizedText("Manque : ", "Missing: ", "Falta: ", "不足: "))}${escapeHtml(pack.missing.join(", "))}</p>`
+            : "";
+          card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p title="${escapeHtml(imagePackNote(pack))}">${escapeHtml(imagePackNoteShort(pack))}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(packFacts(pack)))}</span>${action}</div>${missingLine}${downloadBlock(pack.id)}`;
+          return card;
+        } });
+      });
+
+    /* Un style importe n'apparaissait nulle part dans la bibliotheque : on le
+       deposait, on lisait « c'est pret », et la fenetre ne montrait rien. Un
+       LoRA est un fichier de ce disque, il a sa carte, au meme endroit. */
+    state.imageLoras
+      .filter(lora => matches(lora.name, lora.family))
+      .forEach(lora => {
+        entries.push({ rank: 1, build: () => {
+          const chosen = lora.name === state.imageLora;
+          const pack = activeImagePack();
+          const fits = loraFits(pack, lora);
+          const base = lora.name.replace(/\.(safetensors|pt|ckpt)$/i, "");
+          const familyLabel = imageFamilyLabel(lora.family) || localizedText("famille inconnue", "unknown family", "familia desconocida", "系統不明");
+          const card = document.createElement("article");
+          card.className = `model-card image-card lora-card family-local${chosen ? " selected" : ""}`;
+          const action = !fits
+            ? `<button type="button" class="is-blocked" disabled>${escapeHtml(localizedText("Incompatible", "Incompatible", "Incompatible", "非対応"))}</button>`
+            : chosen
+              ? `<button type="button" disabled>${escapeHtml(activeLabel)}</button>`
+              : `<button type="button" data-image-lora="${escapeHtml(lora.name)}">${escapeHtml(activateLabel)}</button>`;
+          const note = fits
+            ? localizedText(
+              `Style ${familyLabel}, appliqué à ${pack?.name || "aucun modèle actif"}.`,
+              `${familyLabel} style, applied to ${pack?.name || "no active model"}.`,
+              `Estilo ${familyLabel}, aplicado a ${pack?.name || "ningún modelo activo"}.`,
+              `${familyLabel} のスタイル。${pack?.name || "有効なモデルなし"} に適用。`
+            )
+            : localizedText(
+              `Style ${familyLabel} : ne s'applique pas à ${imageFamilyLabel(pack?.family) || "ce modèle"}.`,
+              `${familyLabel} style: does not apply to ${imageFamilyLabel(pack?.family) || "this model"}.`,
+              `Estilo ${familyLabel}: no se aplica a ${imageFamilyLabel(pack?.family) || "este modelo"}.`,
+              `${familyLabel} のスタイル。${imageFamilyLabel(pack?.family) || "このモデル"} には適用できません。`
+            );
+          /* Pas de badge « autre famille » : la phrase et le bouton grise le
+             disent deja, et la carte n'a pas besoin de trois fois la meme
+             information. */
+          card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("STYLE", "STYLE", "ESTILO", "スタイル"))}</p></div><div><h3>${escapeHtml(base)}</h3><p>${escapeHtml(note)}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(`${Math.round(lora.bytes / (1024 * 1024))} MB`))} · ${escapeHtml(familyLabel)}</span>${action}</div>`;
+          return card;
+        } });
+      });
+  }
+
   let shownRank = -1;
-  const imageCards = !showImage ? [] : orderedPacks.flatMap(pack => {
-    const active = pack.id === state.imagePackId;
-    const ready = Boolean(pack.local);
-    const detail = pack.video
-      ? `${pack.px}×${pack.height || pack.px} · ${videoDurationLabel(pack)}`
-      : `${pack.px}px/${pack.steps} ${localizedText("pas", "steps", "pasos", "ステップ")}`;
-    const size = displaySize(`${pack.bytes ? `~${(pack.bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : pack.size} · ${detail}`);
-    const card = document.createElement("article");
-    /* Trois familles, trois aspects distincts : ce que SIMIA installe lui-meme
-       (accent vert plein), ce qui est deja sur le disque, et ce qu'il reste a
-       recuperer. Sans cette difference, une carte « fournie » et une carte
-       « a telecharger » se ressemblaient au premier regard. */
-    const family = pack.bundled ? "family-bundled" : ready ? "family-local" : "family-remote";
-    card.className = `model-card image-card ${family}${active ? " selected" : ""}${pack.recommended ? " recommended" : ""}${ready ? "" : " remote"}`;
-    const videoTag = pack.video
-      ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画"))}</span>`
-      : "";
-    const badge = !ready
-      ? pack.downloadable
-        ? `<span class="model-badge model-badge-download">${escapeHtml(localizedText("À TÉLÉCHARGER", "TO DOWNLOAD", "PARA DESCARGAR", "要ダウンロード"))}</span>`
-        : `<span class="model-badge model-badge-download">${escapeHtml(localizedText("MANUEL", "MANUAL", "MANUAL", "手動"))}</span>`
-      : pack.added
-        ? `<span class="model-origin model-origin-local">${escapeHtml(localizedText("AJOUTÉ", "ADDED", "AÑADIDO", "追加"))}</span>`
-      : pack.bundled
-        ? `<span class="model-badge model-badge-bundled">${escapeHtml(localizedText("FOURNI AVEC SIMIA", "SHIPPED WITH SIMIA", "INCLUIDO", "同梱"))}</span>`
-      : pack.recommended
-        ? `<span class="model-badge">${escapeHtml(localizedText("RECOMMANDÉ", "RECOMMENDED", "RECOMENDADO", "おすすめ"))}</span>`
-        : `<span class="model-origin model-origin-local">${escapeHtml(localizedText("SUR LE DISQUE", "ON DISK", "EN EL DISCO", "ローカル"))}</span>`;
-    const action = ready
-      ? `<button type="button" data-image-pack="${escapeHtml(pack.id)}"${active ? " disabled" : ""}>${escapeHtml(active ? localizedText("Image active", "Image active", "Imagen activa", "画像 有効") : localizedText("Utiliser", "Use", "Usar", "使う"))}</button>`
-      : pack.downloadable
-        ? `<button type="button" data-image-pack-download="${escapeHtml(pack.id)}">${escapeHtml(localizedText("Télécharger", "Download", "Descargar", "ダウンロード"))}</button>`
-        : `<button type="button" disabled>${escapeHtml(localizedText("Fichiers à placer", "Files required", "Faltan archivos", "ファイル未配置"))}</button>`;
-    const styleTag = pack.lora
-      ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("STYLE SIMIA", "SIMIA STYLE", "ESTILO SIMIA", "SIMIA スタイル"))}</span>`
-      : "";
-    /* Un pack video depose a la main est fait de plusieurs fichiers : quand il
-       en manque un, la carte doit le nommer. Un bouton grise sans explication
-       laissait croire a une panne. */
-    const missingLine = !ready && !pack.downloadable && Array.isArray(pack.missing) && pack.missing.length
-      ? `<p class="model-missing">${escapeHtml(localizedText("Manque : ", "Missing: ", "Falta: ", "不足: "))}${escapeHtml(pack.missing.join(", "))}</p>`
-      : "";
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p title="${escapeHtml(imagePackNote(pack))}">${escapeHtml(imagePackNoteShort(pack))}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${missingLine}${downloadBlock(pack.id)}`;
-    const rank = packRank(pack);
-    const separator = rank === shownRank ? [] : (() => {
-      shownRank = rank;
-      const heading = document.createElement("p");
-      heading.className = `model-group-head group-${rank}`;
-      heading.textContent = groupTitle(rank);
-      return [heading];
-    })();
-    return [...separator, card];
-  });
+  const imageCards = entries
+    .sort((a, b) => a.rank - b.rank)
+    .flatMap(({ rank, build }) => {
+      const separator = rank === shownRank ? [] : (() => {
+        shownRank = rank;
+        const heading = document.createElement("p");
+        heading.className = `model-group-head group-${rank}`;
+        heading.textContent = groupTitle(rank);
+        return [heading];
+      })();
+      return [...separator, build()];
+    });
+
   const oversized = NATIVE ? [] : MODELS.filter(model => !modelNeedsUnavailableFeature(model) && modelSizeMB(model) > WEB_MAX_MODEL_MB);
   /* Un modele europeen trop lourd pour le navigateur ne doit pas disparaitre :
      l'onglet « Européen » aurait l'air vide alors que la banque en contient.
@@ -9788,11 +9852,14 @@ function renderModelLibrary() {
       ? `<span class="model-origin model-origin-eu" title="${escapeHtml(localizedText("Modèle européen", "European model", "Modelo europeo", "欧州のモデル"))}">${escapeHtml(localizedText("EUROPE", "EUROPE", "EUROPA", "欧州"))}</span>`
       : "";
     const note = state.cachedModelId === model.id ? ` <span class="model-card-note">${escapeHtml(text.stored)}</span>` : "";
+    /* Meme vocabulaire que la bibliotheque d'images : on active, on
+       telecharge, ou c'est deja actif. « Choisir ce modele » pour l'un et
+       « Utiliser » pour l'autre etaient deux mots pour le meme geste. */
     const label = active && !needsDownload
-      ? text.selected
+      ? activeLabel
       : needsDownload
-        ? localizedText("Télécharger", "Download", "Descargar", "ダウンロード")
-        : text.choose;
+        ? downloadLabel
+        : activateLabel;
     const card = document.createElement("article");
     card.className = `model-card${active ? " selected" : ""}${model.recommended ? " recommended" : ""}${remote ? " remote" : ""}`;
     card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(details[0])}</p>${euBadge}${badge}</div><div><h3>${escapeHtml(model.name)}</h3><p>${escapeHtml(details[1])}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(model.size))}${origin}${note}</span><button type="button" data-model-id="${escapeHtml(model.id)}">${escapeHtml(label)}</button></div>${downloadBlock(model.id)}`;
@@ -9801,9 +9868,12 @@ function renderModelLibrary() {
   /* Resume chiffre : « 1 fourni · 2 sur votre disque · 8 a telecharger ». Sans
      ce decompte, il fallait compter les badges un par un pour savoir ou l'on
      en etait. */
+  /* Le resume ne doit compter que des cartes : `imageCards` contient aussi les
+     titres de groupe, et « 9 resultats » s'affichait pour 7 cartes. */
+  const imageCardCount = imageCards.filter(node => node.tagName === "ARTICLE").length;
   const summary = document.querySelector("#model-summary");
   if (summary && query) {
-    const found = visibleModels.length + (showImage ? orderedPacks.length : 0);
+    const found = visibleModels.length + (showImage ? imageCardCount : 0);
     summary.textContent = found
       ? localizedText(
         `${found} résultat(s) pour « ${state.modelSearch.trim()} »`,
@@ -9837,13 +9907,17 @@ function renderModelLibrary() {
           );
     } else {
       const bundled = state.imagePacks.filter(pack => pack.bundled).length;
-      const onDisk = state.imagePacks.filter(pack => pack.local && !pack.bundled).length;
+      /* Les styles importes sont des fichiers de ce disque : ils comptent avec
+         les modeles, sinon le total annonce ne correspondait pas au nombre de
+         cartes affichees. */
+      const styles = state.imageLoras.filter(lora => matches(lora.name, lora.family)).length;
+      const onDisk = state.imagePacks.filter(pack => pack.local && !pack.bundled).length + styles;
       const toFetch = state.imagePacks.filter(pack => !pack.local).length;
       summary.textContent = localizedText(
-        `${bundled} fourni · ${onDisk} déjà téléchargé(s) · ${toFetch} à récupérer sur ${state.imagePacks.length}`,
-        `${bundled} shipped · ${onDisk} already downloaded · ${toFetch} to fetch out of ${state.imagePacks.length}`,
-        `${bundled} incluido · ${onDisk} ya descargado(s) · ${toFetch} por recuperar de ${state.imagePacks.length}`,
-        `同梱 ${bundled} · 取得済み ${onDisk} · 未取得 ${toFetch} / 全 ${state.imagePacks.length}`
+        `${bundled} fourni · ${onDisk} sur ce disque · ${toFetch} à télécharger`,
+        `${bundled} shipped · ${onDisk} on this disk · ${toFetch} to download`,
+        `${bundled} incluido · ${onDisk} en este disco · ${toFetch} para descargar`,
+        `同梱 ${bundled} · この PC に ${onDisk} · ダウンロード待ち ${toFetch}`
       );
     }
     summary.hidden = !summary.textContent;
@@ -11171,6 +11245,17 @@ ui.modelLibrary.addEventListener("click", event => {
   const packChoice = event.target.closest("button[data-image-pack]");
   if (packChoice) {
     selectImagePack(packChoice.dataset.imagePack);
+    return;
+  }
+  /* Un style se choisit depuis sa carte, comme un modele : il n'y a plus de
+     raison d'aller le chercher dans les reglages. */
+  const loraChoice = event.target.closest("button[data-image-lora]");
+  if (loraChoice) {
+    state.imageLora = loraChoice.dataset.imageLora;
+    renderImageLoraControls();
+    renderImageEngineUi();
+    renderModelLibrary();
+    saveState();
     return;
   }
   const choice = event.target.closest("button[data-model-id]");

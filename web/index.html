@@ -334,6 +334,13 @@
         </div>
         <form class="composer" id="composer">
           <div class="composer-context" id="composer-context">
+            <!-- Le modele d'image passe en tete : c'est la pastille qui manquait,
+                 et elle se lit a gauche du modele de texte, pas noyee a droite. -->
+            <button type="button" class="composer-chip composer-image" id="composer-image" aria-haspopup="dialog" hidden>
+              <svg class="composer-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg>
+              <span class="composer-image-text" id="composer-image-text">Modèle d'image</span>
+              <span class="composer-chip-caret" aria-hidden="true">▾</span>
+            </button>
             <div class="composer-model-wrap" id="composer-model-wrap">
               <button type="button" class="composer-chip composer-model" id="composer-model" aria-haspopup="menu" aria-expanded="false">
                 <span class="composer-model-dot" id="composer-model-dot" aria-hidden="true"></span>
@@ -354,11 +361,6 @@
             <button type="button" class="composer-chip composer-steps" id="composer-steps" aria-pressed="true" hidden>
               <span class="composer-steps-dot" aria-hidden="true"></span>
               <span id="composer-steps-name">Étapes</span>
-            </button>
-            <button type="button" class="composer-chip composer-image" id="composer-image" aria-haspopup="dialog" hidden>
-              <svg class="composer-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg>
-              <span class="composer-image-text" id="composer-image-text">Modèle d'image</span>
-              <span class="composer-chip-caret" aria-hidden="true">▾</span>
             </button>
           </div>
           <textarea id="prompt" rows="1" maxlength="4000" placeholder="Écrivez votre message..." aria-label="Votre message"></textarea>
