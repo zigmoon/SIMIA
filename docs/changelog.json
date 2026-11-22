@@ -1,6 +1,23 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.40": {
+      "title": "Un vrai installeur Windows, un import qui dit la verite, et la pastille du modele d'image",
+      "highlights": [
+        "Importer un modele d'image qui n'en est pas un ne se solde plus par un silence. Un LoRA MiniMax-H3 depose sur SD 1.5 est enregistre, mais n'est plus selectionne d'office : SIMIA ecrit qu'il vise MiniMax-H3 et que le modele actif est SD 1.5. C'est exactement le cas de HMNSFW-Extreme-Realism, un style de 420 tenseurs, pas un modele.",
+        "Une generation avec un style incompatible est refusee avant de lancer le moteur, avec la raison et la correction. Avant, le moteur repondait 0 tenseur applique et rendait une image sans le style : on croyait que le modele importe avait ete ignore.",
+        "Un modele d'image importe devient le modele actif immediatement, au lieu de laisser SD 1.5 en place.",
+        "Une pastille a droite du prompt annonce le modele d'image et son style, en orange quand le style ne correspond pas. La conversation n'annoncait que le modele de texte.",
+        "L'installation d'un modele ne se cherche plus en bas de la grille : un bouton dans l'en-tete de la bibliotheque ouvre l'import, quel que soit l'onglet.",
+        "Les cartes sont plus courtes : une phrase, la fiche complete au survol, et la taille en bas. Les quinze packs tiennent en deux ecrans au lieu de quatre.",
+        "Un installeur Windows : double-clic, installation dans le profil, raccourci, desinstalleur, sans droit administrateur. L'archive zip reste la pour une installation portable."
+      ],
+      "notes": [
+        "L'installeur reprend le dossier assemble par la CI, donc il contient exactement les memes fichiers que l'archive zip.",
+        "Le modele importe par l'utilisateur n'est jamais copie dans le dossier publie en FTP : seule la liste blanche de versions.json part sur le serveur.",
+        "Les paquets Windows, macOS (Apple Silicon et Intel) et Linux sont recompiles par GitHub Actions."
+      ]
+    },
     "0.1.39": {
       "title": "Mentions legales completes, avis RGPD veridique, et PDF.js derriere le consentement",
       "highlights": [

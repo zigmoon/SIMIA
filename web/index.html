@@ -355,6 +355,11 @@
               <span class="composer-steps-dot" aria-hidden="true"></span>
               <span id="composer-steps-name">Étapes</span>
             </button>
+            <button type="button" class="composer-chip composer-image" id="composer-image" aria-haspopup="dialog" hidden>
+              <svg class="composer-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg>
+              <span class="composer-image-text" id="composer-image-text">Modèle d'image</span>
+              <span class="composer-chip-caret" aria-hidden="true">▾</span>
+            </button>
           </div>
           <textarea id="prompt" rows="1" maxlength="4000" placeholder="Écrivez votre message..." aria-label="Votre message"></textarea>
           <input id="attachment-input" type="file" multiple hidden accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.htm,.css,.js,.mjs,.ts,.py,.xml,.yml,.yaml,.log,.rtf,.pdf,.docx,.xlsx,.xlsm,.pptx,.odt,.ods,.odp,.epub,.tex,.png,.jpg,.jpeg,.webp,.gif,.avif,.webm,.mp4,.glb,text/*,application/json,application/rtf,text/rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/epub+zip,image/*,video/*,model/gltf-binary">
@@ -653,6 +658,12 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
         <input id="model-search" type="search" placeholder="Rechercher un modèle" autocomplete="off" aria-label="Rechercher un modèle">
       </label>
+      <!-- Une carte en bas de la grille obligeait a faire defiler quinze
+           modeles pour installer le sien. Le geste est ici, toujours visible. -->
+      <button class="model-import-button" id="model-import" type="button" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
+        <span id="model-import-label">Installer un modèle</span>
+      </button>
       <p class="model-summary" id="model-summary" aria-live="polite"></p>
     </div>
     <div class="model-active" id="model-active" hidden></div>

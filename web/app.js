@@ -4544,6 +4544,16 @@ function paintImportState() {
   });
 }
 
+/* Un style ne s'applique qu'a sa famille d'architecture : les tenseurs d'un
+   LoRA MiniMax-H3 ne correspondent a aucun tenseur de SD 1.5. Le moteur, lui,
+   ne refuse pas : il ignore les 420 tenseurs et rend une image sans le style.
+   C'est exactement ce qui faisait croire que l'import n'avait pas marche. */
+function loraFits(pack, lora) {
+  if (!lora) return false;
+  if (!lora.family || !pack || !pack.family) return true;
+  return lora.family === pack.family;
+}
+
 /* Le fichier choisi part vers le lanceur, puis la bibliotheque se relit toute
    seule : le modele importe doit apparaitre sans redemarrer SIMIA. */
 async function runImageImport(file) {
@@ -4564,28 +4574,78 @@ async function runImageImport(file) {
   }
   const payload = result.payload || {};
   await refreshImagePacks();
-  const isLora = payload.kind === "lora";
-  if (isLora) {
-    state.imageLora = payload.name;
+  paintImportState();
+  const name = payload.name || file.name;
+
+  if (payload.kind === "lora") {
+    const imported = state.imageLoras.find(lora => lora.name === name) || { name, family: payload.family };
+    const pack = activeImagePack();
+    if (loraFits(pack, imported)) {
+      state.imageLora = name;
+      renderImageLoraControls();
+      renderImageEngineUi();
+      saveState();
+      toast(
+        localizedText(
+          `${name} est prêt et appliqué comme style sur ${pack?.name || "ce modèle"}.`,
+          `${name} is ready and applied as a style on ${pack?.name || "this model"}.`,
+          `${name} está listo y aplicado como estilo en ${pack?.name || "este modelo"}.`,
+          `${name} をスタイルとして準備し、${pack?.name || "このモデル"} に適用しました。`
+        )
+      );
+      return;
+    }
+    /* Le style ne vise pas le modele actif : on ne le selectionne pas, et on
+       dit pourquoi, avec la correction a portee de clic. */
     renderImageLoraControls();
     renderImageEngineUi();
-    saveState();
+    toast(
+      localizedText(
+        `${name} est un style pour ${imageFamilyLabel(imported.family) || "une autre architecture"}, pas pour ${imageFamilyLabel(pack?.family) || "le modèle actif"} : il est enregistré mais pas appliqué.`,
+        `${name} is a style for ${imageFamilyLabel(imported.family) || "another architecture"}, not for ${imageFamilyLabel(pack?.family) || "the active model"}: it is saved but not applied.`,
+        `${name} es un estilo para ${imageFamilyLabel(imported.family) || "otra arquitectura"}, no para ${imageFamilyLabel(pack?.family) || "el modelo activo"}: se guarda pero no se aplica.`,
+        `${name} は ${imageFamilyLabel(imported.family) || "別のアーキテクチャ"} 向けのスタイルで、${imageFamilyLabel(pack?.family) || "現在のモデル"} には適用できません。保存はしました。`
+      ),
+      "error"
+    );
+    return;
   }
-  paintImportState();
+
+  /* Un modele complet : on le rend actif tout de suite. Laisser SD 1.5 en place
+     apres un import faisait croire que le fichier avait ete ignore. Un pack
+     video reste en attente de ses autres composants : l'activer n'aurait mene
+     qu'a une erreur au chargement, la carte dit deja ce qui manque. */
+  const chosen = state.imagePacks.find(pack => pack.id === payload.packId) || null;
+  if (chosen && !chosen.video) {
+    await selectImagePack(chosen.id, { silent: true });
+    toast(
+      localizedText(
+        `${name} est prêt : c'est maintenant le modèle d'image actif.`,
+        `${name} is ready: it is now the active image model.`,
+        `${name} está listo: ahora es el modelo de imagen activo.`,
+        `${name} を準備し、画像モデルとして有効にしました。`
+      )
+    );
+    return;
+  }
+  if (chosen && chosen.video) {
+    toast(
+      localizedText(
+        `Fichier ajouté à ${chosen.name}. Il reste ${chosen.missing?.length || 0} élément(s) à fournir pour que ce modèle vidéo fonctionne.`,
+        `File added to ${chosen.name}. ${chosen.missing?.length || 0} more item(s) are needed before this video model can run.`,
+        `Archivo añadido a ${chosen.name}. Faltan ${chosen.missing?.length || 0} elemento(s) para que este modelo de vídeo funcione.`,
+        `${chosen.name} にファイルを追加しました。この動画モデルを動かすには残り ${chosen.missing?.length || 0} 点が必要です。`
+      )
+    );
+    return;
+  }
   toast(
-    isLora
-      ? localizedText(
-        `${payload.name} est prêt comme style. Choisissez-le dans les réglages.`,
-        `${payload.name} is ready as a style. Pick it in the settings.`,
-        `${payload.name} está listo como estilo. Elígelo en los ajustes.`,
-        `${payload.name} をスタイルとして登録しました。設定から選べます。`
-      )
-      : localizedText(
-        `${payload.name} est prêt comme modèle d'image.`,
-        `${payload.name} is ready as an image model.`,
-        `${payload.name} está listo como modelo de imagen.`,
-        `${payload.name} を画像モデルとして登録しました。`
-      )
+    localizedText(
+      `${name} est prêt comme modèle d'image.`,
+      `${name} is ready as an image model.`,
+      `${name} está listo como modelo de imagen.`,
+      `${name} を画像モデルとして登録しました。`
+    )
   );
 }
 
@@ -4710,7 +4770,7 @@ function renderImageLoraControls() {
   }
 }
 
-async function selectImagePack(id) {
+async function selectImagePack(id, options = {}) {
   if (!IMAGE || !id) return false;
   try {
     const response = await fetch(IMAGE.selectPackUrl, {
@@ -4732,7 +4792,9 @@ async function selectImagePack(id) {
     if (ui.imageToggle) ui.imageToggle.hidden = !IMAGE_SUPPORTED;
     renderImageEngineUi();
     renderModelLibrary();
-    toast(localizedText("Modèle d'image sélectionné.", "Image model selected.", "Modelo de imagen seleccionado.", "画像モデルを選択しました。"));
+    if (!options.silent) {
+      toast(localizedText("Modèle d'image sélectionné.", "Image model selected.", "Modelo de imagen seleccionado.", "画像モデルを選択しました。"));
+    }
     return true;
   } catch {
     toast(localizedText("Impossible de changer de modèle d'image.", "Could not switch the image model.", "No se pudo cambiar el modelo de imagen.", "画像モデルを切り替えられませんでした。"), "error");
@@ -5090,10 +5152,27 @@ async function imageGenerate(prompt, bubble) {
     if (label && text) label.textContent = text;
     if (bar) bar.style.width = `${Math.round(Math.max(0, Math.min(1, ratio)) * 100)}%`;
   };
+
+  const pack = state.imagePacks.find(item => item.id === state.imagePackId);
+  /* Un style d'une autre architecture ne s'applique pas : le moteur repond
+     quand meme, avec 0 tenseur applique, et rend une image sans le style. Le
+     resultat ressemblait a « le modele a ete ignore ». On refuse avant de
+     lancer quoi que ce soit, avec la correction dans le message. */
+  const style = activeImageLora();
+  if (style && !loraFits(pack, style)) {
+    const blocked = new Error(localizedText(
+      `${style.name} est un style pour ${imageFamilyLabel(style.family)}, et le modèle actif est ${imageFamilyLabel(pack?.family) || "d'une autre famille"} : le moteur ignorerait ses tenseurs et rendrait une image sans le style. Choisissez « Aucun style » dans les réglages, ou un modèle de la même famille.`,
+      `${style.name} is a style for ${imageFamilyLabel(style.family)}, and the active model is ${imageFamilyLabel(pack?.family) || "of another family"}: the engine would ignore its tensors and return an image without the style. Pick “No style” in the settings, or a model of the same family.`,
+      `${style.name} es un estilo para ${imageFamilyLabel(style.family)}, y el modelo activo es ${imageFamilyLabel(pack?.family) || "de otra familia"}: el motor ignoraría sus tensores y devolvería una imagen sin el estilo. Elige «Sin estilo» en los ajustes, o un modelo de la misma familia.`,
+      `${style.name} は ${imageFamilyLabel(style.family)} 向けのスタイルで、現在のモデルは ${imageFamilyLabel(pack?.family) || "別の系統"} です。適用するとテンソルが無視され、スタイルなしの画像が生成されます。設定で「スタイルなし」を選ぶか、同じ系統のモデルを使ってください。`
+    ));
+    blocked.fatal = true;
+    throw blocked;
+  }
+
   await imageEngineReady(setStage);
   setStage(imageStageLabel({ stage: "conditioning" }), 0.05);
 
-  const pack = state.imagePacks.find(item => item.id === state.imagePackId);
   const px = pack?.px || IMAGE.width;
   const videoHeight = Number(pack?.height) || px;
   const isVideo = Boolean(pack?.video);
@@ -5274,7 +5353,10 @@ async function requestImage(prompt) {
       } catch (error) {
         failure = error;
         const aborted = error?.name === "AbortError" || String(error?.message || "").includes("cancel");
-        if (aborted) break;
+        /* Un refus volontaire (style incompatible) n'est pas une panne : le
+           relancer ou redemarrer le moteur ne changerait rien, et masquerait la
+           vraie raison. */
+        if (aborted || error?.fatal) break;
         if (attempt === 0) {
           /* sd-server meurt parfois au premier pas de debruitage quand la VRAM
              vient d'etre liberee par llama-server. Un redemarrage suffit : on
@@ -5302,7 +5384,11 @@ async function requestImage(prompt) {
   } catch (error) {
     const cancelled = error?.name === "AbortError" || String(error?.message || "").includes("cancel");
     const detail = String(error?.detail || "").trim();
-    const text = cancelled
+    /* Un refus explique deja ce qui se passe : on l'affiche tel quel, au lieu
+       de le noyer dans « l'image n'a pas pu etre generee ». */
+    const text = error?.fatal
+      ? String(error.message || "")
+      : cancelled
       ? localizedText("Génération annulée.", "Generation cancelled.", "Generación cancelada.", "生成を中止しました。")
       : detail
         ? localizedText(
@@ -5384,6 +5470,21 @@ function imagePackNote(pack) {
   return (key && pack[key]) || pack.note || "";
 }
 
+/* Sur une carte, la note complete faisait six lignes et repoussait le bouton
+   hors de vue : on n'y comprenait plus ce qu'on installait. On garde la
+   premiere phrase, la fiche complete reste dans l'infobulle et dans les
+   reglages. Un pack ajoute a la main n'a pas de phrase : son texte est deja
+   court, il passe tel quel. */
+function imagePackNoteShort(pack) {
+  const full = imagePackNote(pack).replace(/\s+/g, " ").trim();
+  if (full.length <= 110) return full;
+  const cut = full.slice(0, 150);
+  const stop = cut.search(/[.!?](\s|$)/);
+  if (stop > 30) return cut.slice(0, stop + 1);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > 60 ? cut.slice(0, space) : full.slice(0, 110)).trim()}…`;
+}
+
 function shortImageName(pack) {
   if (!pack) return "";
   const parts = String(pack.name || "").split("·");
@@ -5452,6 +5553,52 @@ function renderImageEngineUi() {
       ui.imagePicker.title = localizedText("Changer de modèle d'image", "Change the image model", "Cambiar el modelo de imagen", "画像モデルを変更");
     }
   }
+  renderComposerImageChip();
+}
+
+/* Pastille du modele d'image, a droite du prompt. Elle repond a une question
+   qui n'avait aucune reponse visible : qu'est-ce qui va dessiner, et avec quel
+   style ? Le modele de texte avait sa pastille, pas l'image. */
+function renderComposerImageChip() {
+  const chip = document.querySelector("#composer-image");
+  if (!chip) return;
+  const pack = activeImagePack();
+  if (!IMAGE_SUPPORTED || !pack) {
+    chip.hidden = true;
+    return;
+  }
+  chip.hidden = false;
+  const ready = Boolean(pack.local);
+  const lora = activeImageLora();
+  const mismatch = Boolean(lora && !loraFits(pack, lora));
+  const stylePart = lora
+    ? `<span class="engine-chip-sep" aria-hidden="true">+</span><b class="composer-image-style${mismatch ? " is-warning" : ""}">${escapeHtml(shortLoraName(lora))}</b>`
+    : "";
+  chip.classList.toggle("is-warning", mismatch);
+  chip.classList.toggle("is-ready", ready && !mismatch);
+  chip.innerHTML = `<svg class="composer-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><span class="composer-image-text">${escapeHtml(localizedText("Image", "Image", "Imagen", "画像"))} · ${escapeHtml(shortImageName(pack))}${pack.video ? ` <span class="engine-chip-tag">${escapeHtml(localizedText("vidéo", "video", "vídeo", "動画"))}</span>` : ""}</span>${stylePart}<span class="composer-chip-caret" aria-hidden="true">▾</span>`;
+  const label = mismatch
+    ? localizedText(
+      `Modèle d'image : ${pack.name}, avec le style ${lora?.name || ""} qui ne correspond pas. Cliquez pour changer.`,
+      `Image model: ${pack.name}, with the style ${lora?.name || ""} that does not match. Click to change.`,
+      `Modelo de imagen: ${pack.name}, con el estilo ${lora?.name || ""} que no corresponde. Haz clic para cambiar.`,
+      `画像モデル: ${pack.name}。スタイル ${lora?.name || ""} は一致しません。クリックで変更。`
+    )
+    : ready
+      ? localizedText(
+        `Modèle d'image : ${pack.name}. Cliquez pour changer.`,
+        `Image model: ${pack.name}. Click to change.`,
+        `Modelo de imagen: ${pack.name}. Haz clic para cambiar.`,
+        `画像モデル: ${pack.name}。クリックで変更。`
+      )
+      : localizedText(
+        `Modèle d'image choisi mais pas encore installé : ${pack.name}. Cliquez pour l'installer.`,
+        `Image model chosen but not installed yet: ${pack.name}. Click to install.`,
+        `Modelo de imagen elegido pero aún no instalado: ${pack.name}. Haz clic para instalarlo.`,
+        `画像モデルは選択済みですが未インストールです: ${pack.name}。クリックでインストール。`
+      );
+  chip.title = label;
+  chip.setAttribute("aria-label", label);
 }
 
 /* Notification non bloquante : remplace window.alert.
@@ -9408,6 +9555,36 @@ function renderModelLibrary() {
     ui.modelSearch.placeholder = searchLabel;
     ui.modelSearch.setAttribute("aria-label", searchLabel);
   }
+  /* Le bouton d'installation dit ce qu'il installera. Un seul libelle pour les
+     deux familles laissait croire qu'il fallait aller chercher une carte.
+     Il n'apparait que la ou un fichier peut reellement etre importe : la
+     version web n'a pas de dossier de modeles. */
+  const importButton = document.querySelector("#model-import");
+  if (importButton) {
+    const isImageTab = state.modelFilter === "image";
+    const canImport = Boolean(IMAGE) && (isImageTab || NATIVE);
+    importButton.hidden = !canImport;
+    if (canImport) {
+      const label = isImageTab
+        ? localizedText("Installer un modèle d'image", "Install an image model", "Instalar un modelo de imagen", "画像モデルをインストール")
+        : localizedText("Installer un modèle", "Install a model", "Instalar un modelo", "モデルをインストール");
+      document.querySelector("#model-import-label").textContent = label;
+      importButton.title = isImageTab
+        ? localizedText(
+          "Un .safetensors ou un .gguf : un modèle complet devient actif, un style LoRA rejoint la liste des styles.",
+          "A .safetensors or a .gguf: a full model becomes active, a LoRA style joins the style list.",
+          "Un .safetensors o un .gguf: un modelo completo pasa a estar activo, un estilo LoRA se añade a la lista.",
+          ".safetensors または .gguf：フルモデルは有効化され、LoRA はスタイル一覧に追加されます。"
+        )
+        : localizedText(
+          "Ouvrir le dossier des modèles de texte : un fichier .gguf déposé là apparaît au prochain démarrage.",
+          "Open the text model folder: a .gguf dropped there appears on next launch.",
+          "Abrir la carpeta de modelos de texto: un .gguf colocado allí aparece en el próximo arranque.",
+          "テキストモデルのフォルダーを開きます。.gguf を置くと次回起動時に表示されます。"
+        );
+      importButton.dataset.importTarget = isImageTab ? "image" : "text";
+    }
+  }
   const filters = [["all", text.all], ["general", text.general], ["documents", text.documents], ["writing", text.writing], ["code", text.code], ["reasoning", text.reasoning], ["vision", text.vision], ["eu", localizedText("Européen", "European", "Europeo", "欧州")]];
   if (IMAGE) filters.push(["image", localizedText("Image", "Image", "Imagen", "画像生成")]);
   ui.modelFilters.replaceChildren(...filters.map(([id, label]) => {
@@ -9542,7 +9719,7 @@ function renderModelLibrary() {
     const missingLine = !ready && !pack.downloadable && Array.isArray(pack.missing) && pack.missing.length
       ? `<p class="model-missing">${escapeHtml(localizedText("Manque : ", "Missing: ", "Falta: ", "不足: "))}${escapeHtml(pack.missing.join(", "))}</p>`
       : "";
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(imagePackNote(pack))}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${missingLine}${downloadBlock(pack.id)}`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p title="${escapeHtml(imagePackNote(pack))}">${escapeHtml(imagePackNoteShort(pack))}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${missingLine}${downloadBlock(pack.id)}`;
     const rank = packRank(pack);
     const separator = rank === shownRank ? [] : (() => {
       shownRank = rank;
@@ -9577,16 +9754,6 @@ function renderModelLibrary() {
         card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("VOTRE CATALOGUE", "YOUR CATALOG", "TU CATÁLOGO", "あなたのカタログ"))}</p><span class="model-origin model-origin-local">${escapeHtml(localizedText("LIBRE", "OPEN", "LIBRE", "自由"))}</span></div><div><h3>${escapeHtml(localizedText("Ajouter un modèle", "Add a model", "Añadir un modelo", "モデルを追加"))}</h3><p>${escapeHtml(localizedText("Déposez n'importe quel fichier .gguf dans le dossier models/ de SIMIA, puis relancez : il apparaît ici sous son nom de fichier et se charge comme les autres. Aucun catalogue à modifier.", "Drop any .gguf file into SIMIA's models/ folder, then restart: it appears here under its filename and loads like the others. No catalogue to edit.", "Coloca cualquier archivo .gguf en la carpeta models/ de SIMIA y reinicia: aparece aquí con su nombre de archivo y se carga como los demás. Sin editar ningún catálogo.", "任意の .gguf を SIMIA の models/ に置いて再起動すると、ここにファイル名で表示され、他のモデルと同じように読み込まれます。"))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("models/ sur ce disque", "models/ on this disk", "models/ en este disco", "この PC の models/"))}</span><button type="button" data-open-models-folder>${escapeHtml(localizedText("Ouvrir le dossier", "Open folder", "Abrir carpeta", "フォルダーを開く"))}</button></div>`;
         return card;
       })()];
-  /* Même geste que pour les modèles de texte : un dossier, un fichier déposé,
-     et il apparaît. Un .safetensors de Civitai ou un .gguf quantifié, au choix. */
-  const ownImageCard = !IMAGE || !showImage || Boolean(query)
-    ? []
-    : [(() => {
-        const card = document.createElement("article");
-        card.className = "model-card add-model-card";
-        card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("VOTRE CATALOGUE", "YOUR CATALOG", "TU CATÁLOGO", "あなたのカタログ"))}</p><span class="model-origin model-origin-local">${escapeHtml(localizedText("LIBRE", "OPEN", "LIBRE", "自由"))}</span></div><div><h3>${escapeHtml(localizedText("Ajouter un modèle d'image", "Add an image model", "Añadir un modelo de imagen", "画像モデルを追加"))}</h3><p>${escapeHtml(localizedText("Un .safetensors (Stable Diffusion, Civitai) ou un .gguf : SIMIA lit son en-tête, range un modèle complet ici et un style LoRA dans loras/, puis relit la liste. Par le bouton ci-dessous ou en glissant le fichier n'importe où dans la fenêtre.", "A .safetensors (Stable Diffusion, Civitai) or a .gguf: SIMIA reads its header, files a full model here and a LoRA style into loras/, then reloads the list. With the button below, or by dropping the file anywhere in the window.", "Un .safetensors (Stable Diffusion, Civitai) o un .gguf: SIMIA lee su cabecera, guarda un modelo completo aquí y un estilo LoRA en loras/, y relee la lista. Con el botón de abajo o arrastrando el archivo a cualquier parte de la ventana.", "safetensors（Stable Diffusion、Civitai）または .gguf：SIMIA がヘッダーを読み、フルモデルはここへ、LoRA は loras/ へ自動で配置して一覧を更新します。下のボタンか、ウィンドウへのドラッグ＆ドロップで。"))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("models/image/ sur ce disque", "models/image/ on this disk", "models/image/ en este disco", "この PC の models/image/"))}</span><button type="button" data-import-button>${escapeHtml(localizedText("Importer un fichier…", "Import a file…", "Importar un archivo…", "ファイルを読み込む…"))}</button><button type="button" data-open-image-folder>${escapeHtml(localizedText("Ouvrir le dossier", "Open folder", "Abrir carpeta", "フォルダーを開く"))}</button></div>`;
-        return card;
-      })()];
   const desktopCard = !oversized.length || state.modelFilter !== "all" || Boolean(query)
     ? []
     : [(() => {
@@ -9595,7 +9762,7 @@ function renderModelLibrary() {
         card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("HORS LIGNE", "OFFLINE", "SIN CONEXIÓN", "オフライン"))}</p><span class="model-badge model-badge-download">${escapeHtml(localizedText("DESKTOP", "DESKTOP", "DESKTOP", "デスクトップ"))}</span></div><div><h3>${escapeHtml(localizedText("Version desktop", "Desktop version", "Versión de escritorio", "デスクトップ版"))}</h3><p>${escapeHtml(localizedText(`${oversized.length} modèles supplémentaires vous attendent sur PC, Mac et Linux : jusqu'à 9,7 Go, sans limite de navigateur, avec la génération d'images.`, `${oversized.length} more models wait on PC, Mac and Linux: up to 9.7 GB, no browser limit, with image generation.`, `${oversized.length} modelos más te esperan en PC, Mac y Linux: hasta 9,7 GB, sin límite del navegador y con generación de imágenes.`, `PC・Mac・Linux 版では ${oversized.length} 個の追加モデル（最大 9.7GB、ブラウザ制限なし、画像生成対応）が使えます。`))}</p></div><div class="model-card-footer"><span>${escapeHtml(localizedText("Sans téléversement", "Nothing uploaded", "Sin subir nada", "アップロードなし"))}</span><a class="model-card-link" href="${DESKTOP_PAGE_URL}" target="_blank" rel="noopener">${escapeHtml(localizedText("Télécharger", "Download", "Descargar", "ダウンロード"))}</a></div>`;
         return card;
       })()];
-  ui.modelCards.replaceChildren(...imageCards, ...ownImageCard, ...customCards, ...euDesktopCards, ...visibleModels.map(model => {
+  ui.modelCards.replaceChildren(...imageCards, ...customCards, ...euDesktopCards, ...visibleModels.map(model => {
     const details = modelDetails(model);
     const active = model.id === state.selectedModel && !state.customModelActive;
     const remote = NATIVE && model.nativeLocal === false;
@@ -10812,6 +10979,18 @@ ui.modelPicker.addEventListener("click", () => openModelLibrary());
 /* Le nom du moteur d'image, ou qu'on clique dessus, ouvre directement l'onglet Image. */
 ui.imageEngine?.addEventListener("click", () => openModelLibrary("image"));
 ui.imagePicker?.addEventListener("click", () => openModelLibrary("image"));
+/* Meme geste que la pastille du haut : la bibliotheque s'ouvre sur les modeles
+   d'image, ce qui est exactement ce qu'on veut changer depuis le prompt. */
+document.querySelector("#composer-image")?.addEventListener("click", () => openModelLibrary("image"));
+/* Installer depuis l'en-tete de la bibliotheque : un fichier de poids part vers
+   le lanceur, un modele de texte ouvre son dossier. */
+document.querySelector("#model-import")?.addEventListener("click", () => {
+  if (document.querySelector("#model-import")?.dataset.importTarget === "image") {
+    document.querySelector("#image-import-input")?.click();
+    return;
+  }
+  document.querySelector("[data-open-models-folder]")?.click();
+});
 ui.imageLora?.addEventListener("change", () => {
   state.imageLora = ui.imageLora.value;
   /* L'aide sous la liste change de sens selon le style choisi : elle doit se

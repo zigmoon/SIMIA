@@ -2996,13 +2996,31 @@ fn import_image_request(state: &Shared, request: &mut tiny_http::Request) -> (u1
         Ok(mut guard) => {
             guard.progress = None;
             guard.image.refresh();
+            /* L'identifiant du pack que ce fichier vient de creer. L'interface
+               l'active aussitot : sans lui, elle devait deviner a partir du nom
+               de fichier, et un modele importe laissait le precedent actif. */
+            let pack_id = guard
+                .image
+                .packs
+                .iter()
+                .find(|pack| {
+                    pack.added
+                        && (pack.model.eq_ignore_ascii_case(&name)
+                            || pack.diffusion.eq_ignore_ascii_case(&name)
+                            || pack.llm.eq_ignore_ascii_case(&name)
+                            || pack.vae.eq_ignore_ascii_case(&name)
+                            || pack.audio_vae.eq_ignore_ascii_case(&name))
+                })
+                .map(|pack| pack.id.clone())
+                .unwrap_or_default();
             format!(
-                "{{\"ok\":true,\"name\":{},\"kind\":{},\"family\":{},\"bytes\":{},\"lora\":{}}}",
+                "{{\"ok\":true,\"name\":{},\"kind\":{},\"family\":{},\"bytes\":{},\"lora\":{},\"packId\":{}}}",
                 js_escape(&name),
                 js_escape(if is_lora { "lora" } else { "model" }),
                 js_escape(family.key()),
                 written,
-                is_lora
+                is_lora,
+                js_escape(&pack_id)
             )
         }
         Err(_) => format!("{{\"ok\":true,\"name\":{}}}", js_escape(&name)),

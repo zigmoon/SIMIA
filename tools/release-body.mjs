@@ -26,10 +26,16 @@ const VERSION = (process.env.GITHUB_REF_NAME ?? "v0.1.0").replace(/^v/, "");
 // Nom d'archive produit par le workflow -> ce qu'on en dit au visiteur.
 const TARGETS = [
   {
-    file: "simia-windows-x64.zip",
-    os: "Windows",
+    file: "simia-windows-x64-setup.exe",
+    os: "Windows — installeur",
     detail: "10 et 11, 64 bits",
-    note: "Moteur Vulkan, repli processeur. Modèle d'image SD 1.5 (1,46 Go) joint à l'archive.",
+    note: "Double-clic : SIMIA s'installe dans votre profil, sans droit administrateur, avec un raccourci et un désinstalleur. Rien à décompresser.",
+  },
+  {
+    file: "simia-windows-x64.zip",
+    os: "Windows — archive",
+    detail: "10 et 11, 64 bits",
+    note: "La même chose en archive, pour une installation portable sur clé USB ou un disque externe. Moteur Vulkan, repli processeur, modèle d'image SD 1.5 (1,46 Go) joint.",
   },
   {
     file: "simia-macos-arm64.tar.gz",
@@ -155,10 +161,16 @@ compilée par GitHub Actions à partir du code source de ce dépôt, et son
 empreinte SHA-256 est publiée plus bas. Une seule commande supprime
 l'avertissement, mais **l'ordre compte**.
 
-**Windows — AVANT de décompresser.** Clic droit sur le \`.zip\` → *Propriétés* →
-cocher ***Débloquer*** → *OK*. Windows oublie alors que le fichier vient
-d'Internet, et \`simia-desktop.exe\` démarre sans rien demander. En PowerShell,
-sans passer par les Propriétés :
+**Windows — avec l'installeur (recommandé).** Double-cliquez sur
+\`simia-windows-x64-setup.exe\`. SmartScreen peut prévenir une première fois :
+*Informations complémentaires* → *Exécuter quand même*. L'installation se fait
+ensuite dans votre profil, sans demande d'administrateur, et l'entrée du menu
+Démarrer comme le désinstalleur sont créés.
+
+**Windows — avec l'archive.** Clic droit sur le \`.zip\` → *Propriétés* →
+cocher ***Débloquer*** → *OK*, **avant** de décompresser. Windows oublie alors
+que le fichier vient d'Internet, et \`simia-desktop.exe\` démarre sans rien
+demander. En PowerShell, sans passer par les Propriétés :
 
 \`\`\`powershell
 Unblock-File .\\simia-windows-x64.zip

@@ -175,7 +175,7 @@ code que l'onglet, mis en cache par un service worker.
 | Atelier de code | vrai projet : arborescence, onglets, recherche de fichier (Ctrl/⌘+P), import de fichiers ou d'un dossier, ouverture d'un dossier du disque avec enregistrement des modifications, export ZIP, aperçu live HTML/CSS/JS avec console, exécution JavaScript et Python, application du code reçu dans le fichier | ✅ | ✅ |
 | Paramètres | une seule fenêtre courte, à cinq onglets (Modèle, Réponses, Saisie, Atelier de code, Historique et données) : 520 × 519 px au plus, jamais la hauteur de l'écran | ✅ | ✅ |
 | Mon assistant | profil local : un nom et des consignes permanentes posés devant un modèle existant, sans entraînement ni téléchargement ; création, export, suppression | ✅ | ✅ |
-| Choix d'un modèle | bibliothèque de 900 × 640 px au plus ; un modèle absent du cache s'annonce « à télécharger » et se télécharge depuis sa carte, avec sa barre de progression, sans quitter la bibliothèque | ✅ | ✅ |
+| Choix d'un modèle | bibliothèque de 900 × 640 px au plus ; un modèle absent du cache s'annonce « à télécharger » et se télécharge depuis sa carte, avec sa barre de progression, sans quitter la bibliothèque ; l'installation d'un fichier depuis le disque est dans l'en-tête, pas au bas de la liste | ✅ | ✅ |
 | Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | — |
 | Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
 | Quatre langues | français, anglais, espagnol, japonais — interface, bibliothèque de modèles, notes des packs d'image, panneau Cookies et page d'accueil comprise ; le choix fait sur la landing est repris par l'application | ✅ | ✅ |
@@ -206,32 +206,42 @@ Les archives sont compilées par GitHub Actions à chaque étiquette `v*` et
 publiées dans [Releases](https://github.com/zigmoon/SIMIA/releases). Le lien
 `latest` pointe toujours sur la version la plus récente.
 
-| Système | Matériel | Archive |
+| Système | Matériel | Fichier |
 |---|---|---|
-| Windows | x86_64 | [simia-windows-x64.zip](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64.zip) |
+| Windows | x86_64 | [simia-windows-x64-setup.exe](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64-setup.exe) — installeur |
+| Windows | x86_64 | [simia-windows-x64.zip](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-windows-x64.zip) — archive portable |
 | macOS | Apple Silicon (M1 et plus) | [simia-macos-arm64.tar.gz](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-arm64.tar.gz) |
 | macOS | Intel | [simia-macos-x64.tar.gz](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-macos-x64.tar.gz) |
 | Linux | x86_64 | [simia-linux-x64.tar.gz](https://github.com/zigmoon/SIMIA/releases/latest/download/simia-linux-x64.tar.gz) |
 
-Décompressez l'archive, puis lancez `simia-desktop` (ou `simia-desktop.exe`).
-Les moteurs et l'interface sont inclus ; les poids des modèles se téléchargent
-depuis l'application, au premier choix. Sur macOS et Linux, rendez le fichier
-exécutable si l'archive a perdu le droit : `chmod +x simia-desktop`.
+**Windows — l'installeur.** Double-clic sur `simia-windows-x64-setup.exe` :
+SIMIA s'installe dans `%LOCALAPPDATA%\Programs\SIMIA`, crée l'entrée du menu
+Démarrer et un désinstalleur, avec un raccourci sur le Bureau si vous le
+demandez. Aucun droit administrateur n'est requis, et rien n'est décompressé à
+la main. L'installeur reprend le dossier assemblé par la CI : il contient
+exactement les mêmes fichiers que l'archive.
+
+**Windows, macOS et Linux — l'archive.** Décompressez, puis lancez
+`simia-desktop` (ou `simia-desktop.exe`). Les moteurs et l'interface sont
+inclus ; les poids des modèles se téléchargent depuis l'application, au premier
+choix. Sur macOS et Linux, rendez le fichier exécutable si l'archive a perdu le
+droit : `chmod +x simia-desktop`.
 
 Sur Windows, le runtime Visual C++ est joint aux moteurs : rien à installer, et
 aucun droit administrateur.
 
 > **Windows — l'avertissement au premier lancement.** Windows prévient pour tout
 > exécutable non signé par un certificat de signature de code, et SIMIA ne l'est
-> pas. Pour ne pas le voir : **avant de décompresser**, clic droit sur le `.zip`
+> pas. Avec l'installeur, l'avertissement apparaît une fois : *Informations
+> complémentaires* puis *Exécuter quand même*, et c'est fini. Avec l'archive,
+> pour ne pas le voir : **avant de décompresser**, clic droit sur le `.zip`
 > → *Propriétés* → cocher *Débloquer* → *OK*. Windows oublie alors que le fichier
 > vient d'Internet et `simia-desktop.exe` démarre directement. En PowerShell :
 > `Unblock-File .\simia-windows-x64.zip`. Fait **après** extraction, ce réglage
 > ne sert à rien : la marque est déjà recopiée sur l'exécutable, et c'est elle
-> que SmartScreen lit. S'il apparaît malgré tout : *Informations
-> complémentaires* puis *Exécuter quand même*. Le programme est compilé par
-> GitHub Actions depuis ce dépôt, et l'empreinte SHA-256 de chaque archive est
-> publiée dans la note de version.
+> que SmartScreen lit. Le programme est compilé par GitHub Actions depuis ce
+> dépôt, et l'empreinte SHA-256 de chaque archive est publiée dans la note de
+> version.
 >
 > La CI sait signer via **Azure Trusted Signing** : l'étape existe dans
 > `build.yml`, entre la compilation et l'assemblage, et ne s'active qu'une fois
@@ -304,6 +314,7 @@ procédure d'upload, y compris le `.htaccess` qui déclare les types MIME
 <!-- versions:start -->
 | Version | Date | Windows | macOS ARM | macOS Intel | Linux |
 |---|---|---|---|---|---|
+| [v0.1.40](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.40) | 2026-11-22 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.40/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.40/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.40/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.40/simia-linux-x64.tar.gz) |
 | [v0.1.39](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.39) | 2026-11-22 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-linux-x64.tar.gz) |
 | [v0.1.38](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.38) | 2026-11-22 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-linux-x64.tar.gz) |
 | [v0.1.37](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.37) | 2026-11-22 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-linux-x64.tar.gz) |
@@ -405,6 +416,14 @@ donc les réglages : 512 px et 20 pas pour SD 1.5, 1024 px et 25 pas pour SDXL,
 1024 px et 8 pas pour une architecture DiT. Le nom ne sert plus qu'à un chose
 que l'en-tête ne peut pas dire : une version distillée (`turbo`, `lightning`,
 `lcm`, `dmd`, `hyper`) tient en 4 pas et CFG 1.
+
+**Un style ne s'applique qu'à sa famille.** Les 420 tenseurs d'un LoRA
+MiniMax-H3 ne correspondent à aucun tenseur de SD 1.5. Le moteur ne refuse pas :
+il répond `Only (0 / 420) LoRA tensors have been applied` et rend une image sans
+le style — d'où l'impression que le fichier importé n'avait servi à rien. SIMIA
+lit donc la famille des deux côtés et refuse la génération avant de lancer quoi
+que ce soit, en écrivant ce qui ne va pas. À l'import, un style incompatible
+avec le modèle actif est enregistré mais **pas** sélectionné, avec la raison.
 
 **Un fichier qui n'est pas un modèle complet n'est pas proposé comme tel.** Un
 LoRA ne contient que des paires `lora_A`/`lora_B` : le donner à `sd-server -m`

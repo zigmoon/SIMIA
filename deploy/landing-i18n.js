@@ -381,6 +381,10 @@ var I18N = {
     "Qui édite SIMIA, et ce qu'il advient de vos données.": "Who publishes SIMIA, and what happens to your data.",
     "Cette page dit exactement ce qui reste sur votre appareil, ce qui en sort, sur quelle base légale et pendant combien de temps. Elle n'annonce rien qui ne soit vérifiable dans le code, publié et lisible.": "This page states exactly what stays on your device, what leaves it, on which legal basis and for how long. It claims nothing that cannot be verified in the code, which is published and readable.",
     "Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite, hors agent web.": "An online assistant consumes on every message: your sentence leaves for a data centre, meets a model there, comes back. SIMIA reverses the route. The computation happens once, on the machine you already own, and nothing travels afterwards, apart from the web agent.",
+    "Archive portable": "Portable archive",
+    "exe · recommandé": "exe · recommended",
+    "zip": "zip",
+    "L'installeur place SIMIA dans votre profil, crée le raccourci et le désinstalleur, sans droit administrateur : double-clic, c'est tout. L'archive, elle, se décompresse où vous voulez — sur une clé USB par exemple — mais il faut d'abord la débloquer : clic droit sur le .zip → Propriétés → Débloquer, avant extraction.": "The installer puts SIMIA in your user profile, creates the shortcut and the uninstaller, with no administrator rights: double-click, done. The archive is extracted wherever you like — on a USB stick, for instance — but you must unblock it first: right-click the .zip → Properties → Unblock, before extracting.",
   },
   es: {
     "Versions": "Versiones",
@@ -763,6 +767,10 @@ var I18N = {
     "Qui édite SIMIA, et ce qu'il advient de vos données.": "Quién edita SIMIA y qué ocurre con tus datos.",
     "Cette page dit exactement ce qui reste sur votre appareil, ce qui en sort, sur quelle base légale et pendant combien de temps. Elle n'annonce rien qui ne soit vérifiable dans le code, publié et lisible.": "Esta página dice exactamente qué se queda en tu dispositivo, qué sale de él, con qué base legal y durante cuánto tiempo. No anuncia nada que no sea verificable en el código, publicado y legible.",
     "Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite, hors agent web.": "Un asistente en línea consume en cada mensaje: tu frase sale hacia un centro de datos, allí encuentra un modelo y vuelve. SIMIA invierte el trayecto. El cálculo se hace una vez, en la máquina que ya tienes, y después nada circula, salvo el agente web.",
+    "Archive portable": "Archivo portable",
+    "exe · recommandé": "exe · recomendado",
+    "zip": "zip",
+    "L'installeur place SIMIA dans votre profil, crée le raccourci et le désinstalleur, sans droit administrateur : double-clic, c'est tout. L'archive, elle, se décompresse où vous voulez — sur une clé USB par exemple — mais il faut d'abord la débloquer : clic droit sur le .zip → Propriétés → Débloquer, avant extraction.": "El instalador coloca SIMIA en tu perfil, crea el acceso directo y el desinstalador, sin permisos de administrador: doble clic y listo. El archivo comprimido se descomprime donde quieras —en una memoria USB, por ejemplo—, pero antes hay que desbloquearlo: clic derecho en el .zip → Propiedades → Desbloquear, antes de extraer.",
   },
   ja: {
     "Versions": "バージョン",
@@ -1145,6 +1153,10 @@ var I18N = {
     "Qui édite SIMIA, et ce qu'il advient de vos données.": "SIMIA を発行しているのは誰か、あなたのデータがどう扱われるか。",
     "Cette page dit exactement ce qui reste sur votre appareil, ce qui en sort, sur quelle base légale et pendant combien de temps. Elle n'annonce rien qui ne soit vérifiable dans le code, publié et lisible.": "このページは、何が端末に残り、何が外へ出て、どの法的根拠に基づき、どれだけの期間なのかを正確に記します。公開され読めるコードで確認できないことは述べていません。",
     "Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite, hors agent web.": "オンラインのアシスタントはメッセージごとに消費します。あなたの一文がデータセンターへ行き、そこでモデルに会い、戻ってきます。SIMIA はその経路を逆にします。計算はあなたがすでに持っているマシンで一度だけ行われ、その後は Web エージェントを除いて何も流れません。",
+    "Archive portable": "ポータブル版アーカイブ",
+    "exe · recommandé": "exe · 推奨",
+    "zip": "zip",
+    "L'installeur place SIMIA dans votre profil, crée le raccourci et le désinstalleur, sans droit administrateur : double-clic, c'est tout. L'archive, elle, se décompresse où vous voulez — sur une clé USB par exemple — mais il faut d'abord la débloquer : clic droit sur le .zip → Propriétés → Débloquer, avant extraction.": "インストーラーは SIMIA をユーザープロファイルに置き、ショートカットとアンインストーラーを作成します。管理者権限は不要で、ダブルクリックだけです。アーカイブ版は好きな場所（USB メモリなど）に展開できますが、展開の前にブロックを解除してください：.zip を右クリック → プロパティ → ブロックの解除。",
   }
 };
 

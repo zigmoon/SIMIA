@@ -339,6 +339,9 @@ jobs:
           if [ "${{ matrix.archive }}" = "zip" ]; then
             (cd "$RUNNER_TEMP" && 7z a -tzip -mx=3 "$name.zip" "$name" > /dev/null)
             echo "archive=$RUNNER_TEMP/$name.zip" >> "$GITHUB_ENV"
+            # Le dossier assemble reste sur place : l'installeur Windows le
+            # reprend tel quel, sans redecompresser l'archive.
+            echo "stage=$stage" >> "$GITHUB_ENV"
           else
             tar -czf "$RUNNER_TEMP/$name.tar.gz" -C "$RUNNER_TEMP" "$name"
             echo "archive=$RUNNER_TEMP/$name.tar.gz" >> "$GITHUB_ENV"
@@ -346,10 +349,54 @@ jobs:
 
           du -sh "$RUNNER_TEMP/$name"
 
+      # Installeur Windows : double-clic, raccourci, desinstalleur. Sans lui, le
+      # visiteur doit decompresser 1,5 Go a la main avant meme de pouvoir
+      # essayer SIMIA. Il est faculte par le meme dossier assemble que l'archive,
+      # donc les deux contiennent exactement les memes fichiers.
+      - name: Construire l'installeur Windows
+        if: matrix.target == 'windows-x64'
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Host "Inno Setup absent de l'image : installation."
+            choco install innosetup --no-progress -y | Out-Null
+          }
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe introuvable : impossible de construire l'installeur" }
+
+          # Le tag porte un « v » : la version affichee dans Ajout/Suppression de
+          # programmes ne doit pas le garder.
+          $version = "${{ github.ref_name }}"
+          if ($version.StartsWith("v")) { $version = $version.Substring(1) }
+          if ($version -notmatch '^\d+\.\d+\.\d+') { $version = "0.0.0" }
+
+          $source = $env:stage
+          if (-not (Test-Path $source)) { throw "dossier assemble introuvable : $source" }
+
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$source" "/DOutputDir=$env:RUNNER_TEMP" "packaging\windows\simia.iss"
+          if (-not $?) { throw "ISCC a echoue" }
+
+          $setup = Join-Path $env:RUNNER_TEMP "simia-windows-x64-setup.exe"
+          if (-not (Test-Path $setup)) { throw "installeur non produit" }
+
+          # Un installeur vide passerait les controles precedents : on verifie
+          # qu'il contient bien les quatre briques indispensables.
+          $size = (Get-Item $setup).Length
+          if ($size -lt 100MB) { throw "installeur suspect : $([math]::Round($size/1MB)) Mo" }
+          "installeur : $([math]::Round($size/1MB)) Mo, version $version"
+          "installer=$setup" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - uses: actions/upload-artifact@v4
         with:
           name: simia-${{ matrix.target }}
           path: ${{ env.archive }}
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.target == 'windows-x64'
+        with:
+          name: simia-windows-installer
+          path: ${{ env.installer }}
           retention-days: 14
 
   release:

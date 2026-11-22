@@ -231,7 +231,8 @@ if (-not $landing.Contains('"softwareVersion": "' + $version + '"')) { $ecarts +
 if (-not $landing.Contains('const RELEASE_TAG = "' + $tag + '";')) { $ecarts += "RELEASE_TAG" }
 if (-not $landing.Contains("/releases/tag/$tag")) { $ecarts += "downloadUrl" }
 $liens = ([regex]::Matches($landing, [regex]::Escape("/releases/download/$tag/simia-"))).Count
-if ($liens -ne 4) { $ecarts += "liens de telechargement ($liens sur 4)" }
+if ($liens -ne 5) { $ecarts += "liens de telechargement ($liens sur 5)" }
+if (-not $landing.Contains("/simia-windows-x64-setup.exe")) { $ecarts += "installeur Windows absent de la landing" }
 if ($landing -match "releases/latest") { $ecarts += "un lien pointe encore sur releases/latest" }
 if ($ecarts) {
     throw ("deploy\index.html ne correspond pas a la version {0} du lanceur : {1}. Mettre la landing a jour avant de publier." -f $version, ($ecarts -join ", "))
