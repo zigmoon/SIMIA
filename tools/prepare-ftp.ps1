@@ -237,6 +237,34 @@ if ($ecarts) {
     throw ("deploy\index.html ne correspond pas a la version {0} du lanceur : {1}. Mettre la landing a jour avant de publier." -f $version, ($ecarts -join ", "))
 }
 
+# L'avis de confidentialite existe en deux endroits : la section de la landing
+# et le panneau de l'application. Ils sont rediges separement, donc ils peuvent
+# diverger — et un avis qui se contredit d'une page a l'autre est pire que pas
+# d'avis du tout. Ces elements sont imposes par la LCEN et par l'article 13 du
+# RGPD : s'ils manquent d'un cote, la publication s'arrete.
+Write-Step "Avis legal : landing et application d'accord"
+$appJs = Join-Path $App "app.js"
+$avis = @(
+    @{ Nom = "SIREN"; Motif = "452 356 728" },
+    @{ Nom = "directeur de la publication"; Motif = "Simon Dupont-Gellert" },
+    @{ Nom = "telephone de contact"; Motif = "71 61 41 10" },
+    @{ Nom = "registre officiel"; Motif = "annuaire-entreprises.data.gouv.fr/entreprise/452356728" },
+    @{ Nom = "adresse CNIL"; Motif = "75334 Paris Cedex 07" },
+    @{ Nom = "hebergeur"; Motif = "LWS (Ligne Web Services)" },
+    @{ Nom = "date de mise a jour"; Motif = "22 novembre 2026" }
+)
+if (-not (Test-Path $appJs)) { throw "app.js introuvable dans $App" }
+$application = Get-Content $appJs -Raw -Encoding UTF8
+$oublis = @()
+foreach ($element in $avis) {
+    if (-not $landing.Contains($element.Motif)) { $oublis += "$($element.Nom) absent de la landing" }
+    if (-not $application.Contains($element.Motif)) { $oublis += "$($element.Nom) absent de l'application" }
+}
+if ($oublis) {
+    throw ("Avis legal incomplet ou divergent : {0}. Completer deploy\index.html et app.js (bloc legalContent des quatre langues) avant de publier." -f ($oublis -join "; "))
+}
+Write-Host ("  {0} elements presents des deux cotes" -f $avis.Count) -ForegroundColor DarkGray
+
 $manifest = [ordered]@{
     version   = $version
     published = (Get-Date).ToString("yyyy-MM-dd")

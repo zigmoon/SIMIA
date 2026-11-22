@@ -67,3 +67,22 @@
 <IfModule mod_autoindex.c>
   Options -Indexes
 </IfModule>
+
+# En-tetes de securite et de vie privee. Ils ne remplacent pas une politique de
+# securite du contenu (elle est posee en <meta> par l'application, qui doit
+# autoriser le CDN des modeles) ; ils la completent la ou le <meta> ne peut rien.
+<IfModule mod_headers.c>
+  # Aucune URL complete n'est transmise a un site tiers : sans cet en-tete, le
+  # chemin visite part chez GitHub ou Hugging Face au moindre clic sortant.
+  Header always set Referrer-Policy "same-origin"
+  # Un navigateur ne doit pas reinterpreter un fichier servi avec un autre type.
+  Header always set X-Content-Type-Options "nosniff"
+  # L'interface ne s'affiche pas dans un cadre etranger : le clic-detournement
+  # sur les boutons de la conversation devient impossible.
+  Header always set X-Frame-Options "SAMEORIGIN"
+  # Aucun capteur n'est utilise sauf le micro, pour la dictee.
+  Header always set Permissions-Policy "geolocation=(), camera=(), payment=(), usb=(), microphone=(self)"
+  # Le site est en HTTPS uniquement. Pas de includeSubDomains : d'autres
+  # sous-domaines de zigmoon.com ne sont pas concernes par ce dossier.
+  Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>

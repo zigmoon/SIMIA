@@ -1,6 +1,22 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.39": {
+      "title": "Mentions legales completes, avis RGPD veridique, et PDF.js derriere le consentement",
+      "highlights": [
+        "L'avis de confidentialite affirmait qu'aucune donnee n'etait transmise a un serveur. C'etait faux : l'agent web envoie votre question au relais du site, qui interroge DuckDuckGo, Bing et Google Actualites. Le texte dit desormais exactement ce qui sort de l'appareil, quand, sur quelle base legale et pour combien de temps.",
+        "La landing n'avait aucune mention legale. Elle en a une, en quatre langues : editeur, SIREN, directeur de la publication, telephone et courriel, hebergeur, et renvoi vers le registre national des entreprises pour l'adresse du domicile professionnel, qui n'est pas publiee sur le site.",
+        "L'avis RGPD est complet : finalites, bases legales, durees de conservation (six mois pour les journaux d'acces de l'hebergeur), transferts hors Union europeenne avec leur fondement, droits d'acces a portabilite, et possibilite de saisir la CNIL.",
+        "PDF.js etait charge depuis un CDN sans aucune demande d'accord, alors que la fenetre Cookies ne citait ni lui ni Transformers.js. La lecture des PDF passe maintenant par la meme barriere que Pyodide, avec un message qui dit quoi faire, et la liste des ressources externes est exacte.",
+        "En-tetes de securite ajoutes au serveur : Referrer-Policy same-origin, X-Content-Type-Options, X-Frame-Options, Permissions-Policy et HSTS. Le premier empeche qu'une adresse visitee parte chez un site tiers au moindre clic sortant.",
+        "Controle de publication : les deux avis, celui de la landing et celui de l'application, sont compares a chaque construction du dossier. Si un element obligatoire manque d'un cote, la publication s'arrete au lieu de produire un site contradictoire."
+      ],
+      "notes": [
+        "L'adresse du domicile professionnel n'est pas affichee : elle renvoie a la fiche officielle de l'entreprise, qui fait foi. Le telephone et le courriel de contact, eux, sont publies, comme la loi le demande.",
+        "La generation video et les archives n'ont pas change dans cette version : seuls le texte juridique, le chargement de PDF.js et les en-tetes du serveur bougent.",
+        "Les paquets Windows, macOS (Apple Silicon et Intel) et Linux sont recompiles par GitHub Actions."
+      ]
+    },
     "0.1.38": {
       "title": "Les modeles video s'importent, la landing parle quatre langues, et le consentement suit le visiteur",
       "highlights": [
