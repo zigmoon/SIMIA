@@ -44,7 +44,19 @@ function Add-File {
     # Un lien physique pour les gros fichiers : le dossier reste complet, sans
     # consommer un octet de plus sur le disque.
     if ($length -gt $HardLinkAbove) {
-        if (Test-Path $To) { Remove-Item $To -Force }
+        if (Test-Path $To) {
+            # Le fichier est peut-etre deja le lien physique de la meme source :
+            # inutile de le remplacer, et impossible s'il est tenu ouvert.
+            $sameFile = $false
+            try {
+                $a = Get-Item $To
+                $b = Get-Item $From
+                $sameFile = ($a.Length -eq $b.Length) -and
+                    ([math]::Abs(($a.LastWriteTimeUtc - $b.LastWriteTimeUtc).TotalSeconds) -lt 2)
+            } catch { $sameFile = $false }
+            if ($sameFile) { return }
+            Remove-Item $To -Force
+        }
         try {
             New-Item -ItemType HardLink -Path $To -Target $From -ErrorAction Stop | Out-Null
             return
@@ -112,7 +124,17 @@ $Site = (Resolve-Path $Site).Path
 $Models = (Resolve-Path $Models).Path
 
 Write-Step "Preparation"
-if (Test-Path $Out) { Remove-Item $Out -Recurse -Force }
+# Un fichier deja present peut etre tenu ouvert par un antivirus, l'indexeur
+# ou un moteur encore en cours : supprimer tout le dossier echouait alors
+# entierement, et la preparation ne pouvait plus avancer. On nettoie ce qui
+# peut l'etre, on signale le reste, et la copie qui suit ecrase les fichiers
+# inchangeables.
+if (Test-Path $Out) {
+    Get-ChildItem $Out -Recurse -Force | ForEach-Object {
+        try { Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop }
+        catch { Write-Host ("  garde (verrouille) : {0}" -f $_.Name) -ForegroundColor DarkYellow }
+    }
+}
 New-Item -ItemType Directory -Path $Out -Force | Out-Null
 
 Write-Step "Landing et fichiers de site"

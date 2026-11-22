@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.36": {
+      "title": "La bibliotheque de modeles s'affiche enfin correctement",
+      "highlights": [
+        "Les cartes de la fenetre « Choisissez un modele » etaient ecrasees a 55 px de haut, alors que leur contenu en demandait 148 : titre, description et bouton debordaient hors de leur propre cadre. Une seule propriete en trop, ajoutee la veille, autorisait la grille a comprimer les rangees. Elle est retiree, et une garde empeche definitivement le retour du defaut.",
+        "Les en-tetes de groupe (« Fournis avec SIMIA », « Deja sur votre disque », « A telecharger ») se superposaient quand on faisait defiler la liste : ils ne collent plus au bord.",
+        "L'introduction de la fenetre etait coupee a la deuxieme ligne, en plein milieu d'une phrase. Elle s'affiche maintenant en entier.",
+        "La grille a ete reverifiee a quatre largeurs, sur les 58 cartes de l'onglet « Tous » : trois colonnes sur un grand ecran, deux sur une tablette, une sur telephone, aucun debordement horizontal, aucune carte deformee.",
+        "Les cartes sont plus compactes qu'avant sans rien perdre : la liste complete tient en 3 481 px de defilement au lieu de 5 887."
+      ]
+    },
     "0.1.35": {
       "title": "Modele vs style : on voit ce qui est actif, on importe en un geste, et 14 Go peuvent etre interrompus",
       "highlights": [
