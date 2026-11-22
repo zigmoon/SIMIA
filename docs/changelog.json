@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.43": {
+      "title": "Gravure SIMIA : le bon chiffre, le bon jeton, et un poids qui laisse parler la consigne",
+      "highlights": [
+        "Le LoRA maison a ete entraine sur 220 planches, pas 32 : la fiche du modele, la landing et la carte Hugging Face annoncaient toutes un chiffre six fois trop petit.",
+        "Le jeton de style est desormais exactement celui de l'entrainement, « s1mia vintage botanical engraving ». La fiche du pack y ajoutait « plate », un mot que le LoRA n'a jamais vu a cette place.",
+        "Le poids par defaut passe de 1,4 a 1,0. Mesure sur le meme sujet et la meme graine : a 1,4 l'image s'eloigne de ce que le modele aurait peint sans style (0,354), a 1,0 elle s'en rapproche (0,268). La gravure reste franche, la consigne reprend ses droits.",
+        "La fiche du modele dit maintenant ce qu'il fait et ce qu'il ne fait pas : c'est un style, pas un savoir. Demandez une plante, il la grave ; demandez une ville, il en fera une planche.",
+        "Mesure du 23 novembre : le LoRA ne recopie pas le corpus (l'image generee est a 0,16-0,20 de la planche la plus proche, contre 0,21 entre deux planches), mais il ecrase les sujets hors de son domaine — chat, vaisseau et rose sortent a 57 % de la distance qu'ils auraient sans lui."
+      ]
+    },
     "0.1.42": {
       "title": "La bibliotheque des modeles respire, et la landing sert la derniere version",
       "highlights": [

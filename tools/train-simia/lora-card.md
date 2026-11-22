@@ -22,7 +22,7 @@ botaniques du XIXᵉ siècle** : trait fin sur cuivre, hachures, mise en couleur
 l'aquarelle, composition centrée sur une seule espèce, fond neutre.
 
 C'est le correctif utilisé par [SIMIA](https://github.com/zigmoon/SIMIA), qui
-l'applique avec un poids de 1,4 sur SD 1.5.
+l'applique avec un poids de 1,0 sur SD 1.5.
 
 ## Le fichier
 
