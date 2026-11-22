@@ -264,7 +264,13 @@ jobs:
             fi
             dir="$stage/models/image/sd15"
             mkdir -p "$dir"
-            curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 \
+            # Un transfert fige bloquait le job entier : les runners GitHub ont
+            # deja laisse une compilation Windows a l'arreur plus de 70 minutes
+            # sur cette seule ligne. curl recoit donc une limite de duree et un
+            # seuil de lenteur, pour echouer et reessayer au lieu d'attendre.
+            curl -L --fail --retry 5 --retry-delay 5 --retry-all-errors \
+              --connect-timeout 30 --max-time 900 \
+              --speed-limit 10240 --speed-time 60 \
               -o "$dir/$SD15_FILE" "$SD15_URL"
             size=$(wc -c < "$dir/$SD15_FILE" | tr -d ' ')
             if [ "$size" != "$SD15_BYTES" ]; then
