@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "packs": [
     {
       "id": "sd-turbo",
@@ -14,7 +14,10 @@
       "recommended": true,
       "model": "sdturbo/sd_turbo_q4_0.gguf",
       "url": "https://huggingface.co/samoudi/sd-turbo-gguf/resolve/main/sd_turbo_q4_0.gguf",
-      "modelBytes": 1847909248
+      "modelBytes": 1847909248,
+      "noteEn": "The best compromise under 2 GB: a single file entirely in VRAM, 4 steps, about 1.2 s per image at 512 px (2.2 s at 768). A distilled SD 2.1, closer to the prompt than SD 1.5 at low step counts.",
+      "noteEs": "El mejor equilibrio por debajo de 2 GB: un solo archivo entero en VRAM, 4 pasos, unos 1,2 s por imagen en 512 px (2,2 s en 768). Versión destilada de SD 2.1, más fiel al prompt que SD 1.5 con pocos pasos.",
+      "noteJa": "2 GB 未満で最高のバランス：単一ファイルをすべて VRAM に載せ、4 ステップ、512 px で 1 枚約 1.2 秒（768 では 2.2 秒）。SD 2.1 の蒸留版で、少ないステップでも SD 1.5 よりプロンプトに忠実です。"
     },
     {
       "id": "sdxs-512",
@@ -28,7 +31,10 @@
       "px": 512,
       "model": "sdxs/sdxs-512-tinySDdistilled_Q8_0.gguf",
       "url": "https://huggingface.co/concedo/sdxs-512-tinySDdistilled-GGUF/resolve/main/sdxs-512-tinySDdistilled_Q8_0.gguf",
-      "modelBytes": 682847200
+      "modelBytes": 682847200,
+      "noteEn": "The lightest of the selection: 651 MB, a single step, 0.3 s per image once the model is loaded. Simple style, ideal for sketching an idea quickly.",
+      "noteEs": "El más ligero de la selección: 651 MB, un solo paso, 0,3 s por imagen una vez cargado el modelo. Estilo sencillo, ideal para plasmar una idea muy rápido.",
+      "noteJa": "ラインナップで最も軽量：651 MB、1 ステップ、読み込み後は 1 枚 0.3 秒。シンプルな画風で、アイデアを素早く形にするのに最適です。"
     },
     {
       "id": "sd15-q4",
@@ -43,7 +49,10 @@
       "px": 512,
       "model": "sd15/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
       "url": "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
-      "modelBytes": 1566768416
+      "modelBytes": 1566768416,
+      "noteEn": "Included in the Windows, Linux and Apple Silicon Mac archive: image generation works from the very first launch, with no download. 512 px, 20 steps, about 2 s per image.",
+      "noteEs": "Incluido en el archivo de Windows, Linux y Mac Apple Silicon: la generación de imágenes funciona desde el primer arranque, sin descarga. 512 px, 20 pasos, unos 2 s por imagen.",
+      "noteJa": "Windows・Linux・Apple Silicon 版 Mac のアーカイブに同梱：初回起動からダウンロードなしで画像生成が使えます。512 px、20 ステップ、1 枚約 2 秒。"
     },
     {
       "id": "sd15-simia",
@@ -60,7 +69,10 @@
       "loraWeight": 1.4,
       "promptPrefix": "s1mia vintage botanical engraving plate",
       "loraUrl": "https://app.zigmoon.com/SIMIA/models/image/loras/simia-gravure.safetensors",
-      "modelBytes": 1566768416
+      "modelBytes": 1566768416,
+      "noteEn": "Our own LoRA, trained on this machine from 32 public-domain botanical plates (Curtis's Botanical Magazine, Edwards's Botanical Register). It sits on SD 1.5 and weighs only a few megabytes: botanical engraving, 24 steps, CFG 7. The style token is added to the prompt automatically.",
+      "noteEs": "Nuestro propio LoRA, entrenado en esta máquina con 32 láminas botánicas de dominio público (Curtis's Botanical Magazine, Edwards's Botanical Register). Se aplica sobre SD 1.5 y pesa solo unos megabytes: grabado botánico, 24 pasos, CFG 7. El token de estilo se añade al prompt automáticamente.",
+      "noteJa": "SIMIA 独自の LoRA。パブリックドメインの植物画 32 点（Curtis's Botanical Magazine、Edwards's Botanical Register）でこの PC 上で学習しました。SD 1.5 に重ねる数メガバイトのファイルで、植物銅版画、24 ステップ、CFG 7。スタイル用トークンは自動でプロンプトに付きます。"
     },
     {
       "id": "sdxl-turbo",
@@ -74,7 +86,10 @@
       "px": 1024,
       "model": "sdxl/stable-diffusion-xl-1.0-turbo-Q4_0.gguf",
       "url": "https://huggingface.co/gpustack/stable-diffusion-xl-1.0-turbo-GGUF/resolve/main/stable-diffusion-xl-1.0-turbo-Q4_0.gguf",
-      "modelBytes": 3940010720
+      "modelBytes": 3940010720,
+      "noteEn": "SD-Turbo's big brother: 1024 px in 4 steps, about 6 s on an RTX 2060 once the model is loaded (15 s on the first call). SIMIA applies no content filter. Downloaded from the CDN on first use.",
+      "noteEs": "El hermano mayor de SD-Turbo: 1024 px en 4 pasos, unos 6 s en una RTX 2060 una vez cargado el modelo (15 s en la primera llamada). SIMIA no aplica ningún filtro de contenido. Se descarga desde el CDN en el primer uso.",
+      "noteJa": "SD-Turbo の上位版：1024 px を 4 ステップで、読み込み後は RTX 2060 で約 6 秒（初回は 15 秒）。SIMIA はコンテンツフィルターをかけません。初回利用時に CDN からダウンロードします。"
     },
     {
       "id": "sdxl-base",
@@ -88,7 +103,10 @@
       "px": 1024,
       "model": "sdxl/stable-diffusion-xl-base-1.0-Q4_0.gguf",
       "url": "https://huggingface.co/gpustack/stable-diffusion-xl-base-1.0-GGUF/resolve/main/stable-diffusion-xl-base-1.0-Q4_0.gguf",
-      "modelBytes": 3940010720
+      "modelBytes": 3940010720,
+      "noteEn": "The full SDXL base: 1024 px, CFG 7, 25 steps, about 57 s on an RTX 2060. Closer to the prompt than the Turbo version, with no content filter on SIMIA's side. Downloaded from the CDN.",
+      "noteEs": "La base SDXL completa: 1024 px, CFG 7, 25 pasos, unos 57 s en una RTX 2060. Más fiel al prompt que la versión Turbo, sin filtro de contenido por parte de SIMIA. Se descarga desde el CDN.",
+      "noteJa": "SDXL ベースの完全版：1024 px、CFG 7、25 ステップ、RTX 2060 で約 57 秒。Turbo 版よりプロンプトに忠実で、SIMIA 側のコンテンツフィルターはありません。CDN からダウンロードします。"
     },
     {
       "id": "sdxl-lightning",
@@ -101,7 +119,10 @@
       "cfg": 1.0,
       "px": 1024,
       "model": "sdxl-lightning/sdxl_lightning_4step.q4_0.gguf",
-      "url": "https://huggingface.co/mzwing/SDXL-Lightning-GGUF/resolve/main/sdxl_lightning_4step.q4_0.gguf"
+      "url": "https://huggingface.co/mzwing/SDXL-Lightning-GGUF/resolve/main/sdxl_lightning_4step.q4_0.gguf",
+      "noteEn": "SDXL distilled to 4 steps by ByteDance: 1024 px, CFG 1, about 4 s on an RTX 2060 once loaded. Lighter than SDXL Turbo and closer to the prompt than SD-Turbo at 512 px.",
+      "noteEs": "SDXL destilado en 4 pasos por ByteDance: 1024 px, CFG 1, unos 4 s en una RTX 2060 una vez cargado. Más ligero que SDXL Turbo y más fiel al prompt que SD-Turbo en 512 px.",
+      "noteJa": "ByteDance が 4 ステップに蒸留した SDXL：1024 px、CFG 1、読み込み後は RTX 2060 で約 4 秒。SDXL Turbo より軽く、512 px では SD-Turbo よりプロンプトに忠実です。"
     },
     {
       "id": "dreamshaper-xl",
@@ -114,7 +135,10 @@
       "cfg": 1.5,
       "px": 1024,
       "model": "dreamshaper-xl/dreamshaper-xl-v2-turbo-Q4_K.gguf",
-      "url": "https://huggingface.co/off-grid-ai/dreamshaper-xl-v2-turbo-GGUF/resolve/main/dreamshaper-xl-v2-turbo-Q4_K.gguf"
+      "url": "https://huggingface.co/off-grid-ai/dreamshaper-xl-v2-turbo-GGUF/resolve/main/dreamshaper-xl-v2-turbo-Q4_K.gguf",
+      "noteEn": "The most \"artistic\" SDXL in the selection: 1024 px in 6 steps, CFG 1.5. Illustrations, portraits and polished moods. Settings taken from the model's own page.",
+      "noteEs": "El SDXL más «artístico» de la selección: 1024 px en 6 pasos, CFG 1,5. Ilustraciones, retratos y atmósferas cuidadas. Ajustes tomados de la ficha del modelo.",
+      "noteJa": "ラインナップで最も「芸術的」な SDXL：1024 px を 6 ステップ、CFG 1.5。イラスト、ポートレート、雰囲気のある表現に。設定はモデルの公開ページに準拠しています。"
     },
     {
       "id": "dreamshaper-8-lcm",
@@ -128,7 +152,10 @@
       "px": 512,
       "model": "dreamshaper8-lcm/dreamshaper_8LCM-iq4_nl.gguf",
       "url": "https://huggingface.co/stduhpf/dreamshaper-8LCM-im-GGUF-sdcpp/resolve/main/dreamshaper_8LCM-iq4_nl.gguf",
-      "modelBytes": 1570742432
+      "modelBytes": 1570742432,
+      "noteEn": "The fastest at 512 px: LCM version of DreamShaper 8, 6 steps, CFG 1.5, about 1 s per image. Versatile, illustrations as well as photos.",
+      "noteEs": "El más rápido en 512 px: versión LCM de DreamShaper 8, 6 pasos, CFG 1,5, unos 1 s por imagen. Versátil, tanto ilustraciones como fotos.",
+      "noteJa": "512 px で最速：DreamShaper 8 の LCM 版、6 ステップ、CFG 1.5、1 枚約 1 秒。イラストにも写真にも使える汎用型です。"
     },
     {
       "id": "anything-v5",
@@ -141,7 +168,10 @@
       "cfg": 7.0,
       "px": 512,
       "model": "anything-v5/anything-v5.q4_0.gguf",
-      "url": "https://huggingface.co/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf"
+      "url": "https://huggingface.co/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf",
+      "noteEn": "Specialised in illustration and anime style: 512 px, 20 steps, CFG 7, about 2 s per image. SIMIA applies no content filter.",
+      "noteEs": "Especializado en ilustración y estilo anime: 512 px, 20 pasos, CFG 7, unos 2 s por imagen. SIMIA no aplica ningún filtro de contenido.",
+      "noteJa": "イラストとアニメ調に特化：512 px、20 ステップ、CFG 7、1 枚約 2 秒。SIMIA はコンテンツフィルターをかけません。"
     },
     {
       "id": "pony-xl",
@@ -156,7 +186,10 @@
       "promptPrefix": "score_9, score_8_up, score_7_up",
       "model": "pony-xl/pony-diffusion-v6-xl-Q4_K.gguf",
       "url": "https://huggingface.co/off-grid-ai/pony-diffusion-v6-xl-GGUF/resolve/main/pony-diffusion-v6-xl-Q4_K.gguf",
-      "modelBytes": 2797752960
+      "modelBytes": 2797752960,
+      "noteEn": "The community's most used SDXL for illustration: characters, graphic styles, detailed scenes. 1024 px, 25 steps, CFG 7. It expects quality prefixes in front of the prompt, added automatically.",
+      "noteEs": "El SDXL de ilustración más usado de la comunidad: personajes, estilos gráficos, escenas detalladas. 1024 px, 25 pasos, CFG 7. Espera prefijos de calidad delante del prompt, que se añaden automáticamente.",
+      "noteJa": "コミュニティで最も使われるイラスト向け SDXL：キャラクター、グラフィック調、描き込んだ情景。1024 px、25 ステップ、CFG 7。プロンプトの前に品質プレフィックスを前提とするため、自動で付加します。"
     },
     {
       "id": "pony-xl-q8",
@@ -170,7 +203,10 @@
       "px": 1024,
       "promptPrefix": "score_9, score_8_up, score_7_up",
       "model": "pony-xl-q8/pony-diffusion-v6-xl-Q8_0.gguf",
-      "url": "https://huggingface.co/off-grid-ai/pony-diffusion-v6-xl-GGUF/resolve/main/pony-diffusion-v6-xl-Q8_0.gguf"
+      "url": "https://huggingface.co/off-grid-ai/pony-diffusion-v6-xl-GGUF/resolve/main/pony-diffusion-v6-xl-Q8_0.gguf",
+      "noteEn": "The same model in Q8: more faithful memory, sharper faces and details, at the cost of 1.3 GB more on disk and in VRAM. Pick it if you have 8 GB of graphics memory.",
+      "noteEs": "El mismo modelo en Q8: memoria más fiel, rostros y detalles más nítidos, a cambio de 1,3 GB más en disco y en VRAM. Elígelo si tienes 8 GB de memoria gráfica.",
+      "noteJa": "同じモデルの Q8 版：より忠実な重みで、顔や細部がくっきり。代わりにディスクと VRAM が 1.3 GB 増えます。グラフィックメモリ 8 GB 以上向けです。"
     },
     {
       "id": "wai-illustrious",
@@ -183,7 +219,10 @@
       "cfg": 5.0,
       "px": 1024,
       "model": "wai-illustrious/wai-illustrious-v170-Q8_0.gguf",
-      "url": "https://huggingface.co/nuupy/WAI-illustrious-SDXL-GGUF/resolve/main/WAI-illustrious-SDXL-v170-Q8_0.gguf"
+      "url": "https://huggingface.co/nuupy/WAI-illustrious-SDXL-GGUF/resolve/main/WAI-illustrious-SDXL-v170-Q8_0.gguf",
+      "noteEn": "Specialised in illustration and anime style, in the line of Illustrious: 1024 px, 28 steps, CFG 5. More stable than Anything V5 at 512 px, and half as demanding as SDXL base.",
+      "noteEs": "Especializado en ilustración y estilo anime, en la línea de Illustrious: 1024 px, 28 pasos, CFG 5. Más estable que Anything V5 en 512 px y la mitad de exigente que SDXL base.",
+      "noteJa": "Illustrious 系のイラスト・アニメ調に特化：1024 px、28 ステップ、CFG 5。512 px では Anything V5 より安定し、SDXL base の半分の負荷です。"
     },
     {
       "id": "z-image-turbo",
@@ -197,7 +236,10 @@
       "px": 1024,
       "diffusion": "z_image_turbo-Q3_K.gguf",
       "llm": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
-      "vae": "ae.safetensors"
+      "vae": "ae.safetensors",
+      "noteEn": "The newest and the prettiest: 1024 px in 8 steps, about 37 s. Three files, placed by hand in models/image/.",
+      "noteEs": "El más reciente y el más bonito: 1024 px en 8 pasos, unos 37 s. Tres archivos, colocados a mano en models/image/.",
+      "noteJa": "最新かつ最も美しいモデル：1024 px を 8 ステップで、約 37 秒。3 つのファイルを models/image/ に手動で置きます。"
     },
     {
       "id": "minimax-h3",
@@ -223,7 +265,10 @@
       "diffusionBytes": 6724190304,
       "llmBytes": 5120870504,
       "vaeBytes": 2811065184,
-      "audioVaeBytes": 605254808
+      "audioVaeBytes": 605254808,
+      "noteEn": "Video with a sound track, generated together: 22 frames at 24 frames per second, just under a second, at 640x360. Four files, downloaded one by one. This is a 22-billion-parameter model: even quantised to Q2 and helped by the disk, it needs several minutes per clip on a 6 GB card, and takes about 14 GB of disk. Best kept for machines with plenty of memory.",
+      "noteEs": "Vídeo con pista de audio, generados juntos: 22 imágenes a 24 por segundo, algo menos de un segundo, en 640x360. Cuatro archivos, descargados uno a uno. Es un modelo de 22 mil millones de parámetros: incluso cuantizado en Q2 y ayudado por el disco, necesita varios minutos por clip en una tarjeta de 6 GB y ocupa unos 14 GB de disco. Reservado para máquinas con mucha memoria.",
+      "noteJa": "映像と音声をまとめて生成：24 fps で 22 フレーム（1 秒弱）、640x360。4 つのファイルを 1 つずつダウンロードします。220 億パラメータのモデルで、Q2 に量子化してディスクに助けさせても、6 GB のカードでは 1 クリップに数分かかり、ディスクを約 14 GB 使います。メモリに余裕のあるマシン向けです。"
     }
   ]
 }

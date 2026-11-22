@@ -1,6 +1,17 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.37": {
+      "title": "Toute l'interface parle anglais, et Vibe dit quel modele ecrit votre code",
+      "highlights": [
+        "La fenetre des modeles etait traduite a moitie : les sept categories du catalogue de bureau (« Generaliste », « Leger », « Ecriture ») et les descriptions de modeles restaient en francais en anglais, en espagnol et en japonais. Elles ont maintenant leurs quatre langues.",
+        "Les quinze packs d'image portent leur note traduite dans le fichier de catalogue lui-meme (noteEn, noteEs, noteJa) : un pack ajoute a la main peut fournir les siennes, et l'interface retombe proprement sur le francais s'il n'en a pas.",
+        "Les coins oublies ont ete repris : reglages du modele d'image (dossier, import, boutons), titre de l'apercu, libelle du depot de fichiers, recherche de la bibliotheque, etat du moteur dans la barre du haut, et le decompte des modeles.",
+        "Le panneau Cookies vivait dans son propre fichier et gardait la langue du chargement : il suit maintenant le changement de langue, comme le reste.",
+        "Vibe dit clairement quel modele ecrit votre code. Quand ce n'est pas un modele de code, le repere passe en ambre avec un losange et le bouton « Changer de modele » s'allume : c'est une occasion d'ecrire plus juste, pas une panne, et cela se lit comme tel.",
+        "Audit chiffre : en passant l'application en anglais, les elements restes en francais tombent de 123 a 21, et les 21 restants sont des faux positifs (mots anglais accentues, noms de modeles)."
+      ]
+    },
     "0.1.36": {
       "title": "La bibliotheque de modeles s'affiche enfin correctement",
       "highlights": [

@@ -177,7 +177,7 @@ code que l'onglet, mis en cache par un service worker.
 | Choix d'un modèle | bibliothèque de 900 × 640 px au plus ; un modèle absent du cache s'annonce « à télécharger » et se télécharge depuis sa carte, avec sa barre de progression, sans quitter la bibliothèque | ✅ | ✅ |
 | Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | — |
 | Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
-| Quatre langues | français, anglais, espagnol, japonais | ✅ | ✅ |
+| Quatre langues | français, anglais, espagnol, japonais — interface, bibliothèque de modèles, notes des packs d'image et panneau Cookies compris | ✅ | ✅ |
 | Installation | application installable depuis le navigateur (icône, fenêtre propre, hors ligne) | ✅ | — |
 | Hors ligne | après le premier téléchargement des poids, aucune connexion requise | ✅ | ✅ |
 

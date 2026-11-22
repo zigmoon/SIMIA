@@ -852,7 +852,54 @@ function normalizedCustomModel(profile) {
   };
 }
 
+/* Les sept categories du catalogue natif, dans les quatre langues. Le
+   catalogue du poste ne porte que la cle francaise : c'est ici qu'elle est
+   traduite, pas dans le fichier de donnees. */
+const MODEL_CATEGORIES = {
+  "Généraliste": ["Généraliste", "General purpose", "Uso general", "汎用"],
+  "Généraliste ": ["Généraliste", "General purpose", "Uso general", "汎用"],
+  "Léger": ["Léger", "Lightweight", "Ligero", "軽量"],
+  "Écriture": ["Écriture", "Writing", "Redacción", "文章"],
+  "Code": ["Code", "Code", "Código", "コード"],
+  "Documents": ["Documents", "Documents", "Documentos", "文書"],
+  "Maths": ["Maths", "Maths", "Matemáticas", "数学"],
+  "Vision": ["Vision", "Vision", "Visión", "画像"],
+  "Européen": ["Européen", "European", "Europeo", "欧州"],
+  "Image": ["Image", "Image", "Imagen", "画像生成"],
+};
+
+const LANGUAGE_INDEX = { fr: 0, en: 1, es: 2, ja: 3 };
+
+function modelCategoryText(category) {
+  const row = MODEL_CATEGORIES[String(category || "").trim()];
+  return row ? row[LANGUAGE_INDEX[state.language] || 0] : category;
+}
+
+/* Une note de modele natif ne vient pas du catalogue : elle depend seulement de
+   la presence du fichier sur le disque. Deux phrases, quatre langues. */
+function modelNoteText(model) {
+  if (model.nativeLocal === undefined) return model.note;
+  return model.nativeLocal
+    ? localizedText(
+      "Modèle présent sur ce disque et exécuté en natif, sans téléchargement.",
+      "On this disk and run natively, with no download.",
+      "En este disco y ejecutado de forma nativa, sin descarga.",
+      "この PC にあり、ダウンロードなしでネイティブに実行されます。"
+    )
+    : localizedText(
+      "Modèle du catalogue : SIMIA le télécharge une seule fois sur ce disque, puis l'exécute en natif.",
+      "Catalogue model: SIMIA downloads it once to this disk, then runs it natively.",
+      "Modelo del catálogo: SIMIA lo descarga una vez en este disco y lo ejecuta de forma nativa.",
+      "カタログのモデル：SIMIA が一度だけこの PC にダウンロードし、ネイティブに実行します。"
+    );
+}
+
 function modelDetails(model) {
+  /* Un modele du catalogue natif n'a pas d'entree dans MODEL_EN : sa categorie
+     et sa note sont fabriquees par SIMIA, donc traduites ici. */
+  if (model.nativeLocal !== undefined) {
+    return [modelCategoryText(model.category), modelNoteText(model)];
+  }
   const fallback = [model.category, model.note];
   if (state.language === "ja") return MODEL_JA[model.id] || fallback;
   if (state.language === "es") return MODEL_ES[model.id] || fallback;
@@ -1836,7 +1883,12 @@ function renderCodeModelHint() {
     `Modelo del taller: ${name}${live ? " (activo)" : " (sin cargar)"}${isCodeModel ? "" : " · un modelo de Código es más preciso"}.`,
     `作業台のモデル：${name}${live ? "（有効）" : "（未読み込み）"}${isCodeModel ? "" : " · コード用モデルの方が正確です"}。`
   );
+  /* Le modele de code est le point qui inquiete le plus dans un atelier : on
+     ecrit du code, et l'on ne sait pas quel moteur va le produire. La phrase
+     seule se lisait comme un detail ; la couleur en fait un etat. */
+  ui.codeModelHint.classList.toggle("is-warning", !isCodeModel);
   ui.codeModelHintAction.textContent = localizedText("Changer de modèle", "Change model", "Cambiar de modelo", "モデルを変更");
+  ui.codeModelHintAction.classList.toggle("is-suggested", !isCodeModel);
 }
 
 function updateCodeHighlight() {
@@ -5308,6 +5360,15 @@ function shortLoraName(lora) {
 
 /* Nom court : "SD 1.5 · Gravure SIMIA" devient "Gravure SIMIA". Le nom complet
    reste dans l'infobulle et dans les parametres. */
+/* La note d'un pack vient du catalogue. Le fichier de donnees porte les quatre
+   langues (noteEn, noteEs, noteJa) : un pack ajoute a la main sans traduction
+   retombe sur sa note francaise plutot que sur du vide. */
+function imagePackNote(pack) {
+  if (!pack) return "";
+  const key = { en: "noteEn", es: "noteEs", ja: "noteJa" }[state.language];
+  return (key && pack[key]) || pack.note || "";
+}
+
 function shortImageName(pack) {
   if (!pack) return "";
   const parts = String(pack.name || "").split("·");
@@ -5369,7 +5430,7 @@ function renderImageEngineUi() {
       document.querySelector("#setting-image-label").textContent = localizedText("MODÈLE D'IMAGE", "IMAGE MODEL", "MODELO DE IMAGEN", "画像モデル");
       document.querySelector("#image-picker-name").textContent = pack.name;
       document.querySelector("#image-picker-meta").textContent = meta;
-      document.querySelector("#image-info").textContent = pack.note || "";
+      document.querySelector("#image-info").textContent = imagePackNote(pack);
       if (ui.settingImageLora) ui.settingImageLora.hidden = false;
       if (ui.settingImageFolder) ui.settingImageFolder.hidden = false;
       renderImageLoraControls();
@@ -8655,7 +8716,71 @@ function setLanguage(code) {
   if (code === state.language) return;
   state.language = code;
   applyLanguage();
+  /* Le panneau Cookies vit dans son propre fichier : il ne connait pas l'etat
+     de l'application et restait dans la langue d'ouverture. L'evenement le
+     prevoit, et le garde-fou couvre son absence sur les pages qui ne le
+     chargent pas. */
+  try {
+    document.dispatchEvent(new CustomEvent("simia:language", { detail: { language: code } }));
+    window.SimiaConsent?.relabel?.();
+  } catch { /* panneau absent : rien a traduire */ }
   saveState();
+}
+
+/* Libelles statiques qui n'etaient traduits nulle part : reglages du modele
+   d'image, apercu de Vibe, depot de fichiers. Regroupes ici pour qu'un seul
+   appel les couvre tous, et pour qu'aucun coin de l'interface ne reste en
+   francais quand on passe en anglais. */
+function translateStaticUi() {
+  const put = (selector, value) => {
+    const node = document.querySelector(selector);
+    if (node && value) node.textContent = value;
+  };
+
+  put("#setting-image-lora-name", localizedText("Style LoRA", "LoRA style", "Estilo LoRA", "LoRA スタイル"));
+  put("#setting-image-folder-name", localizedText("Dossier des modèles d'image", "Image model folder", "Carpeta de modelos de imagen", "画像モデルのフォルダー"));
+  put("#image-folder-hint", localizedText(
+    "Un .safetensors ou un .gguf déposé dans models/image/ apparaît dans la bibliothèque, comme un plugin.",
+    "A .safetensors or .gguf dropped into models/image/ shows up in the library, like a plugin.",
+    "Un .safetensors o un .gguf colocado en models/image/ aparece en la biblioteca, como un plugin.",
+    "models/image/ に置いた .safetensors や .gguf は、プラグインのようにライブラリへ表示されます。"
+  ));
+  put("#image-folder-open", localizedText("Ouvrir le dossier", "Open folder", "Abrir carpeta", "フォルダーを開く"));
+  put("#image-folder-refresh", localizedText("Actualiser", "Refresh", "Actualizar", "更新"));
+  const importButton = document.querySelector('#setting-image-folder [data-import-button]');
+  if (importButton) importButton.textContent = localizedText("Importer un fichier…", "Import a file…", "Importar un archivo…", "ファイルを読み込む…");
+
+  put("#code-preview-title", localizedText("Aperçu", "Preview", "Vista previa", "プレビュー"));
+  const veil = document.querySelector("#drop-veil-label");
+  if (veil) veil.textContent = localizedText("Déposez les fichiers ici", "Drop files here", "Suelta los archivos aquí", "ここにファイルをドロップ");
+
+  /* Le decompte des modeles : il melange des chiffres et des mots, donc il se
+     recompose a chaque changement de langue plutot que d'etre fige. */
+  const fromDisk = MODELS.filter(model => model.nativeLocal).length;
+  const hosted = NATIVE && Array.isArray(NATIVE.models)
+    ? NATIVE.models.filter(model => model.hosted).length
+    : 0;
+  put("#download-info", NATIVE
+    ? localizedText(
+      `${fromDisk} modèle(s) sur ce disque · ${hosted} hébergés sur le serveur`,
+      `${fromDisk} model(s) on this disk · ${hosted} hosted on the server`,
+      `${fromDisk} modelo(s) en este disco · ${hosted} alojados en el servidor`,
+      `この PC に ${fromDisk} 件 · サーバーに ${hosted} 件`
+    )
+    : "");
+
+  /* L'etat du modele dans la barre du haut se reecrit aussi : sans cela, la
+     pastille gardait « Prêt » apres un passage en anglais. On conserve son
+     etat (couleur) et on ne remplace que le mot. */
+  if (ui.status) {
+    const kind = ui.status.dataset.state || "ready";
+    const label = kind === "error"
+      ? copy[state.language].error
+      : state.loadingEngine
+        ? copy[state.language].loading
+        : copy[state.language].ready;
+    setStatus(label, kind);
+  }
 }
 
 function applyLanguage() {
@@ -8670,6 +8795,7 @@ function applyLanguage() {
     });
   }
   ui.language.setAttribute("aria-label", localizedText("Changer de langue", "Switch language", "Cambiar idioma", "言語を切り替える"));
+  translateStaticUi();
   const sidebarNav = document.querySelector(".sidebar");
   if (sidebarNav) sidebarNav.setAttribute("aria-label", localizedText("Navigation principale", "Main navigation", "Navegación principal", "メインナビゲーション"));
   if (ui.appMenuToggle) {
@@ -9217,6 +9343,11 @@ function renderModelLibrary() {
     ? `${intro} ${text.split}`
     : `${intro} ${text.webLimit}`;
   document.querySelector("#model-library-close").setAttribute("aria-label", text.close);
+  if (ui.modelSearch) {
+    const searchLabel = localizedText("Rechercher un modèle", "Search a model", "Buscar un modelo", "モデルを検索");
+    ui.modelSearch.placeholder = searchLabel;
+    ui.modelSearch.setAttribute("aria-label", searchLabel);
+  }
   const filters = [["all", text.all], ["general", text.general], ["documents", text.documents], ["writing", text.writing], ["code", text.code], ["reasoning", text.reasoning], ["vision", text.vision], ["eu", localizedText("Européen", "European", "Europeo", "欧州")]];
   if (IMAGE) filters.push(["image", localizedText("Image", "Image", "Imagen", "画像生成")]);
   ui.modelFilters.replaceChildren(...filters.map(([id, label]) => {
@@ -9345,7 +9476,7 @@ function renderModelLibrary() {
     const styleTag = pack.lora
       ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("STYLE SIMIA", "SIMIA STYLE", "ESTILO SIMIA", "SIMIA スタイル"))}</span>`
       : "";
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(pack.note || "")}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${downloadBlock(pack.id)}`;
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(imagePackNote(pack))}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${downloadBlock(pack.id)}`;
     const rank = packRank(pack);
     const separator = rank === shownRank ? [] : (() => {
       shownRank = rank;

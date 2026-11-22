@@ -661,6 +661,13 @@ body.is-resizing, body.is-resizing * { cursor:col-resize !important; user-select
 .code-model-hint[hidden] { display:none; }
 .code-model-hint button { padding:3px 8px; border:1px solid #3a4740; border-radius:5px; background:#28332c; color:#cfe0c9; font:500 9.5px "DM Mono",monospace; cursor:pointer; }
 .code-model-hint button:hover { border-color:#7fa464; color:#eef4e9; }
+/* Le modele qui ecrit n'est pas un modele de code : ce n'est pas une panne,
+   c'est une occasion d'ameliorer le resultat. Ambre discret plutot que rouge,
+   et le bouton porte l'invitation au lieu de la subir. */
+.code-model-hint.is-warning { color:#d8b98a; }
+.code-model-hint.is-warning #code-model-hint-text::before { content:"◆ "; color:#c9985a; }
+.code-model-hint button.is-suggested { border-color:#8a6a3c; background:#3a2f22; color:#f0dcc0; }
+.code-model-hint button.is-suggested:hover { border-color:#c9985a; color:#fff6e9; }
 .code-action { padding:5px 10px; border:1px solid #3a4740; border-radius:6px; background:#28332c; color:#c3d2c7; font:500 10.5px "DM Mono",monospace; transition:.15s ease; }
 .code-action:hover { border-color:#7fa464; background:#2f3b33; color:#e9f3e9; }
 .code-action:disabled { opacity:.5; cursor:wait; }

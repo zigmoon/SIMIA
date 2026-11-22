@@ -170,6 +170,15 @@ struct ImagePack {
     vae_bytes: u64,
     #[serde(default, rename = "audioVaeBytes")]
     audio_vae_bytes: u64,
+    /* Traductions de la note. Elles vivent dans le catalogue plutot que dans le
+       code : un pack ajoute a la main peut fournir les siennes, et l'interface
+       n'a qu'un champ a lire. */
+    #[serde(default, rename = "noteEn")]
+    note_en: String,
+    #[serde(default, rename = "noteEs")]
+    note_es: String,
+    #[serde(default, rename = "noteJa")]
+    note_ja: String,
     /// Fichier depose a la main dans `models/image/` : SIMIA l'a reconnu seul,
     /// sans entree de catalogue. L'interface le signale, sinon un fichier ajoute
     /// se confondrait avec un modele fourni.
@@ -607,6 +616,9 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
         llm_bytes: 0,
         vae_bytes: 0,
         audio_vae_bytes: 0,
+        note_en: String::new(),
+        note_es: String::new(),
+        note_ja: String::new(),
         added: true,
     })
 }
@@ -2769,12 +2781,15 @@ fn image_packs_json(state: &Shared) -> String {
                     let local = guard.image.local_of(pack);
                     let bytes = pack_bytes(&guard.image.dir, pack);
                     format!(
-                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{},\"family\":{},\"video\":{},\"height\":{},\"frames\":{},\"fps\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"noteEn\":{},\"noteEs\":{},\"noteJa\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{},\"family\":{},\"video\":{},\"height\":{},\"frames\":{},\"fps\":{}}}",
                         js_escape(&pack.id),
                         js_escape(&pack.name),
                         js_escape(&pack.mode),
                         js_escape(&pack.size),
                         js_escape(&pack.note),
+                        js_escape(&pack.note_en),
+                        js_escape(&pack.note_es),
+                        js_escape(&pack.note_ja),
                         js_escape(&pack.license),
                         pack.steps,
                         pack.cfg,
@@ -4374,6 +4389,9 @@ mod image_pack_tests {
             llm_bytes: 0,
             vae_bytes: 0,
             audio_vae_bytes: 0,
+            note_en: String::new(),
+            note_es: String::new(),
+            note_ja: String::new(),
             added: false,
         }
     }
