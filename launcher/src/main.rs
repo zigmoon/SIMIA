@@ -184,6 +184,12 @@ struct ImagePack {
     /// se confondrait avec un modele fourni.
     #[serde(default)]
     added: bool,
+    /// Composants obligatoires qu'un fichier depose seul ne peut pas fournir
+    /// (encodeur de texte, VAE, VAE audio). Nommes en clair : ils remontent tels
+    /// quels dans « fichiers absents », et la carte ne peut donc pas se dire
+    /// prete.
+    #[serde(default)]
+    needs: Vec<String>,
 }
 
 fn default_cfg() -> f32 {
@@ -343,6 +349,186 @@ impl ImageFamily {
             ImageFamily::Unknown => (512, 20, 7.0),
         }
     }
+}
+
+/// Role d'un fichier dans un pack video. Le moteur ne charge pas les quatre
+/// composants par la meme option : un transformateur seul ne dessine rien, et
+/// sans VAE il n'y a rien a decoder.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum VideoSlot {
+    Transformer,
+    TextEncoder,
+    Vae,
+    AudioVae,
+}
+
+impl VideoSlot {
+    /// Ce que l'interface annonce quand le fichier manque.
+    fn label(self) -> &'static str {
+        match self {
+            VideoSlot::Transformer => "transformateur video",
+            VideoSlot::TextEncoder => "encodeur de texte",
+            VideoSlot::Vae => "VAE video",
+            VideoSlot::AudioVae => "VAE audio",
+        }
+    }
+}
+
+/// Famille deduite du nom du fichier. Un `.gguf` n'a pas d'en-tete lisible ici,
+/// et les noms de Hugging Face sont explicites : « minimax_h3 », « ltx »,
+/// « z_image ». Sans cela, un transformateur quantifie passait pour un
+/// checkpoint et la carte ne pouvait pas fonctionner.
+fn family_from_name(stem: &str) -> Option<ImageFamily> {
+    let lower = stem.to_ascii_lowercase();
+    if lower.contains("minimax") || lower.contains("h3") {
+        return Some(ImageFamily::H3);
+    }
+    if lower.contains("ltx") {
+        return Some(ImageFamily::Ltx);
+    }
+    if lower.contains("z_image") || lower.contains("z-image") || lower.contains("zimage") {
+        return Some(ImageFamily::ZImage);
+    }
+    None
+}
+
+/// Role d'un fichier video, lu dans son nom puis dans sa famille. L'ordre
+/// compte : « audio_vae » avant « vae », sinon le VAE audio passait pour le VAE
+/// video et le pack se croyait complet avec deux fois le meme composant.
+fn video_slot(stem: &str, family: ImageFamily) -> Option<VideoSlot> {
+    let lower = stem.to_ascii_lowercase();
+    let has = |keys: &[&str]| keys.iter().any(|key| lower.contains(key));
+    if has(&["audio_vae", "audio-vae", "audiovae", "vocoder"]) {
+        return Some(VideoSlot::AudioVae);
+    }
+    if has(&["vae"]) {
+        return Some(VideoSlot::Vae);
+    }
+    if has(&[
+        "text_encoder",
+        "text-encoder",
+        "textencoder",
+        "umt5",
+        "t5_",
+        "gemma",
+        "llm",
+    ]) {
+        return Some(VideoSlot::TextEncoder);
+    }
+    if has(&["transformer", "diffusion", "dit"]) {
+        return Some(VideoSlot::Transformer);
+    }
+    match family {
+        ImageFamily::H3 | ImageFamily::Ltx => Some(VideoSlot::Transformer),
+        _ => None,
+    }
+}
+
+/// Reglages d'une video deposee a la main : largeur, hauteur, images, vitesse.
+/// MiniMax-H3 travaille en 640x360 et compte par 17 images plus 5 ; LTX en
+/// 768x512. Les valeurs par defaut du moteur donneraient un carre de 512 px,
+/// qu'aucun de ces modeles ne sait produire.
+fn video_frame_defaults(family: ImageFamily) -> (u32, u32, u32, u32) {
+    match family {
+        ImageFamily::H3 => (640, 360, 22, 24),
+        ImageFamily::Ltx => (768, 512, 25, 24),
+        _ => (512, 512, 22, 24),
+    }
+}
+
+/// Un fichier video depose dans `models/image/` ou dans un sous-dossier.
+struct AddedVideoFile {
+    name: String,
+    stem: String,
+    bytes: u64,
+    slot: VideoSlot,
+}
+
+/// Les fichiers d'un modele video forment une seule carte. Deposer le
+/// transformateur, son encodeur et les deux VAE creait auparavant quatre cartes
+/// inutilisables ; ici ils se rejoignent, et ce qui manque est nomme. Une carte
+/// incomplete reste visible : c'est en la voyant qu'on sait quoi telecharger.
+fn added_video_pack(family: ImageFamily, files: &[AddedVideoFile]) -> Option<ImagePack> {
+    let first = files.first()?;
+    let find = |slot: VideoSlot| files.iter().find(|file| file.slot == slot);
+    let transformer = find(VideoSlot::Transformer);
+    let vae = find(VideoSlot::Vae);
+    let audio_vae = find(VideoSlot::AudioVae);
+    let encoder = find(VideoSlot::TextEncoder);
+    let (px, height, frames, fps) = video_frame_defaults(family);
+    let (_, steps, cfg) = family.defaults();
+    let stem = transformer
+        .map(|file| file.stem.clone())
+        .unwrap_or_else(|| first.stem.clone());
+    let mode = match family {
+        ImageFamily::Ltx => "ltx",
+        _ => "h3",
+    };
+    let mut needs: Vec<String> = Vec::new();
+    for (slot, present) in [
+        (VideoSlot::Transformer, transformer.is_some()),
+        (VideoSlot::Vae, vae.is_some()),
+        (VideoSlot::TextEncoder, encoder.is_some()),
+    ] {
+        if !present {
+            needs.push(slot.label().to_string());
+        }
+    }
+    // Le VAE audio n'est exige que par les familles qui produisent du son.
+    if family == ImageFamily::H3 && audio_vae.is_none() {
+        needs.push(VideoSlot::AudioVae.label().to_string());
+    }
+    let listed = [&transformer, &vae, &audio_vae, &encoder]
+        .iter()
+        .filter_map(|file| file.map(|file| file.name.clone()))
+        .count();
+    let total: u64 = files.iter().map(|file| file.bytes).sum();
+    let note = format!(
+        "Modele video depose a la main (famille {}, {} fichier(s)). Reglages : {px} px, {frames} images a {fps} i/s, {steps} pas, CFG {cfg}.\n\nUn pack video demande un transformateur, un VAE video, un encodeur de texte et, pour MiniMax-H3, un VAE audio, tous dans models/image/. Ce qui est deja present est inscrit dans la carte ; le catalogue telecharge les quatre d'un coup si vous preferez.",
+        family.label(),
+        listed,
+    );
+    let bytes = |file: Option<&AddedVideoFile>| file.map(|file| file.bytes).unwrap_or(0);
+    Some(ImagePack {
+        id: image_pack_id(&format!("{}-{}", mode, stem)),
+        name: image_pack_name(&stem),
+        mode: mode.to_string(),
+        size: format!("~{}", human_size(total)),
+        license: String::new(),
+        note,
+        bundled: false,
+        recommended: false,
+        steps,
+        cfg,
+        px,
+        model: String::new(),
+        diffusion: transformer.map(|file| file.name.clone()).unwrap_or_default(),
+        llm: encoder.map(|file| file.name.clone()).unwrap_or_default(),
+        vae: vae.map(|file| file.name.clone()).unwrap_or_default(),
+        url: String::new(),
+        lora: String::new(),
+        lora_weight: default_lora_weight(),
+        prompt_prefix: String::new(),
+        lora_url: String::new(),
+        audio_vae: audio_vae.map(|file| file.name.clone()).unwrap_or_default(),
+        height,
+        frames,
+        fps,
+        diffusion_url: String::new(),
+        llm_url: String::new(),
+        vae_url: String::new(),
+        audio_vae_url: String::new(),
+        model_bytes: 0,
+        diffusion_bytes: bytes(transformer),
+        llm_bytes: bytes(encoder),
+        vae_bytes: bytes(vae),
+        audio_vae_bytes: bytes(audio_vae),
+        note_en: String::new(),
+        note_es: String::new(),
+        note_ja: String::new(),
+        added: true,
+        needs,
+    })
 }
 
 /// Ce que l'en-tete d'un `.safetensors` apprend sur le fichier.
@@ -574,15 +760,29 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
         (family, Some(tensors)) => format!(", {} tenseurs, famille {}", tensors, family.label()),
         (family, None) => format!(", famille {}", family.label()),
     };
-    let caveat = if family == ImageFamily::Dit {
-        "\n\nCette famille (DiT) demande son encodeur de texte et son VAE a cote du checkpoint : sans eux, le moteur ne peut pas dessiner. Voyez le pack Z-Image du catalogue pour la disposition attendue."
-    } else {
-        ""
+    /* Un transformateur video n'est pas un checkpoint : il lui faut son
+       encodeur, ses VAE, et le moteur passe par la file video. Le declarer
+       « checkpoint » produisait une carte qui echouait au chargement. */
+    /* Une famille video ne passe jamais par ici : ses fichiers sont regroupes
+       par `added_video_pack`, qui remplit chaque composant a sa place. Laisser
+       cette branche creer un « checkpoint » avec le transformateur dans `model`
+       donnait une carte qui se disait prete et que le moteur refusait. */
+    if matches!(family, ImageFamily::H3 | ImageFamily::Ltx) {
+        return None;
+    }
+    let (mode, needs, extra_caveat) = match family {
+        ImageFamily::Dit | ImageFamily::ZImage => (
+            "checkpoint",
+            vec!["VAE".to_string(), "encodeur de texte".to_string()],
+            "\n\nCette famille (DiT) demande son encodeur de texte et son VAE a cote du checkpoint : sans eux, le moteur ne peut pas dessiner. Voyez le pack Z-Image du catalogue pour la disposition attendue.",
+        ),
+        _ => ("checkpoint", Vec::new(), ""),
     };
+    let caveat = extra_caveat;
     Some(ImagePack {
         id: image_pack_id(&stem),
         name: image_pack_name(&stem),
-        mode: "checkpoint".to_string(),
+        mode: mode.to_string(),
         size: format!("~{}", human_size(bytes)),
         license: String::new(),
         note: format!(
@@ -620,6 +820,7 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
         note_es: String::new(),
         note_ja: String::new(),
         added: true,
+        needs,
     })
 }
 
@@ -628,7 +829,12 @@ fn added_image_pack(path: &Path) -> Option<ImagePack> {
 /// `.gguf` dans `models/image/` suffit, sans relancer SIMIA. Un pack ajoute
 /// dont le fichier a disparu est retire.
 fn discover_image_packs(dir: &Path, packs: &mut Vec<ImagePack>) {
-    packs.retain(|pack| !pack.added || dir.join(&pack.model).is_file());
+    /* Les cartes deposees a la main sont reconstruites a chaque lecture du
+       disque : leurs fichiers peuvent changer (un composant video ajoute, un
+       autre efface), et garder l'ancienne version aurait fige le premier
+       inventaire, avec une carte qui se dit complete apres la suppression d'un
+       VAE. Les packs du catalogue, eux, restent tels quels. */
+    packs.retain(|pack| !pack.added);
 
     let declared: Vec<String> = packs
         .iter()
@@ -638,26 +844,100 @@ fn discover_image_packs(dir: &Path, packs: &mut Vec<ImagePack>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
-    let mut found: Vec<ImagePack> = Vec::new();
+    /* Un modele livre par Hugging Face arrive souvent dans un sous-dossier
+       (`minimax-h3/…`) : sans cette descente d'un niveau, deposer le dossier
+       entier ne montrait aucune carte. */
+    let mut paths: Vec<PathBuf> = Vec::new();
     for entry in entries.flatten() {
         let path = entry.path();
-        if !path.is_file() || image_model_extension(&path).is_none() {
+        if path.is_dir() {
+            let is_loras = path
+                .file_name()
+                .and_then(|value| value.to_str())
+                .map(|value| value.eq_ignore_ascii_case("loras"))
+                .unwrap_or(false);
+            if is_loras {
+                continue;
+            }
+            if let Ok(children) = fs::read_dir(&path) {
+                for child in children.flatten() {
+                    let child = child.path();
+                    if child.is_file() {
+                        paths.push(child);
+                    }
+                }
+            }
             continue;
         }
-        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+        if path.is_file() {
+            paths.push(path);
+        }
+    }
+    paths.sort();
+
+    let mut found: Vec<ImagePack> = Vec::new();
+    let mut video: Vec<(ImageFamily, Vec<AddedVideoFile>)> = Vec::new();
+    for path in paths {
+        if image_model_extension(&path).is_none() {
+            continue;
+        }
+        let Some(relative) = relative_image_name(dir, &path) else {
             continue;
         };
-        let lower = name.to_ascii_lowercase();
+        let Some(stem) = path.file_stem().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        let lower = relative.to_ascii_lowercase();
         // Un projecteur multimodal accompagne un modele de texte, ce n'est pas
         // un checkpoint d'image. Les fichiers deja cites par un pack non plus.
         if lower.contains("mmproj") || declared.contains(&lower) {
             continue;
         }
-        if packs
-            .iter()
-            .chain(found.iter())
-            .any(|pack| pack.model.eq_ignore_ascii_case(name))
+        if packs.iter().chain(found.iter()).any(|pack| {
+            pack.file_names()
+                .iter()
+                .any(|name| name.eq_ignore_ascii_case(&relative))
+        }) {
+            continue;
+        }
+        let header = if path
+            .extension()
+            .and_then(|value| value.to_str())
+            .map(|value| value.eq_ignore_ascii_case("safetensors"))
+            .unwrap_or(false)
         {
+            read_tensor_header(&path)
+        } else {
+            None
+        };
+        // Un LoRA rejoint la liste des styles, pas celle des modeles.
+        if header.as_ref().map(|info| info.lora).unwrap_or(false) {
+            continue;
+        }
+        let family = header
+            .as_ref()
+            .map(|info| info.family)
+            .filter(|family| *family != ImageFamily::Unknown)
+            .or_else(|| family_from_name(stem))
+            .unwrap_or(ImageFamily::Unknown);
+        if matches!(family, ImageFamily::H3 | ImageFamily::Ltx) {
+            let Some(slot) = video_slot(stem, family) else {
+                continue;
+            };
+            let bytes = fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+            if bytes == 0 {
+                continue;
+            }
+            let file = AddedVideoFile {
+                name: relative,
+                stem: stem.to_string(),
+                bytes,
+                slot,
+            };
+            match video.iter_mut().find(|(known, _)| *known == family) {
+                Some((_, files)) => files.push(file),
+                None => video.push((family, vec![file])),
+            }
             continue;
         }
         if let Some(pack) = added_image_pack(&path) {
@@ -667,8 +947,30 @@ fn discover_image_packs(dir: &Path, packs: &mut Vec<ImagePack>) {
             found.push(pack);
         }
     }
+    for (family, files) in video {
+        if let Some(pack) = added_video_pack(family, &files) {
+            if packs.iter().chain(found.iter()).any(|known| known.id == pack.id) {
+                continue;
+            }
+            found.push(pack);
+        }
+    }
     found.sort_by(|first, second| first.name.to_lowercase().cmp(&second.name.to_lowercase()));
     packs.extend(found);
+}
+
+/// Nom d'un fichier tel que le moteur le designe : relatif a `models/image/`,
+/// avec des barres obliques. Un fichier a la racine garde son simple nom.
+fn relative_image_name(dir: &Path, path: &Path) -> Option<String> {
+    let relative = path.strip_prefix(dir).ok()?;
+    let parts: Vec<String> = relative
+        .components()
+        .filter_map(|part| part.as_os_str().to_str().map(|value| value.to_string()))
+        .collect();
+    if parts.is_empty() {
+        return None;
+    }
+    Some(parts.join("/"))
 }
 
 /// LoRA disponibles dans `models/image/loras/` et a la racine de
@@ -818,6 +1120,10 @@ impl ImageEngine {
                 missing.push(format!("loras/{lora}"));
             }
         }
+        // Un composant obligatoire qui n'a jamais ete telecharge n'est pas un
+        // fichier oublie : on le nomme en clair plutot que de laisser la carte
+        // se dire prete.
+        missing.extend(pack.needs.iter().cloned());
         missing
     }
 
@@ -2780,8 +3086,18 @@ fn image_packs_json(state: &Shared) -> String {
                 .map(|pack| {
                     let local = guard.image.local_of(pack);
                     let bytes = pack_bytes(&guard.image.dir, pack);
+                    /* Ce qui manque, nomme : pour un pack video depose a la
+                       main, la carte doit dire « il faut le VAE video » et non
+                       seulement rester grisee. */
+                    let missing = guard
+                        .image
+                        .missing_of(pack)
+                        .iter()
+                        .map(|item| js_escape(item))
+                        .collect::<Vec<_>>()
+                        .join(",");
                     format!(
-                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"noteEn\":{},\"noteEs\":{},\"noteJa\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{},\"family\":{},\"video\":{},\"height\":{},\"frames\":{},\"fps\":{}}}",
+                        "{{\"id\":{},\"name\":{},\"mode\":{},\"size\":{},\"note\":{},\"noteEn\":{},\"noteEs\":{},\"noteJa\":{},\"license\":{},\"steps\":{},\"cfg\":{},\"px\":{},\"local\":{},\"bytes\":{},\"downloadable\":{},\"recommended\":{},\"bundled\":{},\"lora\":{},\"loraWeight\":{},\"promptPrefix\":{},\"added\":{},\"family\":{},\"video\":{},\"height\":{},\"frames\":{},\"fps\":{},\"missing\":[{}]}}",
                         js_escape(&pack.id),
                         js_escape(&pack.name),
                         js_escape(&pack.mode),
@@ -2813,7 +3129,8 @@ fn image_packs_json(state: &Shared) -> String {
                         pack.is_video(),
                         pack.size_or(0).1,
                         pack.frames_or(DEFAULT_VIDEO_FRAMES),
-                        pack.fps_or(DEFAULT_VIDEO_FPS)
+                        pack.fps_or(DEFAULT_VIDEO_FPS),
+                        missing
                     )
                 })
                 .collect::<Vec<_>>()
@@ -4393,6 +4710,7 @@ mod image_pack_tests {
             note_es: String::new(),
             note_ja: String::new(),
             added: false,
+            needs: Vec::new(),
         }
     }
 
@@ -4559,6 +4877,126 @@ mod image_pack_tests {
             Some(ImageFamily::Sd15)
         );
 
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn un_transformateur_video_seul_devient_une_carte_incomplete() {
+        let dir = scratch("video-seul");
+        fake_safetensors(
+            &dir,
+            "minimax_h3_ref2va.safetensors",
+            &[
+                "audio_patch_proj.weight",
+                "token_refiner.blocks.0.weight",
+                "qkv_proj.weight",
+            ],
+        );
+        let mut packs = Vec::new();
+        discover_image_packs(&dir, &mut packs);
+        let pack = packs.first().expect("une carte video");
+        // Le moteur passe par la file video : le mode doit le dire.
+        assert_eq!(pack.mode, "h3");
+        assert!(pack.is_video());
+        // Le fichier depose est un transformateur, pas un checkpoint : `-m`
+        // aurait echoue. Il va dans `diffusion`, ou le moteur le cherche.
+        assert_eq!(pack.diffusion, "minimax_h3_ref2va.safetensors");
+        assert!(pack.model.is_empty());
+        // Les reglages sont ceux d'une video, pas le carre de 512 px par defaut.
+        assert_eq!((pack.px, pack.height, pack.frames, pack.fps), (640, 360, 22, 24));
+        // Un transformateur seul ne suffit pas : la carte ne peut pas se dire prete.
+        assert!(pack.needs.iter().any(|need| need.contains("VAE video")));
+        assert!(pack.needs.iter().any(|need| need.contains("encodeur de texte")));
+        assert!(pack.note.contains("Modele video"));
+        let engine = ImageEngine {
+            bin: Some(dir.join("sd-server")),
+            probe: None,
+            dir: dir.clone(),
+            packs: packs.clone(),
+            selected: Some(pack.id.clone()),
+            port: 0,
+            child: None,
+            state: "stopped".to_string(),
+            message: String::new(),
+            last_used: None,
+            size_override: None,
+            steps_override: None,
+            download_cancel: Arc::new(AtomicBool::new(false)),
+            download_pid: None,
+        };
+        assert!(!engine.local_of(pack));
+        let reason = engine.missing_reason().expect("raison");
+        assert!(reason.contains("VAE video"), "{reason}");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn les_quatre_fichiers_d_un_modele_video_forment_une_seule_carte() {
+        let dir = scratch("video-complet");
+        // Le cas reel : les quatre fichiers de MiniMax-H3, tels que Hugging
+        // Face les nomme, deposes a la racine de models/image/.
+        let transformer = touch(&dir, "minimax_h3_ref2va_pruned-Q2_K_M.gguf", 512);
+        touch(&dir, "p-h3-image_text_encoder_int8.safetensors", 256);
+        touch(&dir, "minimax_h3_video_vae_int8.safetensors", 128);
+        touch(&dir, "minimax_h3_audio_vae_fp32.safetensors", 64);
+        let mut packs = Vec::new();
+        discover_image_packs(&dir, &mut packs);
+        // Une carte, pas quatre : un pack video est un ensemble, pas un fichier.
+        assert_eq!(packs.len(), 1, "cartes : {:?}", packs.iter().map(|p| &p.name).collect::<Vec<_>>());
+        let pack = &packs[0];
+        assert_eq!(pack.diffusion, "minimax_h3_ref2va_pruned-Q2_K_M.gguf");
+        assert_eq!(pack.llm, "p-h3-image_text_encoder_int8.safetensors");
+        assert_eq!(pack.vae, "minimax_h3_video_vae_int8.safetensors");
+        assert_eq!(pack.audio_vae, "minimax_h3_audio_vae_fp32.safetensors");
+        assert!(pack.needs.is_empty(), "manquant : {:?}", pack.needs);
+        assert!(transformer.is_file());
+        let engine = ImageEngine {
+            bin: Some(dir.join("sd-server")),
+            probe: None,
+            dir: dir.clone(),
+            packs: packs.clone(),
+            selected: Some(pack.id.clone()),
+            port: 0,
+            child: None,
+            state: "stopped".to_string(),
+            message: String::new(),
+            last_used: None,
+            size_override: None,
+            steps_override: None,
+            download_cancel: Arc::new(AtomicBool::new(false)),
+            download_pid: None,
+        };
+        assert!(engine.local_of(pack), "manquant : {:?}", engine.missing_of(pack));
+
+        // Un fichier efface ne fait pas disparaitre la carte : elle redevient
+        // incomplete et nomme ce qui manque, au lieu de s'evanouir sans un mot.
+        fs::remove_file(dir.join("minimax_h3_video_vae_int8.safetensors")).expect("suppression");
+        discover_image_packs(&dir, &mut packs);
+        assert_eq!(packs.len(), 1);
+        assert!(packs[0].needs.iter().any(|need| need.contains("VAE video")));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn un_modele_video_dans_un_sous_dossier_est_trouve() {
+        let dir = scratch("video-sous-dossier");
+        let nested = dir.join("minimax-h3");
+        fs::create_dir_all(&nested).expect("dossier");
+        fs::write(nested.join("minimax_h3_ref2va.gguf"), vec![0u8; 128]).expect("transformateur");
+        fs::write(
+            nested.join("minimax_h3_video_vae.safetensors"),
+            vec![0u8; 64],
+        )
+        .expect("vae");
+        let mut packs = Vec::new();
+        discover_image_packs(&dir, &mut packs);
+        let pack = packs.first().expect("carte trouvee dans le sous-dossier");
+        // Le moteur recoit un chemin relatif au dossier des images, avec une
+        // barre oblique : c'est ainsi qu'il ouvre un fichier range a cote.
+        assert_eq!(pack.diffusion, "minimax-h3/minimax_h3_ref2va.gguf");
+        assert_eq!(pack.vae, "minimax-h3/minimax_h3_video_vae.safetensors");
         let _ = fs::remove_dir_all(&dir);
     }
 

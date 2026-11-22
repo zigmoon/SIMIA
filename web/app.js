@@ -216,8 +216,23 @@ if (NATIVE && Array.isArray(NATIVE.models) && NATIVE.models.length) {
   DEFAULT_MODEL_ID = (preferred || MODELS[0]).id;
 }
 
+/* Langue choisie sur ce site, partagee par la landing et l'application : la
+   landing ecrit cette cle quand on change de langue, l'application la relit au
+   premier demarrage. Sans elle, un visiteur qui choisissait l'anglais sur la
+   page d'accueil retrouvait le francais en ouvrant l'application. */
+const SHARED_LANGUAGE_KEY = "simia.language";
+
+function sharedLanguage() {
+  try {
+    const value = localStorage.getItem(SHARED_LANGUAGE_KEY);
+    return ["fr", "en", "es", "ja"].includes(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 const state = {
-  language: "fr",
+  language: sharedLanguage() || "fr",
   conversations: [],
   activeConversationId: null,
   engine: null,
@@ -8713,6 +8728,8 @@ function toggleAppMenu() {
 function setLanguage(code) {
   if (!["fr", "en", "es", "ja"].includes(code)) return;
   closeLanguageMenu();
+  const select = document.querySelector("#setting-language");
+  if (select) select.value = code;
   if (code === state.language) return;
   state.language = code;
   applyLanguage();
@@ -8727,6 +8744,13 @@ function setLanguage(code) {
   saveState();
 }
 
+/* Le select des reglages et le globe de la barre du haut pilotent la meme
+   valeur : `setLanguage` remet le select a jour, donc les deux restent d'accord
+   quel que soit le chemin emprunte. */
+document.querySelector("#setting-language")?.addEventListener("change", (event) => {
+  setLanguage(event.target.value);
+});
+
 /* Libelles statiques qui n'etaient traduits nulle part : reglages du modele
    d'image, apercu de Vibe, depot de fichiers. Regroupes ici pour qu'un seul
    appel les couvre tous, et pour qu'aucun coin de l'interface ne reste en
@@ -8737,6 +8761,21 @@ function translateStaticUi() {
     if (node && value) node.textContent = value;
   };
 
+  put(
+    "#setting-language-name",
+    localizedText("Langue", "Language", "Idioma", "言語")
+  );
+  put(
+    "#setting-language-hint",
+    localizedText(
+      "Toute l'interface : réglages, bibliothèque de modèles et notes des packs.",
+      "The whole interface: settings, model library and pack notes.",
+      "Toda la interfaz: ajustes, biblioteca de modelos y notas de los paquetes.",
+      "設定・モデル一覧・パックの説明まで、インターフェース全体。"
+    )
+  );
+  const languageSelect = document.querySelector("#setting-language");
+  if (languageSelect) languageSelect.value = state.language;
   put("#setting-image-lora-name", localizedText("Style LoRA", "LoRA style", "Estilo LoRA", "LoRA スタイル"));
   put("#setting-image-folder-name", localizedText("Dossier des modèles d'image", "Image model folder", "Carpeta de modelos de imagen", "画像モデルのフォルダー"));
   put("#image-folder-hint", localizedText(
@@ -8786,6 +8825,9 @@ function translateStaticUi() {
 function applyLanguage() {
   const text = copy[state.language];
   document.documentElement.lang = state.language;
+  try {
+    localStorage.setItem(SHARED_LANGUAGE_KEY, state.language);
+  } catch { /* stockage indisponible : la landing gardera sa langue par defaut */ }
   document.title = localizedText("SIMIA - Assistant local", "SIMIA - Local assistant", "SIMIA - Asistente local");
   if (ui.languageCurrent) ui.languageCurrent.textContent = state.language.toUpperCase();
   closeLanguageMenu();
@@ -9476,7 +9518,13 @@ function renderModelLibrary() {
     const styleTag = pack.lora
       ? `<span class="model-origin model-origin-style">${escapeHtml(localizedText("STYLE SIMIA", "SIMIA STYLE", "ESTILO SIMIA", "SIMIA スタイル"))}</span>`
       : "";
-    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(imagePackNote(pack))}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${downloadBlock(pack.id)}`;
+    /* Un pack video depose a la main est fait de plusieurs fichiers : quand il
+       en manque un, la carte doit le nommer. Un bouton grise sans explication
+       laissait croire a une panne. */
+    const missingLine = !ready && !pack.downloadable && Array.isArray(pack.missing) && pack.missing.length
+      ? `<p class="model-missing">${escapeHtml(localizedText("Manque : ", "Missing: ", "Falta: ", "不足: "))}${escapeHtml(pack.missing.join(", "))}</p>`
+      : "";
+    card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(pack.video ? localizedText("VIDÉO", "VIDEO", "VÍDEO", "動画") : localizedText("IMAGE", "IMAGE", "IMAGEN", "画像"))}</p>${badge}</div><div><h3>${escapeHtml(pack.name)}</h3><p>${escapeHtml(imagePackNote(pack))}</p></div><div class="model-card-footer"><span>${escapeHtml(size)}${pack.license ? ` · ${escapeHtml(pack.license)}` : ""}${styleTag}</span>${action}</div>${missingLine}${downloadBlock(pack.id)}`;
     const rank = packRank(pack);
     const separator = rank === shownRank ? [] : (() => {
       shownRank = rank;

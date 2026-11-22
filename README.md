@@ -37,6 +37,7 @@ navigateur, s'arrête à 1,9 Go par modèle et sert surtout à essayer.
 - [Les modèles](#les-modèles)
 - [Les modèles vidéo](#les-modeles-video)
 - [Importer un fichier depuis l'interface](#importer-un-fichier-depuis-linterface)
+- [Déposer un modèle vidéo à la main](#deposer-un-modele-video-a-la-main)
 - [Télécharger 14 Go sans tout perdre](#telecharger-14-go-sans-tout-perdre)
 - [Architecture](#architecture)
 - [Utilisation](#utilisation)
@@ -170,14 +171,14 @@ code que l'onglet, mis en cache par un service worker.
 | Choix du modèle | plus de 30 modèles de texte, filtrés par usage (généraliste, documents, code, raisonnement, vision), et changement à la volée depuis le champ de saisie | ✅ | ✅ |
 | Lecture de documents | PDF, Word, OpenDocument, CSV, texte ; citations dans la réponse | ✅ | ✅ |
 | Pièces jointes | glisser-déposer depuis le bureau, sélection, ou collage d'une capture ; images analysées par un modèle vision | ✅ | ✅ |
-| Génération d'images | Stable Diffusion local, 512 et 1024 px, style maison « Gravure SIMIA » | — | ✅ |
+| Génération d'images | Stable Diffusion local, 512 et 1024 px, style maison « Gravure SIMIA » ; modèles vidéo MiniMax-H3 (image et son) et LTX, importés ou téléchargés depuis la bibliothèque | — | ✅ |
 | Atelier de code | vrai projet : arborescence, onglets, recherche de fichier (Ctrl/⌘+P), import de fichiers ou d'un dossier, ouverture d'un dossier du disque avec enregistrement des modifications, export ZIP, aperçu live HTML/CSS/JS avec console, exécution JavaScript et Python, application du code reçu dans le fichier | ✅ | ✅ |
 | Paramètres | une seule fenêtre courte, à cinq onglets (Modèle, Réponses, Saisie, Atelier de code, Historique et données) : 520 × 519 px au plus, jamais la hauteur de l'écran | ✅ | ✅ |
 | Mon assistant | profil local : un nom et des consignes permanentes posés devant un modèle existant, sans entraînement ni téléchargement ; création, export, suppression | ✅ | ✅ |
 | Choix d'un modèle | bibliothèque de 900 × 640 px au plus ; un modèle absent du cache s'annonce « à télécharger » et se télécharge depuis sa carte, avec sa barre de progression, sans quitter la bibliothèque | ✅ | ✅ |
 | Agent web | recherche assistée, récupération de pages, synthèse sourcée | ✅ | — |
 | Dictée vocale | saisie au micro, reconnaissance dans le navigateur | ✅ | ✅ |
-| Quatre langues | français, anglais, espagnol, japonais — interface, bibliothèque de modèles, notes des packs d'image et panneau Cookies compris | ✅ | ✅ |
+| Quatre langues | français, anglais, espagnol, japonais — interface, bibliothèque de modèles, notes des packs d'image, panneau Cookies et page d'accueil comprise ; le choix fait sur la landing est repris par l'application | ✅ | ✅ |
 | Installation | application installable depuis le navigateur (icône, fenêtre propre, hors ligne) | ✅ | — |
 | Hors ligne | après le premier téléchargement des poids, aucune connexion requise | ✅ | ✅ |
 
@@ -194,6 +195,10 @@ code que l'onglet, mis en cache par un service worker.
   demandez explicitement à l'agent web.
 - **Stockage local.** Les conversations restent dans le navigateur ou sur le
   disque, et s'exportent en JSON quand vous voulez.
+- **Consentement partagé.** La landing et l'application sont sur la même origine
+  et lisent la même clé : accepter ou refuser les ressources externes d'un côté
+  ne repropose plus la fenêtre de l'autre. Le panneau suit aussi la langue
+  choisie, et la page d'accueil a son sélecteur FR / EN / ES / JA.
 
 ## Télécharger
 
@@ -299,6 +304,7 @@ procédure d'upload, y compris le `.htaccess` qui déclare les types MIME
 <!-- versions:start -->
 | Version | Date | Windows | macOS ARM | macOS Intel | Linux |
 |---|---|---|---|---|---|
+| [v0.1.38](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.38) | 2026-11-22 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-linux-x64.tar.gz) |
 | [v0.1.37](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.37) | 2026-11-22 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-linux-x64.tar.gz) |
 | [v0.1.36](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.36) | 2026-11-22 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.36/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.36/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.36/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.36/simia-linux-x64.tar.gz) |
 | [v0.1.35](https://github.com/zigmoon/SIMIA/releases/tag/v0.1.35) | 2026-11-21 | [zip 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.35/simia-windows-x64.zip) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.35/simia-macos-arm64.tar.gz) | [tar.gz 25 Mo](https://github.com/zigmoon/SIMIA/releases/download/v0.1.35/simia-macos-x64.tar.gz) | [tar.gz 1,4 Go](https://github.com/zigmoon/SIMIA/releases/download/v0.1.35/simia-linux-x64.tar.gz) |
@@ -437,6 +443,32 @@ qu'un transfert de plusieurs minutes sans retour se lit comme un plantage.
 Le nom reçu est réduit à un nom de fichier sûr : pas de dossier, pas de `..`,
 pas de caractère interdit par Windows, et une extension parmi `.safetensors`,
 `.gguf`, `.ckpt`, `.pt`.
+
+### Deposer un modele video a la main
+
+Un modele video n'est pas un fichier mais un ensemble : lui donner
+`sd-server -m` ne dessine rien. Les fichiers poses dans `models/image/` sont
+donc reconnus a leur nom — `minimax_h3_video_vae`, `text_encoder`, `audio_vae`,
+`ref2va` — puis rassembles en **une seule carte** :
+
+| Ce que vous deposez | Ce que la carte en fait |
+|---|---|
+| le transformateur (`ref2va`, `.gguf` ou `.safetensors`) | la case lue par le moteur pour la video |
+| le VAE video | le decodeur d'images |
+| l'encodeur de texte | le modele qui lit le prompt |
+| le VAE audio (MiniMax-H3) | la piste son |
+
+Tant qu'il manque un fichier, la carte reste visible et **ecrit ce qui
+manque** : « Manque : VAE audio ». C'est en voyant la carte incomplete qu'on
+sait quoi telecharger ; un bouton grise sans phrase se lisait comme une panne.
+
+Les reglages suivent la famille : 640x360, 22 images a 24 i/s et 8 pas pour
+MiniMax-H3, 768x512 et 25 images pour LTX. Les valeurs par defaut du moteur
+donneraient un carre de 512 px qu'aucun modele video ne sait produire.
+
+Un fichier range dans un **sous-dossier** est trouve aussi : deposer le dossier
+tel que Hugging Face le livre (`minimax-h3/…`) suffit, les chemins envoyes au
+moteur restent relatifs a `models/image/`.
 
 ### Telecharger 14 Go sans tout perdre
 

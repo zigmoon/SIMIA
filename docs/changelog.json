@@ -1,6 +1,21 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.38": {
+      "title": "Les modeles video s'importent, la landing parle quatre langues, et le consentement suit le visiteur",
+      "highlights": [
+        "Un modele video se depose comme le reste : les fichiers d'un pack (transformateur, VAE video, encodeur de texte, VAE audio) sont reconnus a leur nom et a leur en-tete, regroupes en une seule carte, et ce qui manque est ecrit sous la carte (« Manque : VAE audio ») au lieu d'un bouton grise sans explication.",
+        "Un transformateur n'est plus pris pour un checkpoint : il va dans la case que le moteur lit pour la video, avec les reglages de la famille (640x360, 22 images, 24 i/s pour MiniMax-H3), au lieu d'un carre de 512 px qu'aucun modele video ne sait produire.",
+        "Un modele range dans un sous-dossier de models/image/ est trouve : deposer le dossier telecharge depuis Hugging Face suffit, plus besoin d'en sortir les fichiers.",
+        "La landing a son selecteur FR / EN / ES / JA : 258 chaines traduites, titres, descriptions, FAQ, panneau des versions et bloc de telechargement compris. Le choix est ecrit dans la meme cle que l'application, donc il suit le visiteur d'une page a l'autre.",
+        "Le consentement aux cookies est partage entre la landing et l'application : accepter ou refuser d'un cote ne repropose plus la fenetre de l'autre. La boite cookies ecoute aussi le changement de langue et se retraduit.",
+        "Une seule copie de cookies.js : celle de l'application est recopiee a la racine par l'outil de publication, au lieu de maintenir deux fichiers qui avaient deja diverge."
+      ],
+      "notes": [
+        "Le rendu des videos dans le chat est verifie : cadre 16/9, commandes, duree, telechargement en .webm. La generation video reelle demande les 14 Go du pack MiniMax-H3, non telecharges pour ce test.",
+        "Les paquets Windows, macOS (Apple Silicon et Intel) et Linux sont recompiles par GitHub Actions."
+      ]
+    },
     "0.1.37": {
       "title": "Toute l'interface parle anglais, et Vibe dit quel modele ecrit votre code",
       "highlights": [

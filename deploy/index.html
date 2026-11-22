@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.37",
+      "softwareVersion": "0.1.38",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.37",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.38",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -869,6 +869,27 @@
     .eco-card{padding:20px 18px}
     .eco-figure{font-size:26px}
   }
+  /* Selecteur de langue. Il vit dans la barre de navigation : visible sur
+     ordinateur, et range dans le panneau deroulant sur mobile, la ou la place
+     manque. Les codes restent en deux lettres pour ne pas elargir la barre. */
+  .lang-switch{
+    display:inline-flex; align-items:center; gap:2px;
+    padding:3px; border:1px solid var(--line); border-radius:999px;
+    background:#f7f7f2;
+  }
+  .lang-switch button{
+    appearance:none; border:0; background:transparent; cursor:pointer;
+    padding:5px 8px; border-radius:999px;
+    font:800 11px/1 Manrope,sans-serif; letter-spacing:.06em; color:#6d756f;
+    transition:background .15s, color .15s;
+  }
+  .lang-switch button:hover{background:#e9ece4; color:var(--ink)}
+  .lang-switch button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+  .lang-switch button:focus-visible{outline:2px solid #9ab387; outline-offset:1px}
+  @media (max-width:960px){
+    .lang-switch{margin-top:6px; align-self:flex-start; padding:4px}
+    .lang-switch button{padding:7px 12px; font-size:12px}
+  }
 </style>
 </head>
 <body>
@@ -955,6 +976,12 @@
       <a href="#confidentialite">Confidentialité</a>
       <a href="#faq">FAQ</a>
       <a class="nav-panel-cta" href="./app/">Ouvrir la version web</a>
+      <div class="lang-switch" role="group" aria-label="Langue du site" data-no-i18n>
+        <button type="button" data-language="fr" aria-pressed="true" title="Français">FR</button>
+        <button type="button" data-language="en" aria-pressed="false" title="English">EN</button>
+        <button type="button" data-language="es" aria-pressed="false" title="Español">ES</button>
+        <button type="button" data-language="ja" aria-pressed="false" title="日本語">JA</button>
+      </div>
     </nav>
     <button class="nav-burger" id="mega-trigger-mobile" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
       <span></span><span></span><span></span>
@@ -1286,7 +1313,7 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
           <p class="dl-note"><b>Avant de décompresser</b> : clic droit sur le <b>.zip</b> → <b>Propriétés</b> → <b>Débloquer</b>. Windows oublie ainsi que le fichier vient d'Internet, et l'application démarre sans demande. Fait après extraction, cela ne sert à rien.</p>
         </article>
@@ -1301,8 +1328,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1317,7 +1344,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.37/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1604,6 +1631,7 @@
 </footer>
 
 <script src="cookies.js" defer></script>
+<script src="landing-i18n.js" defer></script>
 
 <script>
   /* ------------------------------------------------------------------
@@ -1613,14 +1641,14 @@
      fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
      préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
-  const RELEASE_TAG = "v0.1.37";
+  const RELEASE_TAG = "v0.1.38";
   const RELEASE_BASE = `https://github.com/zigmoon/SIMIA/releases/download/${RELEASE_TAG}`;
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   const RELEASE_API = `https://api.github.com/repos/zigmoon/SIMIA/releases/tags/${RELEASE_TAG}`;
 
   /* Les paquets viennent tous de GitHub, et d'une version nommee : chaque lien
-     porte l'etiquette `releases/download/v0.1.37/<nom>`. Rien ne resout
+     porte l'etiquette `releases/download/v0.1.38/<nom>`. Rien ne resout
      « latest » a notre place : ce que le visiteur telecharge est exactement la
      version annoncee sur la page, et une publication ulterieure ne remplace pas
      sous ses pieds le fichier derriere un bouton deja affiche.
@@ -1833,9 +1861,19 @@
     const runBtn = heroMock.querySelector("[data-run-btn]");
     const titleChat = "SIMIA — conversation locale";
     const titleCode = "SIMIA — atelier de code";
+    /* Les deux titres de la maquette sont ecrits par le script, donc hors de
+       portee du traducteur : on les lui passe quand il est la. */
+    const mockTitleText = value =>
+      (window.SimiaLanding && window.SimiaLanding.translate ? window.SimiaLanding.translate(value) : value);
 
-    typs.forEach(typ => {
-      const words = typ.textContent.trim().split(/\s+/).filter(Boolean);
+    /* Les phrases sont decoupees en mots pour l'animation : le selecteur de
+       langue doit pouvoir les retraduire, donc la decoupe est exposee et la
+       phrase courante gardee dans `data-sentence`. Sans cela, une phrase
+       traduite etait redecoupee en mots francais non traduits. */
+    const splitWords = typ => {
+      const sentence = typ.dataset.sentence || typ.textContent.trim();
+      typ.dataset.sentence = sentence;
+      const words = sentence.split(/\s+/).filter(Boolean);
       typ.textContent = "";
       words.forEach((word, index) => {
         const span = document.createElement("span");
@@ -1847,7 +1885,13 @@
       const caret = document.createElement("span");
       caret.className = "caret";
       typ.append(caret);
-    });
+      if (typ.classList.contains("on")) {
+        typ.querySelectorAll(".w").forEach(word => { word.style.transitionDelay = "0ms"; });
+      }
+    };
+
+    typs.forEach(splitWords);
+    window.SimiaLandingSplit = splitWords;
 
     const wordsOf = bub => [...(bub?.querySelectorAll(".typ .w") ?? [])];
     const typOf = bub => bub?.querySelector(".typ") ?? null;
@@ -1863,10 +1907,10 @@
       heroMock.classList.remove("thinking", "send", "is-code", "is-running", "is-ran");
       codeScene?.classList.remove("is-coded");
       if (runState) {
-        runState.textContent = "en attente";
+        runState.textContent = mockTitleText("en attente");
         runState.classList.remove("is-running", "is-done");
       }
-      if (mockTitle) mockTitle.textContent = titleChat;
+      if (mockTitle) mockTitle.textContent = mockTitleText(titleChat);
       typs.forEach(typ => {
         typ.classList.remove("on", "typing");
         typ.querySelectorAll(".w").forEach(word => { word.style.transitionDelay = "0ms"; });
@@ -1918,7 +1962,7 @@
       /* Second plan : l'atelier. La fenetre ne change pas, seul ce qu'elle
          montre change — le modele a corrige le script, puis on l'execute. */
       heroMock.classList.add("is-code");
-      if (mockTitle) mockTitle.textContent = titleCode;
+      if (mockTitle) mockTitle.textContent = mockTitleText(titleCode);
       rails.forEach((rail, index) => rail.classList.toggle("on", index === 2));
       if (await wait(620, id)) return;
 
@@ -1935,7 +1979,7 @@
 
       heroMock.classList.add("is-running");
       if (runState) {
-        runState.textContent = "en cours";
+        runState.textContent = mockTitleText("en cours");
         runState.classList.add("is-running");
       }
       if (await wait(760, id)) return;
@@ -1943,7 +1987,7 @@
       heroMock.classList.remove("is-running");
       heroMock.classList.add("is-ran");
       if (runState) {
-        runState.textContent = "Terminé";
+        runState.textContent = mockTitleText("Terminé");
         runState.classList.remove("is-running");
         runState.classList.add("is-done");
       }
@@ -1951,9 +1995,9 @@
 
       // Retour a la conversation, puis fondu de fin.
       heroMock.classList.remove("is-code", "is-running", "is-ran");
-      if (mockTitle) mockTitle.textContent = titleChat;
+      if (mockTitle) mockTitle.textContent = mockTitleText(titleChat);
       if (runState) {
-        runState.textContent = "en attente";
+        runState.textContent = mockTitleText("en attente");
         runState.classList.remove("is-running", "is-done");
       }
       codeScene?.classList.remove("is-coded");

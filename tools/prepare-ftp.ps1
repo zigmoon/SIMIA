@@ -141,6 +141,12 @@ Write-Step "Landing et fichiers de site"
 foreach ($file in (Get-ChildItem $Site -File -Force)) {
     Add-File $file.FullName (Join-Path $Out $file.Name)
 }
+
+# Une seule source pour la boite cookies : elle sert la landing a la racine et
+# l'application dans app/. Deux copies physiques avaient deja diverge (l'une
+# connaissait le changement de langue, l'autre non), donc on ecrase la copie de
+# la landing par celle de l'application au lieu de la maintenir a la main.
+Add-File (Join-Path $App "cookies.js") (Join-Path $Out "cookies.js")
 $downloadsFrom = Join-Path $Site "downloads"
 if (Test-Path $downloadsFrom) {
     foreach ($package in (Get-ChildItem $downloadsFrom -File -Filter "*.zip")) {
@@ -241,7 +247,7 @@ if (-not (Test-Path $downloadsOut)) { New-Item -ItemType Directory -Path $downlo
 
 Write-Step "Controle"
 $expected = @(
-    "index.html", ".htaccess", "robots.txt", "sitemap.xml", "service-worker.js", "cookies.js",
+    "index.html", ".htaccess", "robots.txt", "sitemap.xml", "service-worker.js", "cookies.js", "landing-i18n.js",
     "og-simia.png", "leaf-simia.png",
     "agent-api.php", "web-search-api.php", "read-url-api.php",
     "app\index.html", "app\app.js", "app\styles.css", "app\service-worker.js", "app\cookies.js",

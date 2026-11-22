@@ -386,6 +386,19 @@
             <button class="icon-button" id="settings-close" type="button" aria-label="Fermer les paramètres" title="Fermer les paramètres"><svg class="icon-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17"></path></svg></button>
           </div>
 
+          <div class="setting-row setting-row-global" id="setting-language-row">
+            <div class="setting-text">
+              <span class="setting-name" id="setting-language-name">Langue</span>
+              <span class="setting-hint" id="setting-language-hint">Toute l'interface : réglages, bibliothèque de modèles et notes des packs.</span>
+            </div>
+            <select id="setting-language" aria-labelledby="setting-language-name">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="ja">日本語</option>
+            </select>
+          </div>
+
           <div class="settings-tabs" id="settings-tabs" role="tablist" aria-label="Sections des paramètres">
             <button class="settings-tab is-active" id="settings-sec-model" type="button" role="tab" aria-controls="settings-panel-model" aria-selected="true" data-settings-tab="model">Modèle</button>
             <button class="settings-tab" id="settings-sec-reply" type="button" role="tab" aria-controls="settings-panel-reply" aria-selected="false" tabindex="-1" data-settings-tab="reply">Réponses</button>

@@ -1,0 +1,15 @@
+Modeles video importables, landing trilingue et consentement partage
+
+- Un modele video depose a la main est reconnu a son nom et a son en-tete,
+  regroupe en une seule carte, et ce qui manque est ecrit dessous
+  (« Manque : VAE audio »). Le transformateur va dans la diffusion, plus dans
+  le checkpoint : la carte ne se dit plus prete a tort.
+- Reglages video de la famille (640x360, 22 images, 24 i/s pour MiniMax-H3).
+- Un fichier dans un sous-dossier de models/image/ est trouve.
+- Landing : selecteur FR / EN / ES / JA, 258 chaines par langue, y compris le
+  bloc des versions ecrit par script.
+- Consentement aux cookies partage : une seule cle, une seule copie de
+  cookies.js, et le panneau se retraduit au changement de langue.
+- Version 0.1.38, cache du service worker 4.34.0.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

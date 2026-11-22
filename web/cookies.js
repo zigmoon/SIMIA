@@ -100,6 +100,14 @@
   };
 
   function detectLanguage() {
+    // La langue choisie sur ce site (landing comme application) passe avant
+    // tout le reste : c'est un choix explicite, et une seule cle suffit aux
+    // trois surfaces qui l'affichent.
+    try {
+      var shared = localStorage.getItem("simia.language");
+      if (shared && TEXT[shared]) return shared;
+    } catch (error) { /* stockage indisponible */ }
+
     // L'application enregistre sa langue dans sa sauvegarde locale : c'est le
     // choix le plus fiable, l'utilisateur l'a fait explicitement.
     try {
@@ -117,6 +125,39 @@
 
   var LANG = detectLanguage();
   var T = TEXT[LANG];
+
+  /* La langue de SIMIA peut changer apres l'ouverture du panneau : on la relit
+     au lieu de la figer, sinon les boutons restaient dans la langue d'arrivee.
+     Ce fichier sert la landing ET l'application : une seule copie, pour que les
+     deux ne puissent pas diverger. */
+  function relabel() {
+    var next = detectLanguage();
+    if (!TEXT[next]) return;
+    LANG = next;
+    T = TEXT[LANG];
+    if (!box) return;
+    var set = function (selector, value) {
+      var node = box.querySelector(selector);
+      if (node && value) node.textContent = value;
+    };
+    box.setAttribute("aria-label", T.openLabel);
+    set(".simia-cookie-eyebrow", T.eyebrow);
+    set("#simia-cookie-title", T.title);
+    set("#simia-cookie-intro", T.intro);
+    set('[data-label="necessary"]', T.necessary);
+    set('[data-label="necessaryText"]', T.necessaryText);
+    set('[data-label="necessaryAlways"]', T.necessaryAlways);
+    set('[data-label="external"]', T.external);
+    set('[data-label="externalText"]', T.externalText);
+    set('[data-role="note"]', T.changeNote);
+    set('[data-role="accept"]', T.accept);
+    set('[data-role="refuse"]', T.refuse);
+    set('[data-role="customize"]', T.customize);
+    set('[data-role="save"]', T.save);
+    set('[data-role="later"]', T.later);
+    var toggle = box.querySelector('[data-role="switch"]');
+    if (toggle) toggle.setAttribute("aria-label", T.external);
+  }
 
   /* ------------------------------------------------------------------ */
   /* Choix enregistré                                                    */
@@ -302,9 +343,9 @@
       '<h2 id="simia-cookie-title">', T.title, "</h2>",
       '<p class="simia-cookie-intro" id="simia-cookie-intro">', T.intro, "</p>",
       '<div class="simia-cookie-detail">',
-      '<div class="simia-cookie-row"><div style="flex:1"><strong>', T.necessary, "</strong><small>",
-      T.necessaryText, "</small></div><span class=\"simia-cookie-badge\">", T.necessaryAlways, "</span></div>",
-      '<div class="simia-cookie-row"><div style="flex:1"><strong>', T.external, "</strong><small>",
+      '<div class="simia-cookie-row"><div style="flex:1"><strong data-label="necessary">', T.necessary, "</strong><small data-label=\"necessaryText\">",
+      T.necessaryText, "</small></div><span class=\"simia-cookie-badge\" data-label=\"necessaryAlways\">", T.necessaryAlways, "</span></div>",
+      '<div class="simia-cookie-row"><div style="flex:1"><strong data-label="external">', T.external, "</strong><small data-label=\"externalText\">",
       T.externalText, "</small></div>",
       '<button type="button" class="simia-cookie-switch" data-role="switch" aria-pressed="false" aria-label="',
       T.external, '"></button></div>',
@@ -418,7 +459,10 @@
     if (!stored) show();
   }
 
+  document.addEventListener("simia:language", relabel);
+
   window.SimiaConsent = {
+    relabel: relabel,
     external: function () { return current; },
     granted: function () { return stored !== null; },
     open: show,
