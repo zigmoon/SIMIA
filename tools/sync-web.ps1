@@ -61,13 +61,12 @@ Get-ChildItem -Path $Target -File | Where-Object { $known -notcontains $_.Name -
     Write-Host "retire : $($_.Name)"
 }
 
-# La boite cookies est commune a la landing et a l'application : elle vit dans
-# deploy/ (a cote de la landing) et le service worker la precache sous app/.
-# Une seule source, donc pas de divergence entre les deux copies.
-$cookies = Join-Path $PSScriptRoot "..\deploy\cookies.js"
-if (-not (Test-Path $cookies)) { throw "deploy\cookies.js introuvable" }
-Copy-Item $cookies (Join-Path $Target "cookies.js") -Force
-$copies++
+# La boite cookies est commune a la landing et a l'application. Elle n'existe
+# plus qu'en un seul exemplaire, celui de l'application : tools/prepare-ftp.ps1
+# le recopie a la racine du site. Deux fichiers maintenus en parallele avaient
+# deja diverge, donc plus aucune copie depuis deploy/.
+$cookies = Join-Path $Target "cookies.js"
+if (-not (Test-Path $cookies)) { throw "web\cookies.js introuvable : la boite cookies est la source unique" }
 
 # Configuration Apache : elle decrit le site, pas l'application. Elle est
 # desormais versionnee dans deploy/.htaccess.

@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.38",
+      "softwareVersion": "0.1.39",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.38",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.39",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -106,7 +106,7 @@
         {
           "@type": "Question",
           "name": "Quel est l'impact énergétique de SIMIA ?",
-          "acceptedAnswer": { "@type": "Answer", "text": "SIMIA supprime la part réseau et serveur d'un assistant en ligne : pas de requête à envoyer, pas de centre de données maintenu allumé en permanence pour vous répondre. Il reste le calcul, effectué par la machine que vous possédez déjà, et dont la durée dépend du modèle choisi : un modèle 1B répond plus vite, et consomme moins, qu'un modèle 14B. Aucun chiffre d'empreinte carbone n'est publié faute de mesure indépendante. En revanche, une fois le modèle téléchargé, une conversation n'échange plus rien avec Internet : réseau coupé, SIMIA continue de répondre." }
+          "acceptedAnswer": { "@type": "Answer", "text": "SIMIA supprime la part réseau et serveur d'un assistant en ligne : pas de requête à envoyer, pas de centre de données maintenu allumé en permanence pour vous répondre. Il reste le calcul, effectué par la machine que vous possédez déjà, et dont la durée dépend du modèle choisi : un modèle 1B répond plus vite, et consomme moins, qu'un modèle 14B. Aucun chiffre d'empreinte carbone n'est publié faute de mesure indépendante. En revanche, une fois le modèle téléchargé, une conversation n'échange plus rien avec Internet, hors agent web : réseau coupé, SIMIA continue de répondre." }
         },
         {
           "@type": "Question",
@@ -890,6 +890,38 @@
     .lang-switch{margin-top:6px; align-self:flex-start; padding:4px}
     .lang-switch button{padding:7px 12px; font-size:12px}
   }
+
+  /* --------------------------------------------------------------------------
+   * Mentions légales et RGPD. Deux colonnes de blocs courts : une notice longue
+   * en pleine largeur ne se lit pas. Le texte reste au meme corps que la FAQ,
+   * pour ne pas introduire un troisieme niveau de lecture dans la page.
+   * ------------------------------------------------------------------------ */
+  .legal-grid{
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:26px 44px; margin-top:34px;
+  }
+  .legal-block{
+    padding:22px 24px; border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--surface); box-shadow:var(--shadow);
+  }
+  .legal-block h3{
+    margin:0 0 10px; color:var(--dim);
+    font:500 10.5px "DM Mono",monospace; letter-spacing:.1em; text-transform:uppercase;
+  }
+  .legal-block p{margin:0 0 9px; color:var(--muted); font-size:13.5px; line-height:1.62}
+  .legal-block p:last-child{margin-bottom:0}
+  .legal-block ul{margin:0 0 9px; padding-left:17px; color:var(--muted); font-size:13.5px; line-height:1.62}
+  .legal-block li{margin-bottom:7px}
+  .legal-block li:last-child{margin-bottom:0}
+  .legal-block li::marker{color:#9ab387}
+  .legal-block a{color:var(--ink); font-weight:700; text-decoration:none; border-bottom:1px solid #c9df9a}
+  .legal-block a:hover{border-bottom-color:var(--ink)}
+  .legal-links{display:flex !important; flex-wrap:wrap; gap:6px 16px; align-items:baseline}
+  .legal-block .legal-updated{margin-top:12px; color:var(--dim); font:500 11px "DM Mono",monospace}
+  @media (max-width:860px){
+    .legal-grid{grid-template-columns:1fr; gap:16px; margin-top:24px}
+    .legal-block{padding:18px 18px}
+  }
 </style>
 </head>
 <body>
@@ -999,9 +1031,10 @@
         <h1>Votre IA,<br><em>chez vous</em>.</h1>
         <p class="lede">
           SIMIA fait tourner de vrais modèles de langage sur votre machine. Aucune conversation
-          ne part sur un serveur, aucun compte à créer : conversation, documents, images et
-          atelier de code se calculent sur l'appareil. Une version web pour essayer tout de suite,
-          une application de bureau pour aller beaucoup plus loin.
+          ne part sur un serveur, sauf quand vous activez vous-même l'agent web ; aucun compte à
+          créer : conversation, documents, images et atelier de code se calculent sur l'appareil.
+          Une version web pour essayer tout de suite, une application de bureau pour aller
+          beaucoup plus loin.
         </p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#telecharger">
@@ -1313,7 +1346,7 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-windows-x64.zip" download><span>Installateur 64 bits</span><small>zip</small></a>
           </div>
           <p class="dl-note"><b>Avant de décompresser</b> : clic droit sur le <b>.zip</b> → <b>Propriétés</b> → <b>Débloquer</b>. Windows oublie ainsi que le fichier vient d'Internet, et l'application démarre sans demande. Fait après extraction, cela ne sert à rien.</p>
         </article>
@@ -1328,8 +1361,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1344,7 +1377,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.38/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.39/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1473,13 +1506,14 @@
       <div class="reveal">
         <div class="section-head" style="margin-bottom:26px">
           <p class="mono">Confidentialité & sobriété</p>
-          <h2>Vos mots ne quittent pas votre machine.</h2>
+          <h2>Rien ne part sans que vous le demandiez.</h2>
         </div>
         <ul class="privacy-list">
           <li><i>1</i><div><b>Aucun compte</b><span>Pas d'e-mail, pas de mot de passe, pas de profil à créer.</span></div></li>
           <li><i>2</i><div><b>Aucune télémétrie</b><span>SIMIA n'envoie ni statistiques d'usage, ni journal de conversation.</span></div></li>
           <li><i>3</i><div><b>Stockage local</b><span>Les conversations restent dans le navigateur ou sur le disque, et s'exportent quand vous voulez.</span></div></li>
-          <li><i>4</i><div><b>Moteur ouvert</b><span>L'inférence repose sur llama.cpp et stable-diffusion.cpp, deux projets libres et audités.</span></div></li>
+          <li><i>5</i><div><b>Agent web, et rien d'autre</b><span>La seule fonction qui consulte Internet. Elle ne s'active que par vous, et le relais ne conserve ni la question ni les résultats.</span></div></li>
+<li><i>4</i><div><b>Moteur ouvert</b><span>L'inférence repose sur llama.cpp et stable-diffusion.cpp, deux projets libres et audités.</span></div></li>
         </ul>
       </div>
       <aside class="quote reveal">
@@ -1494,13 +1528,13 @@
       <div class="section-head reveal">
         <p class="mono">Empreinte</p>
         <h2>Moins de serveurs, donc moins d'énergie.</h2>
-        <p>Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite.</p>
+        <p>Un assistant en ligne consomme à chaque message : votre phrase part vers un centre de données, y rencontre un modèle, revient. SIMIA inverse le trajet. Le calcul se fait une fois, sur la machine que vous possédez déjà, et rien ne circule ensuite, hors agent web.</p>
       </div>
       <div class="eco">
         <article class="eco-card reveal">
           <p class="eco-figure">0 octet</p>
           <h3>par message</h3>
-          <p>Une fois le modèle choisi, une conversation n'échange plus rien avec le réseau. Ce n'est pas une promesse de confidentialité : c'est mesurable en coupant le Wi-Fi, et SIMIA continue de répondre.</p>
+          <p>Une fois le modèle choisi, une conversation n'échange plus rien avec le réseau, sauf si vous activez l'agent web. Ce n'est pas une promesse de confidentialité : c'est mesurable en coupant le Wi-Fi, et SIMIA continue de répondre.</p>
         </article>
         <article class="eco-card reveal">
           <p class="eco-figure">1,4 Go</p>
@@ -1567,7 +1601,7 @@
         <details>
           <summary>Quel est l'impact énergétique de SIMIA ?</summary>
           <p>SIMIA supprime la part réseau et serveur d'un assistant en ligne : pas de requête à envoyer, pas de centre de données maintenu allumé en permanence pour vous répondre. Il reste le calcul, effectué par la machine que vous possédez déjà, sur une durée proportionnelle au modèle choisi : un modèle 1B répond plus vite, et consomme moins, qu'un modèle 14B.</p>
-          <p>Nous ne publions volontairement aucun chiffre d'empreinte carbone : sans mesure indépendante, ce serait un argument commercial et non une donnée. Le chiffre vérifiable, lui, est simple : une fois le modèle téléchargé, une conversation n'échange plus rien avec Internet — coupez le Wi-Fi, SIMIA continue de répondre.</p>
+          <p>Nous ne publions volontairement aucun chiffre d'empreinte carbone : sans mesure indépendante, ce serait un argument commercial et non une donnée. Le chiffre vérifiable, lui, est simple : une fois le modèle téléchargé, une conversation n'échange plus rien avec Internet, hors agent web — coupez le Wi-Fi, SIMIA continue de répondre.</p>
         </details>
         <details>
           <summary>Où sont stockés les modèles ?</summary>
@@ -1618,12 +1652,71 @@
   <img class="leaf-prop leaf-static" id="leaf-static" src="leaf-simia.png" alt="" width="352" height="640" decoding="async">
 </div>
 
+    <section id="mentions-legales">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="mono">Mentions légales &amp; RGPD</p>
+          <h2>Qui édite SIMIA, et ce qu'il advient de vos données.</h2>
+          <p>Cette page dit exactement ce qui reste sur votre appareil, ce qui en sort, sur quelle base légale et pendant combien de temps. Elle n'annonce rien qui ne soit vérifiable dans le code, publié et lisible.</p>
+        </div>
+        <div class="legal-grid">
+        <div class="legal-block reveal">
+        <h3>Éditeur du site et de l'application</h3>
+        <p>SIMIA est édité par Zigmoon, entrepreneur individuel (micro-entreprise), immatriculé sous le numéro SIREN 452 356 728.</p>
+        <p>Directeur de la publication : Simon Dupont-Gellert.</p>
+        <p class="legal-links"><a href="tel:+33671614110">06 71 61 41 10</a><a href="mailto:contact@zigmoon.com">contact@zigmoon.com</a></p>
+        <p>L'adresse du domicile professionnel est publiée au registre national des entreprises : elle se consulte sur la fiche officielle, qui fait foi.</p>
+        <p class="legal-links"><a href="https://annuaire-entreprises.data.gouv.fr/entreprise/452356728">Fiche officielle de l'entreprise</a></p>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Hébergeur</h3>
+        <p>Le site est hébergé par LWS (Ligne Web Services), SAS au capital de 500 000 €, 10 rue de Penthièvre, 75008 Paris, France — RCS Paris B 851 993 683 00024. Les serveurs et les données sont situés en France. L'application de bureau ne dépend d'aucun hébergeur : elle s'exécute sur votre machine.</p>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Responsable de traitement</h3>
+        <p>Zigmoon est responsable des traitements décrits ci-dessous au sens de l'article 4.7 du règlement (UE) 2016/679, le RGPD. Aucun délégué à la protection des données n'a été désigné : l'activité ne relève d'aucun des cas prévus à l'article 37.</p>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Ce qui reste sur votre appareil</h3>
+        <p>Les conversations, les documents joints, les images et vidéos générées, les fichiers de l'atelier de code, les réglages et le profil « Mon assistant » restent sur votre appareil : stockage local du navigateur pour la version web, dossier de l'application pour la version de bureau. Aucun accès à distance n'existe, et vous les effacez par « Purger » ou depuis les réglages du navigateur.</p>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Ce qui sort de l'appareil, et quand</h3>
+        <ul><li>L'agent web, disponible dans la seule version web, envoie votre question au relais du site, qui interroge ensuite des moteurs de recherche tiers : DuckDuckGo, Bing, Google Actualités. Le relais ne conserve ni la question ni les résultats et n'écrit aucun fichier.</li><li>La lecture d'une page web fait récupérer l'adresse par le serveur, pas par votre navigateur : le site visité voit le serveur de SIMIA, jamais votre adresse IP.</li><li>Le téléchargement d'un modèle transmet votre adresse IP et le nom du fichier au CDN qui le sert, Hugging Face ou ce serveur.</li><li>Les polices d'affichage, la visionneuse 3D, Pyodide, PDF.js, Transformers.js et la vérification des versions passent par un CDN tiers, et ne sont chargés qu'avec votre accord donné dans la fenêtre « Cookies ».</li><li>La page d'accueil interroge l'API de GitHub pour afficher les versions publiées, uniquement avec votre accord.</li></ul>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Bases légales, durées et transferts</h3>
+        <ul><li>Agent web et lecture de page : votre consentement, retiré en désactivant le bouton. Aucune conservation côté SIMIA ; les journaux d'accès du serveur, qui contiennent l'adresse IP et l'heure de la requête, sont conservés six mois par l'hébergeur puis supprimés.</li><li>Ressources externes : votre consentement, retiré à tout moment depuis la fenêtre « Cookies ».</li><li>Données locales : hors du champ du RGPD tant qu'elles restent chez vous, puisque SIMIA n'y a pas accès. Elles restent jusqu'à ce que vous les effaciez et s'exportent en JSON quand vous voulez.</li><li>Aucun profilage, aucune décision automatisée, aucune prospection commerciale, aucune donnée vendue ni cédée à un tiers.</li><li>Certains prestataires sont établis aux États-Unis : DuckDuckGo, Microsoft, Google, jsDelivr, Hugging Face et GitHub. Le transfert repose sur les clauses contractuelles types de la Commission européenne, article 46.2.c, publiées par chacun d'eux. Sans agent web et sans ressources externes, aucun transfert n'a lieu.</li></ul>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Vos droits</h3>
+        <p>Vous disposez des droits d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité, articles 15 à 20 du RGPD. Écrivez à contact@zigmoon.com : la réponse arrive sous un mois. SIMIA ne détenant aucune de vos conversations, l'essentiel de ces droits s'exerce directement dans l'application : export JSON, purge, effacement du stockage local.</p>
+        <p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire une réclamation auprès de la CNIL, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France.</p>
+        <p class="legal-links"><a href="https://www.cnil.fr">cnil.fr</a><a href="mailto:contact@zigmoon.com">contact@zigmoon.com</a></p>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Cookies, sécurité et mineurs</h3>
+        <p>Aucun cookie publicitaire, aucune mesure d'audience, aucun traceur. Le stockage local ne sert qu'à ce qui est strictement nécessaire : le choix exprimé dans la fenêtre « Cookies », les réglages et les conversations. Seules les ressources tierces demandent votre accord préalable, et le refus ne dégrade que la fonction concernée.</p>
+        <p>Le site est servi exclusivement en HTTPS, avec une politique de sécurité du contenu. Aucun mot de passe, aucun compte, aucun formulaire d'inscription : il n'y a pas de base d'utilisateurs à compromettre, et aucune conversation n'est écrite sur le serveur.</p>
+        <p>SIMIA ne s'adresse pas aux enfants de moins de 15 ans et ne collecte aucune donnée d'enfant, faute de compte. Aucun filtre de contenu n'est appliqué : vous répondez de l'usage des textes, images et vidéos produits, ainsi que du respect des licences des modèles que vous installez.</p>
+        </div>
+        <div class="legal-block reveal">
+        <h3>Propriété intellectuelle et modifications</h3>
+        <p>La marque SIMIA, ses éléments graphiques, ses textes et son code sont protégés. Le code source est publié sous la licence indiquée dans le dépôt ; les modèles tiers restent soumis à leurs propres licences. Cette notice change avec les versions de SIMIA : les changements substantiels sont signalés dans les notes de version.</p>
+        <p class="legal-links"><a href="https://github.com/zigmoon/SIMIA">Code source sur GitHub</a></p>
+        <p class="legal-updated">Dernière mise à jour : 22 novembre 2026.</p>
+        </div>
+        </div>
+      </div>
+    </section>
+
 <footer>
   <div class="wrap">
-    <span>SIMIA — assistant local-first. Aucune donnée collectée.</span>
+    <span>SIMIA — assistant local-first. Aucun compte, aucun traceur.</span>
     <span>
       <a href="./app/">Application web</a> ·
       <a href="https://app.zigmoon.com/SIMIA/models/versions.json">Catalogue</a> ·
+      <a href="#mentions-legales">Mentions légales &amp; RGPD</a> ·
       <a href="#faq">FAQ</a> ·
       <button type="button" class="footer-link" data-simia-cookies-open>Cookies</button>
     </span>
@@ -1641,14 +1734,14 @@
      fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
      préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
-  const RELEASE_TAG = "v0.1.38";
+  const RELEASE_TAG = "v0.1.39";
   const RELEASE_BASE = `https://github.com/zigmoon/SIMIA/releases/download/${RELEASE_TAG}`;
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   const RELEASE_API = `https://api.github.com/repos/zigmoon/SIMIA/releases/tags/${RELEASE_TAG}`;
 
   /* Les paquets viennent tous de GitHub, et d'une version nommee : chaque lien
-     porte l'etiquette `releases/download/v0.1.38/<nom>`. Rien ne resout
+     porte l'etiquette `releases/download/v0.1.39/<nom>`. Rien ne resout
      « latest » a notre place : ce que le visiteur telecharge est exactement la
      version annoncee sur la page, et une publication ulterieure ne remplace pas
      sous ses pieds le fichier derriere un bouton deja affiche.
