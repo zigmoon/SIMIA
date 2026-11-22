@@ -1,7 +1,7 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
-    "0.1.40": {
+    "0.1.41": {
       "title": "Un vrai installeur Windows, un import qui dit la verite, et la pastille du modele d'image",
       "highlights": [
         "Importer un modele d'image qui n'en est pas un ne se solde plus par un silence. Un LoRA MiniMax-H3 depose sur SD 1.5 est enregistre, mais n'est plus selectionne d'office : SIMIA ecrit qu'il vise MiniMax-H3 et que le modele actif est SD 1.5. C'est exactement le cas de HMNSFW-Extreme-Realism, un style de 420 tenseurs, pas un modele.",
@@ -15,7 +15,8 @@
       "notes": [
         "L'installeur reprend le dossier assemble par la CI, donc il contient exactement les memes fichiers que l'archive zip.",
         "Le modele importe par l'utilisateur n'est jamais copie dans le dossier publie en FTP : seule la liste blanche de versions.json part sur le serveur.",
-        "Les paquets Windows, macOS (Apple Silicon et Intel) et Linux sont recompiles par GitHub Actions."
+        "Les paquets Windows, macOS (Apple Silicon et Intel) et Linux sont recompiles par GitHub Actions.",
+        "Le telechargement de SD 1.5 dans la CI est desormais borne en duree et en vitesse : un transfert fige faisait echouer la compilation au lieu de la bloquer six heures."
       ]
     },
     "0.1.39": {
