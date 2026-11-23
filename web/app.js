@@ -4595,18 +4595,35 @@ async function runImageImport(file) {
       );
       return;
     }
-    /* Le style ne vise pas le modele actif : on ne le selectionne pas, et on
-       dit pourquoi, avec la correction a portee de clic. */
+    /* Le style ne vise pas le modele actif : on ne le selectionne pas. Le
+       fichier est enregistre, ce qui est un succes, et la phrase dit avec quoi
+       il fonctionnera. La carte de la bibliotheque porte le bouton «
+       Installer » du modele qui lui va : le message n'a pas a le doubler. */
     renderImageLoraControls();
     renderImageEngineUi();
+    renderModelLibrary();
+    const host = state.imagePacks.find(item => item.family === imported.family);
     toast(
-      localizedText(
-        `${name} est un style pour ${imageFamilyLabel(imported.family) || "une autre architecture"}, pas pour ${imageFamilyLabel(pack?.family) || "le modèle actif"} : il est enregistré mais pas appliqué.`,
-        `${name} is a style for ${imageFamilyLabel(imported.family) || "another architecture"}, not for ${imageFamilyLabel(pack?.family) || "the active model"}: it is saved but not applied.`,
-        `${name} es un estilo para ${imageFamilyLabel(imported.family) || "otra arquitectura"}, no para ${imageFamilyLabel(pack?.family) || "el modelo activo"}: se guarda pero no se aplica.`,
-        `${name} は ${imageFamilyLabel(imported.family) || "別のアーキテクチャ"} 向けのスタイルで、${imageFamilyLabel(pack?.family) || "現在のモデル"} には適用できません。保存はしました。`
-      ),
-      "error"
+      host && !host.local
+        ? localizedText(
+          `${name} est enregistré comme style. Il ne s'applique qu'à ${host.name}, qui n'est pas installé (${displaySize(host.size)}) : la carte du style propose de l'installer.`,
+          `${name} is saved as a style. It only applies to ${host.name}, which is not installed (${displaySize(host.size)}): the style card offers to install it.`,
+          `${name} se ha guardado como estilo. Solo se aplica a ${host.name}, que no está instalado (${displaySize(host.size)}): la tarjeta del estilo propone instalarlo.`,
+          `${name} をスタイルとして保存しました。${host.name}（未インストール、${displaySize(host.size)}）でのみ使えます。スタイルのカードからインストールできます。`
+        )
+        : host
+          ? localizedText(
+            `${name} est enregistré comme style. Il fonctionne avec ${host.name} : activez ce modèle pour l'utiliser.`,
+            `${name} is saved as a style. It works with ${host.name}: activate that model to use it.`,
+            `${name} se ha guardado como estilo. Funciona con ${host.name}: activa ese modelo para usarlo.`,
+            `${name} をスタイルとして保存しました。${host.name} で使えます。そのモデルを有効化してください。`
+          )
+          : localizedText(
+            `${name} est enregistré comme style, mais il vise ${imageFamilyLabel(imported.family) || "une autre architecture"} : aucun modèle de cette famille n'est proposé au catalogue.`,
+            `${name} is saved as a style, but it targets ${imageFamilyLabel(imported.family) || "another architecture"}: no model of that family is offered in the catalogue.`,
+            `${name} se ha guardado como estilo, pero apunta a ${imageFamilyLabel(imported.family) || "otra arquitectura"}: el catálogo no ofrece ningún modelo de esa familia.`,
+            `${name} をスタイルとして保存しましたが、${imageFamilyLabel(imported.family) || "別のアーキテクチャ"} 向けです。その系統のモデルはカタログにありません。`
+          )
     );
     return;
   }
@@ -9753,11 +9770,27 @@ function renderModelLibrary() {
           const familyLabel = imageFamilyLabel(lora.family) || localizedText("famille inconnue", "unknown family", "familia desconocida", "系統不明");
           const card = document.createElement("article");
           card.className = `model-card image-card lora-card family-local${chosen ? " selected" : ""}`;
+          /* Le modele avec lequel ce style fonctionnerait, s'il existe au
+             catalogue. C'est la seule information utile quand le style ne
+             correspond pas au modele actif : sans elle, « Incompatible » est
+             un mur. */
+          const host = state.imagePacks.find(item => item.family === lora.family) || null;
+          const hostReady = Boolean(host?.local);
+          /* « MiniMax-H3 · vidéo et son » ne tient pas dans un bouton : on ne
+             garde que le nom propre. */
+          const hostShort = host ? host.name.split("·")[0].trim() : "";
+          const removeButton = `<button type="button" class="lora-remove" data-image-lora-remove="${escapeHtml(lora.name)}">${escapeHtml(localizedText("Retirer", "Remove", "Quitar", "削除"))}</button>`;
           const action = !fits
-            ? `<button type="button" class="is-blocked" disabled>${escapeHtml(localizedText("Incompatible", "Incompatible", "Incompatible", "非対応"))}</button>`
+            ? host && !hostReady && host.downloadable
+              ? `<button type="button" data-image-pack-download="${escapeHtml(host.id)}">${escapeHtml(localizedText(`Installer ${hostShort}`, `Install ${hostShort}`, `Instalar ${hostShort}`, `${hostShort} をインストール`))}</button>${removeButton}`
+              : removeButton
             : chosen
-              ? `<button type="button" disabled>${escapeHtml(activeLabel)}</button>`
-              : `<button type="button" data-image-lora="${escapeHtml(lora.name)}">${escapeHtml(activateLabel)}</button>`;
+              ? `<button type="button" disabled>${escapeHtml(activeLabel)}</button>${removeButton}`
+              : `<button type="button" data-image-lora="${escapeHtml(lora.name)}">${escapeHtml(activateLabel)}</button>${removeButton}`;
+          /* Un style ne s'applique qu'a la famille pour laquelle il a ete
+             entraine. Le dire ne suffit pas : il faut dire avec quoi il
+             marche, et si ce modele est la. */
+          const hostSize = host ? displaySize(host.size) : "";
           const note = fits
             ? localizedText(
               `Style ${familyLabel}, appliqué à ${pack?.name || "aucun modèle actif"}.`,
@@ -9765,12 +9798,26 @@ function renderModelLibrary() {
               `Estilo ${familyLabel}, aplicado a ${pack?.name || "ningún modelo activo"}.`,
               `${familyLabel} のスタイル。${pack?.name || "有効なモデルなし"} に適用。`
             )
-            : localizedText(
-              `Style ${familyLabel} : ne s'applique pas à ${imageFamilyLabel(pack?.family) || "ce modèle"}.`,
-              `${familyLabel} style: does not apply to ${imageFamilyLabel(pack?.family) || "this model"}.`,
-              `Estilo ${familyLabel}: no se aplica a ${imageFamilyLabel(pack?.family) || "este modelo"}.`,
-              `${familyLabel} のスタイル。${imageFamilyLabel(pack?.family) || "このモデル"} には適用できません。`
-            );
+            : host && hostReady
+              ? localizedText(
+                `Style ${familyLabel}. Il fonctionne avec ${host.name}, qui est installé : activez-le pour l'utiliser.`,
+                `${familyLabel} style. It works with ${host.name}, which is installed: activate it to use this style.`,
+                `Estilo ${familyLabel}. Funciona con ${host.name}, que está instalado: actívalo para usarlo.`,
+                `${familyLabel} のスタイル。${host.name}（インストール済み）で使えます。有効化してください。`
+              )
+              : host
+                ? localizedText(
+                  `Style ${familyLabel}. Il ne fonctionne qu'avec ${host.name}, qui n'est pas installé (${hostSize}).`,
+                  `${familyLabel} style. It only works with ${host.name}, which is not installed (${hostSize}).`,
+                  `Estilo ${familyLabel}. Solo funciona con ${host.name}, que no está instalado (${hostSize}).`,
+                  `${familyLabel} のスタイル。${host.name}（未インストール、${hostSize}）でのみ使えます。`
+                )
+                : localizedText(
+                  `Style ${familyLabel} : ne s'applique pas à ${imageFamilyLabel(pack?.family) || "ce modèle"}, et aucun modèle ${familyLabel} n'est proposé au catalogue.`,
+                  `${familyLabel} style: does not apply to ${imageFamilyLabel(pack?.family) || "this model"}, and no ${familyLabel} model is offered in the catalogue.`,
+                  `Estilo ${familyLabel}: no se aplica a ${imageFamilyLabel(pack?.family) || "este modelo"}, y no hay ningún modelo ${familyLabel} en el catálogo.`,
+                  `${familyLabel} のスタイル。${imageFamilyLabel(pack?.family) || "このモデル"} には適用できず、カタログに ${familyLabel} のモデルもありません。`
+                );
           /* Pas de badge « autre famille » : la phrase et le bouton grise le
              disent deja, et la carte n'a pas besoin de trois fois la meme
              information. */
@@ -11256,6 +11303,42 @@ ui.modelLibrary.addEventListener("click", event => {
     renderImageEngineUi();
     renderModelLibrary();
     saveState();
+    return;
+  }
+  /* Retirer un style importe. Le fichier part du disque : c'est ce que dit le
+     bouton, sans confirmation, parce qu'un style se reimporte en un clic depuis
+     le meme fichier. */
+  const loraRemove = event.target.closest("button[data-image-lora-remove]");
+  if (loraRemove) {
+    const name = loraRemove.dataset.imageLoraRemove;
+    loraRemove.disabled = true;
+    fetch(IMAGE.removeLoraUrl || "/_simia/image/lora/remove", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name })
+    })
+      .then(response => response.json().then(payload => ({ ok: response.ok, payload })))
+      .then(async ({ ok, payload }) => {
+        if (!ok) throw new Error(payload?.error || "remove");
+        if (state.imageLora === name) state.imageLora = "";
+        await refreshImagePacks();
+        renderImageLoraControls();
+        renderImageEngineUi();
+        saveState();
+        toast(localizedText(
+          `${name} a été retiré : le fichier n'est plus sur le disque.`,
+          `${name} was removed: the file is no longer on disk.`,
+          `${name} se ha retirado: el archivo ya no está en el disco.`,
+          `${name} を削除しました。ファイルはディスクから消えています。`
+        ));
+      })
+      .catch(() => toast(localizedText(
+        `${name} n'a pas pu être retiré.`,
+        `${name} could not be removed.`,
+        `${name} no se ha podido retirar.`,
+        `${name} を削除できませんでした。`
+      ), "error"))
+      .finally(() => { loraRemove.disabled = false; });
     return;
   }
   const choice = event.target.closest("button[data-model-id]");

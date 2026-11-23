@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.44",
+      "softwareVersion": "0.1.45",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.44",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.45",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -1400,8 +1400,8 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a class="file-primary" data-release="windows-x64-setup.exe" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.44/simia-windows-x64-setup.exe" download><span>Installer SIMIA</span><small>exe · recommandé</small></a>
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.44/simia-windows-x64.zip" download><span>Archive portable</span><small>zip</small></a>
+            <a class="file-primary" data-release="windows-x64-setup.exe" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-windows-x64-setup.exe" download><span>Installer SIMIA</span><small>exe · recommandé</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-windows-x64.zip" download><span>Archive portable</span><small>zip</small></a>
           </div>
           <p class="dl-note">L'installeur place SIMIA dans votre profil, crée le raccourci et le désinstalleur, sans droit administrateur : double-clic, c'est tout. L'archive, elle, se décompresse où vous voulez — sur une clé USB par exemple — mais il faut d'abord la débloquer : clic droit sur le .zip → Propriétés → Débloquer, avant extraction.</p>
         </article>
@@ -1416,8 +1416,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.44/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.44/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1432,7 +1432,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.44/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1789,7 +1789,7 @@
      fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
      préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
-  const RELEASE_TAG = "v0.1.44";
+  const RELEASE_TAG = "v0.1.45";
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   /* La page annonce une version, mais GitHub peut en avoir publie une plus

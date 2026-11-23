@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.45": {
+      "title": "Un style importe n'est plus une impasse : il dit avec quoi il marche, et il se retire",
+      "highlights": [
+        "Un LoRA importe qui ne correspond pas au modele actif n'affiche plus un bouton grise « Incompatible ». La carte nomme le modele avec lequel il fonctionne, dit s'il est installe et pour quel poids, et propose de l'installer : « Style MiniMax-H3. Il ne fonctionne qu'avec MiniMax-H3, qui n'est pas installe (~14,2 Go). »",
+        "Un bouton « Retirer » sur chaque carte de style : le fichier quitte le disque, la carte disparait, et le style actif est deselectionne. Il fallait jusqu'ici ouvrir le dossier a la main pour se debarrasser d'un fichier dont on ne voulait plus.",
+        "Nouvelle route POST /_simia/image/lora/remove. Elle ne touche qu'un fichier de style, jamais un modele ni un dossier, et refuse les noms hostiles : remontee de dossier, chemin absolu, nom vide.",
+        "Le message d'import n'est plus une erreur rouge : le fichier est enregistre, ce qui est un succes, et la phrase dit quoi faire ensuite.",
+        "Cas verifie de bout en bout : import d'un LoRA MiniMax-H3 sur SD 1.5 (la carte propose l'installation, le retrait supprime le fichier), import d'un LoRA SDXL (la carte renvoie vers SDXL Turbo, deja installe), retrait, puis reimport."
+      ]
+    },
     "0.1.44": {
       "title": "Gravure SIMIA v2 : le style laisse enfin respirer la consigne",
       "highlights": [

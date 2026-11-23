@@ -4130,6 +4130,46 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
         return;
     }
 
+    /* Retirer un style importe. Sans cette porte, un fichier dont on ne veut
+       plus restait dans la bibliotheque pour toujours : une carte morte, avec
+       un bouton grise, et aucun moyen de la faire disparaitre sinon en
+       explorant le dossier a la main. La suppression ne touche qu'un fichier
+       de style : jamais un modele, jamais un dossier. */
+    if path == "/_simia/image/lora/remove" {
+        let mut body = Vec::new();
+        let _ = request.as_reader().read_to_end(&mut body);
+        let text = String::from_utf8_lossy(&body).to_string();
+        let Some(name) = json_string(&text, "name").as_deref().and_then(safe_import_name) else {
+            respond_json(
+                request,
+                400,
+                "{\"error\":\"nom de style absent\"}".to_string(),
+            );
+            return;
+        };
+        let dir = match state.lock() {
+            Ok(guard) => guard.image.dir.clone(),
+            Err(_) => PathBuf::from("models/image"),
+        };
+        let mut removed = false;
+        for candidate in [dir.join("loras").join(&name), dir.join(&name)] {
+            if candidate.is_file() && fs::remove_file(&candidate).is_ok() {
+                removed = true;
+                break;
+            }
+        }
+        if !removed {
+            respond_json(
+                request,
+                404,
+                format!("{{\"error\":{}}}", js_escape("ce style n'est plus sur le disque")),
+            );
+            return;
+        }
+        respond_json(request, 200, image_packs_json(&state));
+        return;
+    }
+
     if path == "/_simia/image/status" {
         respond_json(request, 200, image_status_json(&state));
         return;
@@ -4483,7 +4523,7 @@ fn native_script(state: &Shared) -> String {
         Ok(guard) => {
             let selected = guard.selected_model.clone();
             let image = format!(
-                "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"apiBase\":\"\",\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"importUrl\":\"/_simia/image/import\",\"cancelUrl\":\"/_simia/image/cancel\",\"generateUrl\":\"/sdapi/v1/txt2img\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
+                "{{\"available\":{},\"supported\":{},\"width\":{},\"height\":{},\"steps\":{},\"cfg\":{},\"model\":{},\"apiBase\":\"\",\"packsUrl\":\"/_simia/image/packs\",\"selectPackUrl\":\"/_simia/image/select\",\"downloadPackUrl\":\"/_simia/image/download\",\"statusUrl\":\"/_simia/image/status\",\"prepareUrl\":\"/_simia/image/prepare\",\"importUrl\":\"/_simia/image/import\",\"removeLoraUrl\":\"/_simia/image/lora/remove\",\"cancelUrl\":\"/_simia/image/cancel\",\"generateUrl\":\"/sdapi/v1/txt2img\",\"jobsUrl\":\"/sdcpp/v1/jobs\"}}",
                 guard.image.available(),
                 guard.image.bin.is_some() && guard.image.probe.is_none(),
                 guard.image.current().map(|pack| match guard.image.size_override {
