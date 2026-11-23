@@ -1,7 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
-    "0.1.47": {
+    "0.1.48": {
+      "title": "Un .safetensors depose depuis le Bureau devient un modele ou un style, et le nom affiche est le meme partout",
+      "highlights": [
+        "Verifie de bout en bout avec de vrais fichiers : un checkpoint .safetensors de 1,99 Go depose depuis le Bureau arrive dans models/image/, recoit sa carte « Votre fichier » (1131 tenseurs, famille SD 1.5, 512 px, 20 pas), devient le modele d'image actif et dessine — le moteur le charge tel quel, sans conversion en GGUF.",
+        "Un style depose pendant qu'un modele de la meme famille est actif s'applique aussitot, et sa carte affiche desormais « Actif » : elle proposait encore « Activer » pour un style qui venait de l'etre, parce que la liste avait ete dessinee juste avant le choix.",
+        "Un seul nom par fichier : le message d'import et la ligne « Actif maintenant » ne rajoutent plus l'extension .safetensors que la carte, la pastille et la liste n'affichent pas.",
+        "Un LoRA importe pour une autre architecture (MiniMax-H3 sur SD 1.5) reste enregistre et sa carte dit avec quoi il fonctionne, sans jamais laisser croire qu'il a ete applique.",
+        "Retrait verifie : « Retirer » efface le fichier, la carte disparait, le style se deselectionne et la pastille revient au modele seul."
+      ]
+    },    "0.1.47": {
       "title": "La barre de telechargement revient sous la carte du style, la ou l'on clique",
       "highlights": [
         "« Installer MiniMax-H3 » depuis la carte d'un style lance un telechargement de quatorze gigaoctets : sa barre de progression vit desormais sous cette carte. Elle n'existait que sous la carte du modele hote, et cette carte disparait des que l'on cherche un style ou que l'on change d'onglet — le telechargement se faisait alors sans le moindre signe de vie, parfois pendant vingt minutes.",

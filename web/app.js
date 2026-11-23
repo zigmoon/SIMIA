@@ -4576,6 +4576,9 @@ async function runImageImport(file) {
   await refreshImagePacks();
   paintImportState();
   const name = payload.name || file.name;
+  /* La carte affiche le style sans son extension : le message doit dire le
+     meme nom, sinon on cherche deux fichiers differents dans la liste. */
+  const label = name.replace(/\.(safetensors|gguf|ckpt|pt)$/i, "");
 
   if (payload.kind === "lora") {
     const imported = state.imageLoras.find(lora => lora.name === name) || { name, family: payload.family };
@@ -4584,13 +4587,16 @@ async function runImageImport(file) {
       state.imageLora = name;
       renderImageLoraControls();
       renderImageEngineUi();
+      /* La liste a ete dessinee avant que le style soit choisi : sans ce rendu,
+         sa carte proposait encore « Activer » alors qu'il venait de l'etre. */
+      renderModelLibrary();
       saveState();
       toast(
         localizedText(
-          `${name} est prêt et appliqué comme style sur ${pack?.name || "ce modèle"}.`,
-          `${name} is ready and applied as a style on ${pack?.name || "this model"}.`,
-          `${name} está listo y aplicado como estilo en ${pack?.name || "este modelo"}.`,
-          `${name} をスタイルとして準備し、${pack?.name || "このモデル"} に適用しました。`
+          `${label} est prêt et appliqué comme style sur ${pack?.name || "ce modèle"}.`,
+          `${label} is ready and applied as a style on ${pack?.name || "this model"}.`,
+          `${label} está listo y aplicado como estilo en ${pack?.name || "este modelo"}.`,
+          `${label} をスタイルとして準備し、${pack?.name || "このモデル"} に適用しました。`
         )
       );
       return;
@@ -4606,23 +4612,23 @@ async function runImageImport(file) {
     toast(
       host && !host.local
         ? localizedText(
-          `${name} est enregistré comme style. Il ne s'applique qu'à ${host.name}, qui n'est pas installé (${displaySize(host.size)}) : la carte du style propose de l'installer.`,
-          `${name} is saved as a style. It only applies to ${host.name}, which is not installed (${displaySize(host.size)}): the style card offers to install it.`,
-          `${name} se ha guardado como estilo. Solo se aplica a ${host.name}, que no está instalado (${displaySize(host.size)}): la tarjeta del estilo propone instalarlo.`,
-          `${name} をスタイルとして保存しました。${host.name}（未インストール、${displaySize(host.size)}）でのみ使えます。スタイルのカードからインストールできます。`
+          `${label} est enregistré comme style. Il ne s'applique qu'à ${host.name}, qui n'est pas installé (${displaySize(host.size)}) : la carte du style propose de l'installer.`,
+          `${label} is saved as a style. It only applies to ${host.name}, which is not installed (${displaySize(host.size)}): the style card offers to install it.`,
+          `${label} se ha guardado como estilo. Solo se aplica a ${host.name}, que no está instalado (${displaySize(host.size)}): la tarjeta del estilo propone instalarlo.`,
+          `${label} をスタイルとして保存しました。${host.name}（未インストール、${displaySize(host.size)}）でのみ使えます。スタイルのカードからインストールできます。`
         )
         : host
           ? localizedText(
-            `${name} est enregistré comme style. Il fonctionne avec ${host.name} : activez ce modèle pour l'utiliser.`,
-            `${name} is saved as a style. It works with ${host.name}: activate that model to use it.`,
-            `${name} se ha guardado como estilo. Funciona con ${host.name}: activa ese modelo para usarlo.`,
-            `${name} をスタイルとして保存しました。${host.name} で使えます。そのモデルを有効化してください。`
+            `${label} est enregistré comme style. Il fonctionne avec ${host.name} : activez ce modèle pour l'utiliser.`,
+            `${label} is saved as a style. It works with ${host.name}: activate that model to use it.`,
+            `${label} se ha guardado como estilo. Funciona con ${host.name}: activa ese modelo para usarlo.`,
+            `${label} をスタイルとして保存しました。${host.name} で使えます。そのモデルを有効化してください。`
           )
           : localizedText(
-            `${name} est enregistré comme style, mais il vise ${imageFamilyLabel(imported.family) || "une autre architecture"} : aucun modèle de cette famille n'est proposé au catalogue.`,
-            `${name} is saved as a style, but it targets ${imageFamilyLabel(imported.family) || "another architecture"}: no model of that family is offered in the catalogue.`,
-            `${name} se ha guardado como estilo, pero apunta a ${imageFamilyLabel(imported.family) || "otra arquitectura"}: el catálogo no ofrece ningún modelo de esa familia.`,
-            `${name} をスタイルとして保存しましたが、${imageFamilyLabel(imported.family) || "別のアーキテクチャ"} 向けです。その系統のモデルはカタログにありません。`
+            `${label} est enregistré comme style, mais il vise ${imageFamilyLabel(imported.family) || "une autre architecture"} : aucun modèle de cette famille n'est proposé au catalogue.`,
+            `${label} is saved as a style, but it targets ${imageFamilyLabel(imported.family) || "another architecture"}: no model of that family is offered in the catalogue.`,
+            `${label} se ha guardado como estilo, pero apunta a ${imageFamilyLabel(imported.family) || "otra arquitectura"}: el catálogo no ofrece ningún modelo de esa familia.`,
+            `${label} をスタイルとして保存しましたが、${imageFamilyLabel(imported.family) || "別のアーキテクチャ"} 向けです。その系統のモデルはカタログにありません。`
           )
     );
     return;
@@ -4637,10 +4643,10 @@ async function runImageImport(file) {
     await selectImagePack(chosen.id, { silent: true });
     toast(
       localizedText(
-        `${name} est prêt : c'est maintenant le modèle d'image actif.`,
-        `${name} is ready: it is now the active image model.`,
-        `${name} está listo: ahora es el modelo de imagen activo.`,
-        `${name} を準備し、画像モデルとして有効にしました。`
+        `${label} est prêt : c'est maintenant le modèle d'image actif.`,
+        `${label} is ready: it is now the active image model.`,
+        `${label} está listo: ahora es el modelo de imagen activo.`,
+        `${label} を準備し、画像モデルとして有効にしました。`
       )
     );
     return;
@@ -4658,10 +4664,10 @@ async function runImageImport(file) {
   }
   toast(
     localizedText(
-      `${name} est prêt comme modèle d'image.`,
-      `${name} is ready as an image model.`,
-      `${name} está listo como modelo de imagen.`,
-      `${name} を画像モデルとして登録しました。`
+      `${label} est prêt comme modèle d'image.`,
+      `${label} is ready as an image model.`,
+      `${label} está listo como modelo de imagen.`,
+      `${label} を画像モデルとして登録しました。`
     )
   );
 }
@@ -9696,7 +9702,10 @@ function renderModelLibrary() {
         const mismatch = Boolean(lora.family && imagePack.family && lora.family !== imagePack.family);
         pieces.push({
           kind: localizedText("STYLE", "STYLE", "ESTILO", "スタイル"),
-          name: lora.name,
+          /* Le nom du fichier porte son extension ; la carte du style, elle,
+             l'affiche sans. Deux graphies pour le meme style dans la meme
+             fenetre font chercher deux fichiers. */
+          name: lora.name.replace(/\.(safetensors|gguf|ckpt|pt)$/i, ""),
           state: mismatch ? "warning" : "ready"
         });
       }
