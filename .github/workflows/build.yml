@@ -426,17 +426,30 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Verifier qu'au moins un paquet existe
+      - name: Verifier que les quatre systemes sont la
         shell: bash
         run: |
           set -euo pipefail
-          count=$(find dist -maxdepth 1 -type f \( -name '*.zip' -o -name '*.tar.gz' \) | wc -l)
-          echo "paquets trouves : $count"
-          if [ "$count" -eq 0 ]; then
-            echo "::error::Aucune archive produite : rien a publier."
+          # Une cible en echec ne doit pas donner une release amputee. La 0.1.50
+          # est partie sans Linux : l'envoi de l'artefact avait echoue, et ce
+          # controle se contentait d'« au moins une archive sur quatre ».
+          expected=(
+            "simia-windows-x64.zip"
+            "simia-windows-x64-setup.exe"
+            "simia-macos-arm64.tar.gz"
+            "simia-macos-x64.tar.gz"
+            "simia-linux-x64.tar.gz"
+          )
+          missing=()
+          for file in "${expected[@]}"; do
+            if [ ! -f "dist/$file" ]; then missing+=("$file"); fi
+          done
+          echo "paquets trouves : $(find dist -maxdepth 1 -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.exe' \) | wc -l)"
+          ls -la dist
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Release incomplete, fichiers absents : ${missing[*]}"
             exit 1
           fi
-          ls -la dist
 
       # Les notes de release sont redigees a partir des archives reellement
       # presentes : tableau des telechargements, instructions d'installation
