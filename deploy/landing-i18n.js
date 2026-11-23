@@ -210,7 +210,7 @@ var I18N = {
     "SD 1.5 · Gravure SIMIA": "SD 1.5 · SIMIA engraving",
     "Image · 1024 px": "Image · 1024 px",
     "Z-Image · 1024 px": "Z-Image · 1024 px",
-    ", le LoRA maison de 6 Mo entraîné sur 220 planches anciennes, accompagne Stable Diffusion 1.5.":
+    ", le LoRA maison de 6 Mo entraîné sur 212 planches anciennes, accompagne Stable Diffusion 1.5.":
       ", the 6 MB house LoRA trained on 220 antique plates, comes with Stable Diffusion 1.5.",
     "Confidentialité & sobriété": "Privacy & restraint",
     "Vos mots ne quittent pas votre machine.": "Your words never leave your machine.",
@@ -600,7 +600,7 @@ var I18N = {
     "SD 1.5 · Gravure SIMIA": "SD 1.5 · Grabado SIMIA",
     "Image · 1024 px": "Imagen · 1024 px",
     "Z-Image · 1024 px": "Z-Image · 1024 px",
-    ", le LoRA maison de 6 Mo entraîné sur 220 planches anciennes, accompagne Stable Diffusion 1.5.":
+    ", le LoRA maison de 6 Mo entraîné sur 212 planches anciennes, accompagne Stable Diffusion 1.5.":
       ", el LoRA propio de 6 MB entrenado con 220 láminas antiguas, acompaña a Stable Diffusion 1.5.",
     "Confidentialité & sobriété": "Privacidad y sobriedad",
     "Vos mots ne quittent pas votre machine.": "Tus palabras no salen de tu máquina.",
@@ -990,7 +990,7 @@ var I18N = {
     "SD 1.5 · Gravure SIMIA": "SD 1.5 · SIMIA の彫版",
     "Image · 1024 px": "画像 · 1024 px",
     "Z-Image · 1024 px": "Z-Image · 1024 px",
-    ", le LoRA maison de 6 Mo entraîné sur 220 planches anciennes, accompagne Stable Diffusion 1.5.":
+    ", le LoRA maison de 6 Mo entraîné sur 212 planches anciennes, accompagne Stable Diffusion 1.5.":
       "、220枚の古い図版で学習した6 MBの独自LoRAが、Stable Diffusion 1.5 に付属します。",
     "Confidentialité & sobriété": "プライバシーと軽さ",
     "Vos mots ne quittent pas votre machine.": "あなたの言葉はマシンの外に出ません。",

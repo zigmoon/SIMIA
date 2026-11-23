@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.44": {
+      "title": "Gravure SIMIA v2 : le style laisse enfin respirer la consigne",
+      "highlights": [
+        "Le LoRA a ete reentraine avec des legendes qui nomment la plante : 212 planches de 154 especes, au lieu de 220 legendes dont 61 % ne disaient rien (« This is a plate from Curtis's Botanical Magazine, Volume 73 », ou du texte grave mal ocerise). Le modele apprend desormais un style, pas une planche.",
+        "Mesure a graine et consigne identiques : la consigne est respectee 1,8 fois mieux. Deux sujets differents sortent plus distincts avec le style qu'ils ne le seraient sans lui (rapport 1,11, contre 0,63 pour le LoRA precedent) — demandez un chat, vous obtenez un chat grave, pas une planche de plus.",
+        "Le style est plus franc : chaleur du papier +0,242 contre +0,229, contours 0,075 contre 0,075, et aucune planche du corpus n'est recitee (l'image la plus proche reste a 0,24 quand deux planches du corpus sont a 0,20 l'une de l'autre).",
+        "Poids par defaut 1,2, celui ou le style tient sans reprendre le dessus.",
+        "Le fichier garde exactement les 384 clefs du precedent : verifie contre le LoRA livre, puis dans le vrai moteur — deux fichiers differents a la meme graine donnent des images a 0,37 l'une de l'autre, donc les tenseurs sont bien appliques par sd-server."
+      ]
+    },
     "0.1.43": {
       "title": "Gravure SIMIA : le bon chiffre, le bon jeton, et un poids qui laisse parler la consigne",
       "highlights": [

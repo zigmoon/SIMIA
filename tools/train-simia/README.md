@@ -121,6 +121,64 @@ Le script crée le dépôt s'il n'existe pas, vérifie que le `.safetensors` est
 lisible, que la fiche commence bien par un en-tête YAML avec `license` et
 `tags`, et n'envoie pas les points de sauvegarde intermédiaires.
 
+## La variante LoRA, celle que livre le catalogue
+
+Le catalogue de SIMIA ne pose pas un checkpoint de 2,1 Go mais un correctif de
+6 Mo (`models/image/loras/simia-gravure.safetensors`). Trois scripts le
+fabriquent et le mesurent.
+
+### 1. Recapitionner le corpus
+
+Un LoRA n'apprend que ce que la légende lui dit de distinguer. Sur les 220
+planches de la première campagne, 61 % des légendes ne nommaient pas la plante :
+« This is a plate from Curtis's Botanical Magazine, Volume 73 », ou du texte
+gravé mal océrisé (« MfoS », « FSv£ »). Le jeton de style y a donc appris « une
+planche », pas « un style posé sur un sujet ».
+
+```powershell
+.\.venv\Scripts\python.exe recaption.py --dry-run   # rapport seul
+.\.venv\Scripts\python.exe recaption.py             # écrit les légendes
+```
+
+Le script reprend le nom latin là où il existe : dans le titre Commons
+(`File:Ada aurantiaca.jpg`), sinon dans les catégories, qui rangent chaque
+planche sous son espèce (`Digitalis purpurea`). Résultat mesuré sur le corpus :
+**212 planches nommées, 154 espèces distinctes, 8 planches écartées** faute de
+sujet identifiable — déplacées dans `data/unused/`, jamais supprimées.
+
+### 2. Entraîner le LoRA
+
+```powershell
+.\.venv\Scripts\python.exe train_lora.py --dry-run
+.\.venv\Scripts\python.exe train_lora.py --steps 1500 --checkpoint-every 500
+```
+
+Rang 8, alpha 8, sur les seules projections d'attention (128 couches,
+1,59 M de paramètres, 2,8 Go de VRAM, ~1,3 s par pas sur une RTX 2060).
+L'UNet entier est gelé avant la greffe : sans ce gel, l'optimiseur se retrouve
+avec 767 M de paramètres, remplit la carte et fait dériver la perte en NaN.
+
+L'export écrit les clefs que `sd-server` attend — `lora_unet_<module>` avec les
+points devenus des soulignes, `.alpha`, `.lora_down.weight`, `.lora_up.weight` —
+et **compare le jeu de clefs à celui du LoRA livré**. Un export subtilement
+différent ne lève aucune erreur : le moteur applique zéro tenseur et rend une
+image sans style.
+
+### 3. Mesurer avant de livrer
+
+```powershell
+.\.venv\Scripts\python.exe eval_lora.py --lora out/gravure-step-500.safetensors --weight 1.0
+.\.venv\Scripts\python.exe eval_lora.py --lora ../../models/image/loras/simia-gravure.safetensors
+```
+
+Trois chiffres, tous comparatifs :
+
+| Mesure | Ce qu'elle dit | Seuil |
+|---|---|---|
+| écrasement | rapport des distances entre trois sujets hors domaine, avec et sans le LoRA | 1,00 = la consigne survit ; le LoRA de 0.1.42 était à 0,57 |
+| présence | part de papier crème et densité de contour | doit rester au-dessus du rendu sans style |
+| mémoire | distance à la planche du corpus la plus proche, comparée à la distance entre deux planches | si l'image est plus proche d'une planche que deux planches ne le sont entre elles, le modèle récite |
+
 ## Vérifier que le modèle appris diffère vraiment de SD 1.5
 
 Une campagne ne vaut rien sans comparaison. Après l'entraînement :

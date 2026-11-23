@@ -6,6 +6,6 @@
     "Llama-3.2-1B-Instruct-Q4_K_M": { "bytes": 807694368, "sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1" },
     "qwen2.5-1.5b-instruct-q4_k_m": { "bytes": 1117320736, "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e" },
     "Qwen3.5-2B-Q4_K_M": { "bytes": 1280835840, "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223" },
-    "image/loras/simia-gravure.safetensors": { "bytes": 6434192, "sha256": "7f3be8110fad2897595619be9beab99f3affc43acd5516e38b16a9292647930a" }
+    "image/loras/simia-gravure.safetensors": { "bytes": 6434192, "sha256": "49a2ccc032e5d0f81e92f910c5047779dce7d31f872272d8ee595e183587fcef" }
   }
 }

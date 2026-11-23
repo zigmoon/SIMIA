@@ -22,7 +22,7 @@ botaniques du XIXᵉ siècle** : trait fin sur cuivre, hachures, mise en couleur
 l'aquarelle, composition centrée sur une seule espèce, fond neutre.
 
 C'est le correctif utilisé par [SIMIA](https://github.com/zigmoon/SIMIA), qui
-l'applique avec un poids de 1,0 sur SD 1.5.
+l'applique avec un poids de 1,2 sur SD 1.5.
 
 ## Le fichier
 
@@ -84,7 +84,7 @@ style reste discret ; avec lui, le rendu bascule franchement vers la gravure.
 | Résolution | 512 × 512 (le corpus est à cette échelle) |
 | Pas | 24 à 30 |
 | CFG | 6,5 à 7,5 |
-| Poids du LoRA | 1,2 à 1,6 ; au-delà de 1,8 le trait se durcit |
+| Poids du LoRA | 1,2 ; au-delà de 1,6 le trait se durcit |
 
 ## Ce qu'il apprend
 
@@ -97,8 +97,14 @@ style reste discret ; avec lui, le rendu bascule franchement vers la gravure.
 
 ## Corpus
 
-Planches de *Curtis's Botanical Magazine* et d'*Edwards's Botanical Register*,
-domaine public, récupérées sur Wikimedia Commons.
+212 planches de *Curtis's Botanical Magazine* et d'*Edwards's Botanical Register*,
+domaine public, récupérées sur Wikimedia Commons, couvrant 154 espèces.
+
+Les légendes d'entraînement donnent le nom latin de la plante, lu dans le
+titre Commons ou dans les catégories de la fiche. C'est ce qui apprend au LoRA
+la différence entre le style et le sujet : avec des légendes qui ne nommaient
+pas la plante, le jeton de style attirait toute la composition et écrasait la
+consigne de l'utilisateur.
 
 ## Limites
 
