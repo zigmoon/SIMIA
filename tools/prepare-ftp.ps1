@@ -252,7 +252,7 @@ $avis = @(
     @{ Nom = "registre officiel"; Motif = "annuaire-entreprises.data.gouv.fr/entreprise/452356728" },
     @{ Nom = "adresse CNIL"; Motif = "75334 Paris Cedex 07" },
     @{ Nom = "hebergeur"; Motif = "LWS (Ligne Web Services)" },
-    @{ Nom = "date de mise a jour"; Motif = "22 novembre 2026" }
+    @{ Nom = "date de mise a jour"; Motif = "23 novembre 2026" }
 )
 if (-not (Test-Path $appJs)) { throw "app.js introuvable dans $App" }
 $application = Get-Content $appJs -Raw -Encoding UTF8

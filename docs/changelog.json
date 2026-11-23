@@ -1,6 +1,16 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.46": {
+      "title": "Le menu Modeles se remplit, l'accroche respire, les mentions legales suivent",
+      "highlights": [
+        "Le sous-menu « Modeles » passe de 4 + 4 + 6 a 7 + 7 + 7 entrees, colonnes equilibrees : Qwen 3.5 4B, Ministral 3 3B et Mistral 7B Instruct rejoignent la conversation ; Pony Diffusion V6 XL, MiniMax-H3 et « Vos propres styles » rejoignent l'image ; les fonctions citent desormais l'import de fichiers et les images generees.",
+        "La phrase d'accroche tombe de 65 a 41 mots. Elle dit ce que SIMIA sait faire aujourd'hui — conversations, documents, images, videos, code — et garde la seule reserve qui compte : l'agent web, que vous activez vous-meme, est la seule chose qui sort du reseau local.",
+        "Le modele video MiniMax-H3 apparait enfin au catalogue, avec son propre compte (14 modeles d'image, 1 de video) : le menu l'annoncait, la page ne le listait nulle part.",
+        "Mentions legales : date au 23 novembre 2026 des deux cotes, modeles et styles importes declares (copies dans le dossier de l'application, jamais envoyes ailleurs, supprimes par « Retirer »), et un modele video annonce pour ce qu'il est — quatre fichiers, quatre requetes, environ quatorze gigaoctets, donc quatre fois l'adresse IP chez le CDN.",
+        "26 libelles traduits par langue (en, es, ja) pour que le menu et l'accroche restent coherents hors francais."
+      ]
+    },
     "0.1.45": {
       "title": "Un style importe n'est plus une impasse : il dit avec quoi il marche, et il se retire",
       "highlights": [

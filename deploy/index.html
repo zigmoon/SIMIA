@@ -54,7 +54,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Assistant IA local-first",
       "operatingSystem": ["Windows 10", "Windows 11", "macOS 13.3+", "Linux x86_64", "Web"],
-      "softwareVersion": "0.1.45",
+      "softwareVersion": "0.1.46",
       "description": "Assistant IA local-first : les modèles de langage, l'analyse de documents et la génération d'images s'exécutent sur la machine de l'utilisateur, sans compte, sans serveur et sans télémétrie. Aucune requête ne traverse le réseau : l'inférence réutilise le matériel déjà présent, au lieu d'un centre de données.",
       "inLanguage": ["fr", "en", "es", "ja"],
       "isAccessibleForFree": true,
@@ -73,7 +73,7 @@
         { "@type": "Organization", "name": "Zigmoon", "url": "https://zigmoon.com" }
       ],
       "creator": { "@type": "Person", "name": "Simon Dupont-Gellert" },
-      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.45",
+      "downloadUrl": "https://github.com/zigmoon/SIMIA/releases/tag/v0.1.46",
       "sameAs": ["https://github.com/zigmoon/SIMIA"]
     },
     {
@@ -991,18 +991,33 @@
               <p class="mega-title">Conversation</p>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">Qwen 3.5 2B</span>
-                <span class="mega-desc">Généraliste · ~1,2 Go</span>
+                <span class="mega-desc">Généraliste · 1,2–1,4 Go</span>
                 <span class="mega-tag both">Web + bureau</span>
               </a>
               <a class="mega-item" href="#modeles">
+                <span class="mega-name">Qwen 3.5 4B</span>
+                <span class="mega-desc">Documents · ~2,6 Go</span>
+                <span class="mega-tag desk">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
                 <span class="mega-name">Gemma 2 2B</span>
-                <span class="mega-desc">Documents · ~1,2 Go</span>
+                <span class="mega-desc">Documents · 1,2–1,6 Go</span>
                 <span class="mega-tag both">Web + bureau</span>
               </a>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">Qwen 2.5 Coder 3B</span>
-                <span class="mega-desc">Code · ~1,7 Go</span>
+                <span class="mega-desc">Code · 1,7–2,0 Go</span>
                 <span class="mega-tag both">Web + bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Ministral 3 3B</span>
+                <span class="mega-desc">Généraliste européen · ~2,0 Go</span>
+                <span class="mega-tag desk">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Mistral 7B Instruct</span>
+                <span class="mega-desc">Généraliste européen · ~4,1 Go</span>
+                <span class="mega-tag desk">Bureau</span>
               </a>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">SmolVLM2 500M</span>
@@ -1012,42 +1027,58 @@
             </div>
 
             <div class="mega-col">
-              <p class="mega-title">Génération d'images</p>
+              <p class="mega-title">Images et vidéo</p>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">Gravure SIMIA</span>
                 <span class="mega-desc">Style maison · LoRA 6 Mo</span>
-                <span class="mega-tag soon">Bureau</span>
-              </a>
-              <a class="mega-item" href="#modeles">
-                <span class="mega-name">SDXL Turbo</span>
-                <span class="mega-desc">1024 px en 6 s · ~3,7 Go</span>
-                <span class="mega-tag soon">Bureau</span>
+                <span class="mega-tag desk">Bureau</span>
               </a>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">SD-Turbo</span>
                 <span class="mega-desc">512 px en 1,2 s · ~1,7 Go</span>
-                <span class="mega-tag soon">Bureau</span>
+                <span class="mega-tag desk">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">SDXL Turbo</span>
+                <span class="mega-desc">1024 px en 6 s · ~3,7 Go</span>
+                <span class="mega-tag desk">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Pony Diffusion V6 XL</span>
+                <span class="mega-desc">1024 px, style anime · ~2,6 Go</span>
+                <span class="mega-tag desk">Bureau</span>
               </a>
               <a class="mega-item" href="#modeles">
                 <span class="mega-name">Z-Image Turbo</span>
-                <span class="mega-desc">1024 px · ~5,6 Go</span>
-                <span class="mega-tag soon">Bureau</span>
+                <span class="mega-desc">1024 px en 8 pas · ~5,6 Go</span>
+                <span class="mega-tag desk">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">MiniMax-H3</span>
+                <span class="mega-desc">Vidéo avec son · ~14 Go</span>
+                <span class="mega-tag desk">Bureau</span>
+              </a>
+              <a class="mega-item" href="#modeles">
+                <span class="mega-name">Vos propres styles</span>
+                <span class="mega-desc">Un LoRA importé du disque</span>
+                <span class="mega-tag desk">Bureau</span>
               </a>
             </div>
 
             <div class="mega-col">
-              <p class="mega-title">Options</p>
+              <p class="mega-title">Fonctions</p>
               <a class="mega-item compact" href="#atelier"><span class="mega-name">Atelier de code</span><span class="mega-desc">Éditeur + exécution JS et Python</span></a>
               <a class="mega-item compact" href="#modeles"><span class="mega-name">Agent web</span><span class="mega-desc">Recherche assistée, version web</span></a>
               <a class="mega-item compact" href="#modeles"><span class="mega-name">Documents</span><span class="mega-desc">PDF, Word, OpenDocument, CSV</span></a>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">Images et vidéos</span><span class="mega-desc">SD 1.5, SDXL, MiniMax-H3</span></a>
+              <a class="mega-item compact" href="#modeles"><span class="mega-name">Vos propres modèles</span><span class="mega-desc">GGUF, safetensors, ckpt</span></a>
               <a class="mega-item compact" href="#modeles"><span class="mega-name">Dictée vocale</span><span class="mega-desc">Saisie au micro, dans le navigateur</span></a>
               <a class="mega-item compact" href="#modeles"><span class="mega-name">4 langues</span><span class="mega-desc">Français, anglais, espagnol, japonais</span></a>
-              <a class="mega-item compact" href="#modeles"><span class="mega-name">Export JSON</span><span class="mega-desc">Sauvegarde et reprise des conversations</span></a>
             </div>
           </div>
 
           <div class="mega-foot">
-            <span><b>40</b> modèles de texte, dont <b>4</b> européens · <b>14</b> modèles d'image · filtres par usage</span>
+            <span>40 modèles de texte · 14 d'image · 1 de vidéo · import de vos fichiers</span>
             <a href="#modeles">Voir le catalogue complet →</a>
           </div>
         </div>
@@ -1084,11 +1115,9 @@
         <p class="eyebrow"><span></span> Local-first · sans compte</p>
         <h1>Votre IA,<br><em>chez vous</em>.</h1>
         <p class="lede">
-          SIMIA fait tourner de vrais modèles de langage sur votre machine. Aucune conversation
-          ne part sur un serveur, sauf quand vous activez vous-même l'agent web ; aucun compte à
-          créer : conversation, documents, images et atelier de code se calculent sur l'appareil.
-          Une version web pour essayer tout de suite, une application de bureau pour aller
-          beaucoup plus loin.
+          Conversations, documents, images, vidéos et code : tout se calcule sur votre appareil.
+          Une fois le modèle téléchargé, coupez le Wi-Fi — SIMIA répond encore. Aucun compte,
+          aucun serveur ; seul l'agent web, que vous activez vous-même, sort du réseau local.
         </p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#telecharger">
@@ -1254,7 +1283,7 @@
   <div class="stats">
     <div class="wrap stats-grid">
       <div class="stat"><b>40</b><span>modèles de texte</span></div>
-      <div class="stat"><b>14</b><span>modèles d'image</span></div>
+      <div class="stat"><b>14</b><span>modèles d'image, 1 de vidéo</span></div>
       <div class="stat"><b>0</b><span>donnée envoyée</span></div>
       <div class="stat"><b>3</b><span>systèmes supportés</span></div>
     </div>
@@ -1400,8 +1429,8 @@
           </div>
           <p class="req">Windows 10 ou 11, 64 bits. Vulkan, repli sur le processeur. Image fournie avec SIMIA.</p>
           <div class="files">
-            <a class="file-primary" data-release="windows-x64-setup.exe" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-windows-x64-setup.exe" download><span>Installer SIMIA</span><small>exe · recommandé</small></a>
-            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-windows-x64.zip" download><span>Archive portable</span><small>zip</small></a>
+            <a class="file-primary" data-release="windows-x64-setup.exe" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.46/simia-windows-x64-setup.exe" download><span>Installer SIMIA</span><small>exe · recommandé</small></a>
+            <a data-release="windows-x64.zip" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.46/simia-windows-x64.zip" download><span>Archive portable</span><small>zip</small></a>
           </div>
           <p class="dl-note">L'installeur place SIMIA dans votre profil, crée le raccourci et le désinstalleur, sans droit administrateur : double-clic, c'est tout. L'archive, elle, se décompresse où vous voulez — sur une clé USB par exemple — mais il faut d'abord la débloquer : clic droit sur le .zip → Propriétés → Débloquer, avant extraction.</p>
         </article>
@@ -1416,8 +1445,8 @@
           </div>
           <p class="req">macOS 13.3 ou plus. Metal, repli sur le processeur. Images dès macOS 26, Apple Silicon.</p>
           <div class="files">
-            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
-            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
+            <a data-release="macos-arm64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.46/simia-macos-arm64.tar.gz" download><span>Apple Silicon</span><small>M1 et plus</small></a>
+            <a data-release="macos-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.46/simia-macos-x64.tar.gz" download><span>Intel</span><small>x86_64</small></a>
           </div>
           <p class="dl-note">L'archive <b>Intel</b> pèse une vingtaine de mégaoctets et non 1,4 Go : elle contient le lanceur, le moteur de conversation et l'interface, mais aucun modèle d'image, puisque le moteur d'images n'existe pas sur Intel. La conversation et l'atelier de code y sont complets. Sur Mac Intel, le bouton Image est masqué.</p>
         </article>
@@ -1432,7 +1461,7 @@
           </div>
           <p class="req">Ubuntu 22.04 ou plus, 64 bits. Vulkan, repli sur le processeur. Images dès Ubuntu 26.04.</p>
           <div class="files">
-            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.45/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
+            <a data-release="linux-x64.tar.gz" href="https://github.com/zigmoon/SIMIA/releases/download/v0.1.46/simia-linux-x64.tar.gz" download><span>Archive 64 bits</span><small>tar.gz</small></a>
           </div>
         </article>
       </div>
@@ -1548,6 +1577,11 @@
           <li class="model"><p class="cat">Image · 1024 px</p><b>SDXL base 1.0</b><span>3,67 Go</span></li>
           <li class="model"><p class="cat">Image · 1024 px</p><b>Pony Diffusion V6 XL · Q8</b><span>3,89 Go</span></li>
           <li class="model"><p class="cat">Z-Image · 1024 px</p><b>Z-Image Turbo</b><span>5,57 Go</span></li>
+        </ul>
+
+        <div class="grid-head reveal"><b>Vidéo · 1</b><span>640×360 avec piste son · quatre fichiers à récupérer</span></div>
+        <ul class="models dense reveal" id="desktop-video">
+          <li class="model"><p class="cat">Vidéo · 640×360</p><b>MiniMax-H3</b><span>14,2 Go</span></li>
         </ul>
 
         <p class="lora-note reveal"><i class="model-tag ship">Fourni</i><b>Gravure SIMIA</b>, le LoRA maison de 6 Mo entraîné sur 212 planches anciennes, accompagne Stable Diffusion 1.5.</p>
@@ -1733,11 +1767,11 @@
         </div>
         <div class="legal-block reveal">
         <h3>Ce qui reste sur votre appareil</h3>
-        <p>Les conversations, les documents joints, les images et vidéos générées, les fichiers de l'atelier de code, les réglages et le profil « Mon assistant » restent sur votre appareil : stockage local du navigateur pour la version web, dossier de l'application pour la version de bureau. Aucun accès à distance n'existe, et vous les effacez par « Purger » ou depuis les réglages du navigateur.</p>
+        <p>Les conversations, les documents joints, les images et vidéos générées, les fichiers de l'atelier de code, les réglages et le profil « Mon assistant » restent sur votre appareil : stockage local du navigateur pour la version web, dossier de l'application pour la version de bureau. Les modèles et les styles que vous importez depuis votre disque y restent aussi : le fichier est copié dans le dossier de l'application, jamais envoyé ailleurs, et le bouton « Retirer » le supprime. Aucun accès à distance n'existe, et vous effacez le reste par « Purger » ou depuis les réglages du navigateur.</p>
         </div>
         <div class="legal-block reveal">
         <h3>Ce qui sort de l'appareil, et quand</h3>
-        <ul><li>L'agent web, disponible dans la seule version web, envoie votre question au relais du site, qui interroge ensuite des moteurs de recherche tiers : DuckDuckGo, Bing, Google Actualités. Le relais ne conserve ni la question ni les résultats et n'écrit aucun fichier.</li><li>La lecture d'une page web fait récupérer l'adresse par le serveur, pas par votre navigateur : le site visité voit le serveur de SIMIA, jamais votre adresse IP.</li><li>Le téléchargement d'un modèle transmet votre adresse IP et le nom du fichier au CDN qui le sert, Hugging Face ou ce serveur.</li><li>Les polices d'affichage, la visionneuse 3D, Pyodide, PDF.js, Transformers.js et la vérification des versions passent par un CDN tiers, et ne sont chargés qu'avec votre accord donné dans la fenêtre « Cookies ».</li><li>La page d'accueil interroge l'API de GitHub pour afficher les versions publiées, uniquement avec votre accord.</li></ul>
+        <ul><li>L'agent web, disponible dans la seule version web, envoie votre question au relais du site, qui interroge ensuite des moteurs de recherche tiers : DuckDuckGo, Bing, Google Actualités. Le relais ne conserve ni la question ni les résultats et n'écrit aucun fichier.</li><li>La lecture d'une page web fait récupérer l'adresse par le serveur, pas par votre navigateur : le site visité voit le serveur de SIMIA, jamais votre adresse IP.</li><li>Le téléchargement d'un modèle transmet votre adresse IP et le nom du fichier au CDN qui le sert, Hugging Face ou ce serveur. Un modèle vidéo demande quatre fichiers, donc quatre requêtes, pour environ quatorze gigaoctets.</li><li>Les polices d'affichage, la visionneuse 3D, Pyodide, PDF.js, Transformers.js et la vérification des versions passent par un CDN tiers, et ne sont chargés qu'avec votre accord donné dans la fenêtre « Cookies ».</li><li>La page d'accueil interroge l'API de GitHub pour afficher les versions publiées, uniquement avec votre accord.</li></ul>
         </div>
         <div class="legal-block reveal">
         <h3>Bases légales, durées et transferts</h3>
@@ -1759,7 +1793,7 @@
         <h3>Propriété intellectuelle et modifications</h3>
         <p>La marque SIMIA, ses éléments graphiques, ses textes et son code sont protégés. Le code source est publié sous la licence indiquée dans le dépôt ; les modèles tiers restent soumis à leurs propres licences. Cette notice change avec les versions de SIMIA : les changements substantiels sont signalés dans les notes de version.</p>
         <p class="legal-links"><a href="https://github.com/zigmoon/SIMIA">Code source sur GitHub</a></p>
-        <p class="legal-updated">Dernière mise à jour : 22 novembre 2026.</p>
+        <p class="legal-updated">Dernière mise à jour : 23 novembre 2026.</p>
         </div>
         </div>
       </div>
@@ -1789,7 +1823,7 @@
      fichiers dans la release publiée ; tools/prepare-ftp.ps1 refuse de
      préparer le site si l'une de ces copies prend du retard.
      ------------------------------------------------------------------ */
-  const RELEASE_TAG = "v0.1.45";
+  const RELEASE_TAG = "v0.1.46";
   const RELEASE_PREFIX = "simia-";
   const REPO_URL = "https://github.com/zigmoon/SIMIA";
   /* La page annonce une version, mais GitHub peut en avoir publie une plus
