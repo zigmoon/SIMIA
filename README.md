@@ -479,7 +479,7 @@ Tant qu'il manque un fichier, la carte reste visible et **ecrit ce qui
 manque** : « Manque : VAE audio ». C'est en voyant la carte incomplete qu'on
 sait quoi telecharger ; un bouton grise sans phrase se lisait comme une panne.
 
-Les reglages suivent la famille : 640x360, 22 images a 24 i/s et 8 pas pour
+Les reglages suivent la famille : 640x384, 22 images a 24 i/s et 8 pas pour
 MiniMax-H3, 768x512 et 25 images pour LTX. Les valeurs par defaut du moteur
 donneraient un carre de 512 px qu'aucun modele video ne sait produire.
 

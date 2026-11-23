@@ -9,6 +9,10 @@ models/image/**/*.gguf
 models/image/**/*.part
 # VAE externe de Z-Image (310 Mo), place a la main.
 models/image/*.safetensors
+# Un modele video range ses quatre composants dans un sous-dossier
+# (minimax-h3/...) : les .safetensors y pesent plusieurs gigaoctets. Le motif
+# d'un seul niveau les laissait passer, et `git add` partait hasher 8 Go.
+models/image/**/*.safetensors
 # Un style importe par l'utilisateur vit sur son disque, pas dans le depot :
 # plusieurs centaines de Mo, et GitHub refuse au-dela de 100 Mo. Le style de
 # SIMIA, lui, reste versionne (il est deja suivi).

@@ -425,7 +425,7 @@ fn video_slot(stem: &str, family: ImageFamily) -> Option<VideoSlot> {
 }
 
 /// Reglages d'une video deposee a la main : largeur, hauteur, images, vitesse.
-/// MiniMax-H3 travaille en 640x360 et compte par 17 images plus 5 ; LTX en
+/// MiniMax-H3 travaille en 640x384 et compte par 17 images plus 5 ; LTX en
 /// 768x512. Les valeurs par defaut du moteur donneraient un carre de 512 px,
 /// qu'aucun de ces modeles ne sait produire.
 fn video_frame_defaults(family: ImageFamily) -> (u32, u32, u32, u32) {
@@ -2622,7 +2622,13 @@ fn sd_server_args(
         /* MiniMax-H3 : transformer, encodeur de texte et deux VAE. Les poids
            pesent plus lourd que la memoire graphique d'une carte courante :
            `--offload-to-cpu` garde le modele en RAM et fait circuler les blocs,
-           et `--rng cpu` evite de tenir le generateur aleatoire sur le GPU. */
+           et `--rng cpu` evite de tenir le generateur aleatoire sur le GPU.
+           Mesure sur une RTX 2060 de 6 Go : sans `--temporal-tiling`, le decodage
+           du VAE video demande 709 Mo de plus que ce qui reste libre et echoue
+           apres trois tentatives de tuilage (256, puis 128, puis 64), le clip
+           n'est jamais rendu. Le decodage temporel traite quatre images a la
+           fois au lieu de vingt-deux, et un tuilage spatial plus petit laisse la
+           place au tampon de travail. */
         args.push("--diffusion-model".to_string());
         args.push(path(&pack.diffusion));
         args.push("--vae".to_string());
@@ -2631,6 +2637,16 @@ fn sd_server_args(
         args.push(path(&pack.llm));
         args.push("--offload-to-cpu".to_string());
         args.push("--vae-tiling".to_string());
+        args.push("--temporal-tiling".to_string());
+        args.push("--vae-tile-size".to_string());
+        args.push("128".to_string());
+        /* Mesure : avec les 4,88 Go d'encodeur de texte sur la carte, il ne
+           reste plus assez de memoire pour le tampon de travail de l'encodage et
+           la generation echoue des le prompt (« LLM prompt encoding failed »).
+           L'encodeur passe donc sur le processeur : il ne sert qu'une fois par
+           clip, alors que le transformateur et le VAE travaillent a chaque pas. */
+        args.push("--backend".to_string());
+        args.push("te=cpu".to_string());
         args.push("--rng".to_string());
         args.push("cpu".to_string());
         if !pack.audio_vae.is_empty() {
@@ -3042,6 +3058,100 @@ fn import_image_request(state: &Shared, request: &mut tiny_http::Request) -> (u1
         Err(_) => format!("{{\"ok\":true,\"name\":{}}}", js_escape(&name)),
     };
     (200, body)
+}
+
+/// Ecrit le media recu dans un fichier temporaire et le confie au lecteur du
+/// systeme. Le nom vient de l'en-tete `x-simia-filename`, nettoye comme un
+/// import : aucune remontee de dossier, aucune extension exotique.
+fn open_media_request(request: &mut tiny_http::Request) -> (u16, String) {
+    let raw_name = request
+        .headers()
+        .iter()
+        .find(|header| header.field.equiv("x-simia-filename"))
+        .map(|header| header.value.as_str().to_string())
+        .unwrap_or_else(|| "simia-clip.mkv".to_string());
+    let name = percent_decode(&raw_name)
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let safe: String = name
+        .chars()
+        .map(|character| {
+            if character.is_control() || matches!(character, '<' | '>' | ':' | '"' | '|' | '?' | '*') {
+                '_'
+            } else {
+                character
+            }
+        })
+        .collect();
+    let extension = Path::new(&safe)
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase())
+        .unwrap_or_default();
+    if !matches!(extension.as_str(), "mkv" | "webm" | "mp4" | "mov" | "avi") {
+        return (400, "{\"error\":\"extension non reconnue\"}".to_string());
+    }
+    let stem = Path::new(&safe)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("simia-clip")
+        .to_string();
+    let dir = std::env::temp_dir().join("simia-medias");
+    if let Err(error) = fs::create_dir_all(&dir) {
+        return (500, format!("{{\"error\":{}}}", js_escape(&format!("dossier temporaire : {error}"))));
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|value| value.as_secs())
+        .unwrap_or(0);
+    let target = dir.join(format!("{stem}-{stamp}.{extension}"));
+    let mut body = Vec::new();
+    if let Err(error) = request.as_reader().read_to_end(&mut body) {
+        return (500, format!("{{\"error\":{}}}", js_escape(&format!("lecture : {error}"))));
+    }
+    if body.is_empty() {
+        return (400, "{\"error\":\"fichier vide\"}".to_string());
+    }
+    if let Err(error) = fs::write(&target, &body) {
+        return (500, format!("{{\"error\":{}}}", js_escape(&format!("ecriture : {error}"))));
+    }
+    match open_with_system_player(&target) {
+        Ok(_) => (
+            200,
+            format!(
+                "{{\"path\":{},\"bytes\":{}}}",
+                js_escape(&target.display().to_string()),
+                body.len()
+            ),
+        ),
+        Err(error) => (
+            500,
+            format!(
+                "{{\"error\":{},\"path\":{}}}",
+                js_escape(&format!("lecteur du systeme : {error}")),
+                js_escape(&target.display().to_string())
+            ),
+        ),
+    }
+}
+
+/// Confie un fichier au lecteur par defaut du systeme.
+fn open_with_system_player(path: &Path) -> std::io::Result<Child> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd").args(["/C", "start", ""]).arg(path).spawn()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").arg(path).spawn()
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        Command::new("xdg-open").arg(path).spawn()
+    }
 }
 
 fn image_status_json(state: &Shared) -> String {
@@ -4152,6 +4262,17 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
         return;
     }
 
+    /* Ouvrir un media genere dans le lecteur du systeme. Le moteur ecrit du
+       Matroska avec une piste PCM : aucun navigateur ne sait le lire, alors que
+       VLC, mpv ou le lecteur de Windows le lisent sans probleme. Le corps est le
+       fichier lui-meme ; il est ecrit dans un dossier temporaire, puis confie au
+       lecteur par defaut. */
+    if path == "/_simia/media/open" {
+        let (code, body) = open_media_request(&mut request);
+        respond_json(request, code, body);
+        return;
+    }
+
     /* Importer un fichier depuis l'interface, sans passer par le gestionnaire
        de fichiers. Le corps de la requete EST le fichier : il est ecrit au fil
        de l'eau, jamais garde en memoire, parce qu'un safetensors peut peser
@@ -4846,6 +4967,13 @@ mod image_pack_tests {
         assert!(line.contains("--audio-vae"), "{line}");
         assert!(line.contains("--rng cpu"));
         assert!(line.contains("--offload-to-cpu"));
+        // Decodage video : sans tuilage temporel, une carte de 6 Go manque de
+        // memoire au decodage du VAE et le clip n'est jamais rendu.
+        assert!(line.contains("--temporal-tiling"), "{line}");
+        assert!(line.contains("--vae-tile-size 128"), "{line}");
+        // L'encodeur de texte d'un modele video ne tient pas dans 6 Go avec le
+        // transformateur : il travaille sur le processeur.
+        assert!(line.contains("--backend te=cpu"), "{line}");
         // Les dimensions arrivent en clair : une video n'est pas carree.
         assert!(line.contains("-W 640"));
         assert!(line.contains("-H 360"));
@@ -4902,7 +5030,9 @@ mod image_pack_tests {
         assert!(pack.height > 0 && pack.px > pack.height);
         assert!(pack.frames > 0 && pack.fps > 0);
         let (width, height) = pack.size_or(512);
-        assert_eq!((width, height), (640, 360));
+        // 384 et non 360 : le moteur arrondit la hauteur au multiple de 32, et la
+        // fiche annoncait 360 alors que le fichier en faisait 384.
+        assert_eq!((width, height), (640, 384));
     }
 
     #[test]

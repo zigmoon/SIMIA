@@ -247,11 +247,11 @@
       "mode": "h3",
       "size": "~14,2 GB",
       "license": "MiniMax H3 Community",
-      "note": "Vidéo avec piste son, générée ensemble. 22 images à 24 images par seconde, soit un peu moins d'une seconde, en 640x360. Quatre fichiers, téléchargés un par un. C'est un modèle de 22 milliards de paramètres : même quantifié en Q2 et aidé par le disque, il lui faut plusieurs minutes par clip sur une carte de 6 Go, et il occupe environ 14 Go de disque. À réserver aux machines avec beaucoup de mémoire.",
+      "note": "Vidéo avec piste son, générée ensemble. 22 images à 24 images par seconde, soit un peu moins d'une seconde, en 640x384. Quatre fichiers, téléchargés un par un. C'est un modèle de 22 milliards de paramètres : même quantifié en Q2 et aidé par le disque, il lui faut une à trois minutes par clip sur une carte de 6 Go, et il occupe environ 14 Go de disque. Le clip est écrit en Matroska avec une piste son PCM : aucun navigateur ne sait ouvrir ce conteneur, le lecteur du système si. À réserver aux machines avec beaucoup de mémoire.",
       "steps": 8,
       "cfg": 1.0,
       "px": 640,
-      "height": 360,
+      "height": 384,
       "frames": 22,
       "fps": 24,
       "diffusion": "minimax-h3/minimax_h3_ref2va_pruned-Q2_K_M.gguf",
@@ -266,9 +266,9 @@
       "llmBytes": 5120870504,
       "vaeBytes": 2811065184,
       "audioVaeBytes": 605254808,
-      "noteEn": "Video with a sound track, generated together: 22 frames at 24 frames per second, just under a second, at 640x360. Four files, downloaded one by one. This is a 22-billion-parameter model: even quantised to Q2 and helped by the disk, it needs several minutes per clip on a 6 GB card, and takes about 14 GB of disk. Best kept for machines with plenty of memory.",
-      "noteEs": "Vídeo con pista de audio, generados juntos: 22 imágenes a 24 por segundo, algo menos de un segundo, en 640x360. Cuatro archivos, descargados uno a uno. Es un modelo de 22 mil millones de parámetros: incluso cuantizado en Q2 y ayudado por el disco, necesita varios minutos por clip en una tarjeta de 6 GB y ocupa unos 14 GB de disco. Reservado para máquinas con mucha memoria.",
-      "noteJa": "映像と音声をまとめて生成：24 fps で 22 フレーム（1 秒弱）、640x360。4 つのファイルを 1 つずつダウンロードします。220 億パラメータのモデルで、Q2 に量子化してディスクに助けさせても、6 GB のカードでは 1 クリップに数分かかり、ディスクを約 14 GB 使います。メモリに余裕のあるマシン向けです。"
+      "noteEn": "Video with a sound track, generated together: 22 frames at 24 frames per second, just under a second, at 640x384. Four files, downloaded one by one. This is a 22-billion-parameter model: even quantised to Q2 and helped by the disk, it needs one to three minutes per clip on a 6 GB card, and takes about 14 GB of disk. The clip is written as Matroska with a PCM sound track: no browser opens that container, the system player does. Best kept for machines with plenty of memory.",
+      "noteEs": "Vídeo con pista de audio, generados juntos: 22 imágenes a 24 por segundo, algo menos de un segundo, en 640x384. Cuatro archivos, descargados uno a uno. Es un modelo de 22 mil millones de parámetros: incluso cuantizado en Q2 y ayudado por el disco, necesita de uno a tres minutos por clip en una tarjeta de 6 GB y ocupa unos 14 GB de disco. El clip se escribe en Matroska con pista de sonido PCM: ningún navegador abre ese contenedor, el reproductor del sistema sí. Reservado para máquinas con mucha memoria.",
+      "noteJa": "映像と音声をまとめて生成：24 fps で 22 フレーム（1 秒弱）、640x384。4 つのファイルを 1 つずつダウンロードします。220 億パラメータのモデルで、Q2 に量子化してディスクに助けさせても、6 GB のカードでは 1 クリップに 1〜3 分かかり、ディスクを約 14 GB 使います。クリップは PCM 音声付きの Matroska で書き出されるため、ブラウザでは開けません（システムのプレーヤーでは再生できます）。メモリに余裕のあるマシン向けです。"
     }
   ]
 }

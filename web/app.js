@@ -4379,11 +4379,61 @@ async function hydrateImages(root) {
     const media = frame.querySelector("img, video");
     if (!media || media.dataset.hydrated === id) continue;
     const url = await imageObjectUrl(id);
-    if (!url) { frame.dataset.missing = "true"; continue; }
+    if (!url) {
+      /* Le texte « image introuvable » vivait dans la feuille de style : en
+         anglais, en espagnol et en japonais, il restait francais, et il parlait
+         d'image devant un lecteur video. Il est ecrit ici, dans la langue de
+         l'interface et avec le bon mot. */
+      const missing = document.createElement("span");
+      missing.className = "image-frame-missing";
+      missing.textContent = media.tagName === "VIDEO"
+        ? localizedText("vidéo introuvable", "video unavailable", "vídeo no disponible", "動画が見つかりません")
+        : localizedText("image introuvable", "image unavailable", "imagen no disponible", "画像が見つかりません");
+      frame.querySelector(".image-frame")?.append(missing);
+      frame.dataset.missing = "true";
+      continue;
+    }
+    if (media.tagName === "VIDEO" && !media.dataset.wired) {
+      /* Le moteur ecrit du Matroska avec une piste PCM : aucun navigateur ne
+         sait ouvrir ce conteneur, et le lecteur restait un rectangle noir sans
+         un mot. On ecoute l'echec pour le dire et proposer le lecteur du
+         systeme, qui lit ce fichier sans broncher. */
+      media.dataset.wired = id;
+      media.addEventListener("error", () => markVideoUnplayable(frame, media), { once: true });
+    }
     media.src = url;
     media.dataset.hydrated = id;
     frame.removeAttribute("data-loading");
   }
+}
+
+/* Un clip que le navigateur ne peut pas decoder : on nomme la cause et on donne
+   l'issue utile. Sans cela, la conversation montrait un lecteur casse et l'on
+   croyait la generation ratee, alors que le fichier etait bon. */
+function markVideoUnplayable(frame, media) {
+  if (frame.dataset.unplayable === "true") return;
+  frame.dataset.unplayable = "true";
+  media.remove();
+  const box = frame.querySelector(".image-frame");
+  if (!box) return;
+  const note = document.createElement("div");
+  note.className = "video-unplayable";
+  const text = document.createElement("p");
+  text.textContent = localizedText(
+    "Le moteur a écrit ce clip en Matroska avec une piste son PCM : aucun navigateur ne sait ouvrir ce conteneur. Le fichier est bon, il se lit dans le lecteur du système.",
+    "The engine wrote this clip as Matroska with a PCM sound track: no browser can open that container. The file is fine; the system player reads it.",
+    "El motor ha escrito este clip en Matroska con pista de sonido PCM: ningún navegador puede abrir ese contenedor. El archivo está bien; el reproductor del sistema lo lee.",
+    "エンジンはこのクリップを PCM 音声付きの Matroska で書き出しました。ブラウザでは開けませんが、ファイル自体は正常で、システムのプレーヤーで再生できます。"
+  );
+  note.append(text);
+  if (NATIVE) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.imageAction = "open-external";
+    button.textContent = localizedText("Lire dans le lecteur du système", "Play in the system player", "Reproducir en el reproductor del sistema", "システムのプレーヤーで再生");
+    note.append(button);
+  }
+  box.append(note);
 }
 
 function imageMetaLine(image) {
@@ -5093,10 +5143,19 @@ async function downloadImagePack(id, anchor) {
 }
 
 function imageStageLabel(status) {
+  const video = Boolean(activeImagePack()?.video);
   if (status.state === "loading") {
-    return localizedText("Préparation du modèle d'image…", "Preparing the image model…", "Preparando el modelo de imagen…", "画像モデルを準備中…");
+    return video
+      ? localizedText("Préparation du modèle vidéo…", "Preparing the video model…", "Preparando el modelo de vídeo…", "動画モデルを準備中…")
+      : localizedText("Préparation du modèle d'image…", "Preparing the image model…", "Preparando el modelo de imagen…", "画像モデルを準備中…");
   }
   const stage = status.stage || "";
+  /* Le moteur charge les quatorze gigaoctets du pack video avant de rendre la
+     main : « préparation » sans rien d'autre laisse croire a une panne. Le
+     temps ecoule est ajoute par l'appelant, ici on nomme seulement l'etape. */
+  if (video && (stage === "loading" || stage === "preparing")) {
+    return localizedText("Chargement du modèle vidéo…", "Loading the video model…", "Cargando el modelo de vídeo…", "動画モデルを読み込み中…");
+  }
   const labels = {
     conditioning: localizedText("Lecture du prompt…", "Reading the prompt…", "Leyendo el prompt…", "プロンプトを解析中…"),
     sampling: localizedText("Dessin en cours…", "Drawing…", "Dibujando…", "描画中…"),
@@ -5110,13 +5169,18 @@ async function imageEngineReady(onStage) {
   const prepared = await fetch(IMAGE.prepareUrl, { method: "POST" }).then(response => response.json()).catch(() => null);
   if (prepared?.state === "ready") return true;
   if (prepared && prepared.available === false) throw new Error(prepared.reason || "indisponible");
-  const deadline = Date.now() + 10 * 60 * 1000;
+  /* Un pack video pese quatorze gigaoctets et se charge par blocs depuis la
+     RAM : dix minutes suffisent a une image, pas a un transformer de 22
+     milliards de parametres. */
+  const budget = activeImagePack()?.video ? 25 : 10;
+  const deadline = Date.now() + budget * 60 * 1000;
+  const startedAt = Date.now();
   while (Date.now() < deadline) {
     await new Promise(resolve => setTimeout(resolve, 1200));
     const status = await imageStatus();
     if (status.state === "ready") return true;
     if (status.state === "error") throw new Error(status.message || "error");
-    onStage?.(imageStageLabel(status));
+    onStage?.(`${imageStageLabel(status)} · ${shortElapsed(Date.now() - startedAt)}`);
   }
   throw new Error("timeout");
 }
@@ -5138,6 +5202,17 @@ const VIDEO_STAGE_LABELS = {
   encoding: ["Encodage vidéo…", "Encoding the video…", "Codificando el vídeo…", "動画を書き出し中…"]
 };
 
+/* Duree ecoulee, courte : « 12 s », « 3 min 05 s ». Un clip de 22 images peut
+   demander vingt minutes sur une carte de 6 Go ; sans ce compteur, l'interface
+   affiche le meme mot pendant tout ce temps et l'on croit le moteur fige. */
+function shortElapsed(ms) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  if (total < 60) return `${total} s`;
+  const minutes = Math.floor(total / 60);
+  const seconds = String(total % 60).padStart(2, "0");
+  return `${minutes} min ${seconds} s`;
+}
+
 function videoStageText(progress) {
   const stage = String(progress?.stage || "");
   const entry = VIDEO_STAGE_LABELS[stage];
@@ -5148,6 +5223,20 @@ function videoStageText(progress) {
     return `${label.replace(/…$/, "")} ${done}/${total}`;
   }
   return label;
+}
+
+/* Le conteneur reel d'un clip. Le moteur annonce « video/webm » et ecrit du
+   Matroska avec une piste PCM : l'etiquette ment, les premiers octets non. On
+   lit l'en-tete EBML (0x1A45DFA3) et le DocType qu'il contient. */
+async function mediaContainer(blob) {
+  try {
+    const view = new Uint8Array(await blob.slice(0, 64).arrayBuffer());
+    const text = String.fromCharCode(...view);
+    if (text.includes("matroska")) return "mkv";
+    if (text.includes("webm")) return "webm";
+    if (text.slice(4, 8) === "ftyp") return "mp4";
+  } catch { /* illisible : l'appelant retombe sur son estimation */ }
+  return "";
 }
 
 async function imageGenerateVideo({ apiBase, prompt, pack, width, height, steps, cfg, chosenLora, setStage, controller }) {
@@ -5184,6 +5273,7 @@ async function imageGenerateVideo({ apiBase, prompt, pack, width, height, steps,
   const id = job?.id;
   if (!id) throw new Error("tache sans identifiant");
   imageJobId = id;
+  const startedAt = Date.now();
   const pollUrl = job.poll_url || `${apiBase}/sdcpp/v1/jobs/${id}`;
   const deadline = Date.now() + 60 * 60 * 1000;
   while (Date.now() < deadline) {
@@ -5194,7 +5284,7 @@ async function imageGenerateVideo({ apiBase, prompt, pack, width, height, steps,
       const encoded = state.result?.b64_json;
       if (!encoded) throw new Error("vidéo vide");
       const blob = base64ToBlob(encoded, state.result?.mime_type || "video/webm");
-      return { blob, seconds: Number(state.result?.frame_count || frames) / fps };
+      return { blob, container: await mediaContainer(blob), seconds: Number(state.result?.frame_count || frames) / fps };
     }
     if (state.status === "failed" || state.status === "cancelled") {
       const failure = new Error(state.status === "cancelled" ? "cancel" : "echec");
@@ -5203,7 +5293,10 @@ async function imageGenerateVideo({ apiBase, prompt, pack, width, height, steps,
     }
     const done = Number(state.progress?.completed);
     const total = Number(state.progress?.total);
-    setStage(videoStageText(state.progress), Number.isFinite(done) && Number.isFinite(total) && total > 0 ? Math.max(0.05, done / total) : 0.08);
+    const ratio = Number.isFinite(done) && Number.isFinite(total) && total > 0 ? Math.max(0.05, done / total) : 0.08;
+    /* Le temps ecoule est la seule preuve de vie quand le moteur n'annonce pas
+       de pourcentage : un clip de 22 images peut durer vingt minutes. */
+    setStage(`${videoStageText(state.progress)} · ${shortElapsed(Date.now() - startedAt)}`, ratio);
   }
   throw new Error("timeout");
 }
@@ -5285,6 +5378,7 @@ async function imageGenerate(prompt, bubble) {
       steps,
       cfg,
       seconds: result.seconds,
+      container: result.container || "",
       pack: pack?.id || null,
       packName: pack?.name || "",
       style: loraEntry?.name || "",
@@ -5406,7 +5500,11 @@ async function requestImage(prompt) {
   const bubble = renderMessage("assistant", "", false, [], null, { image: null, tools: false, last: false });
   const content = bubble.querySelector(".message-content");
   content.querySelector(".message-text")?.remove();
-  content.insertAdjacentHTML("beforeend", imageProgressMarkup(localizedText("Préparation du modèle d'image…", "Preparing the image model…", "Preparando el modelo de imagen…", "画像モデルを準備中…")));
+  /* Le pack decide du mot : annoncer « préparation du modèle d'image » devant
+     un clip video, c'est deja promettre autre chose que ce qu'on va obtenir. */
+  content.insertAdjacentHTML("beforeend", imageProgressMarkup(activeImagePack()?.video
+    ? localizedText("Préparation du modèle vidéo…", "Preparing the video model…", "Preparando el modelo de vídeo…", "動画モデルを準備中…")
+    : localizedText("Préparation du modèle d'image…", "Preparing the image model…", "Preparando el modelo de imagen…", "画像モデルを準備中…")));
   scrollChatToLatest();
   imageBusy = { bubble, prompt: clean };
 
@@ -5450,6 +5548,10 @@ async function requestImage(prompt) {
   } catch (error) {
     const cancelled = error?.name === "AbortError" || String(error?.message || "").includes("cancel");
     const detail = String(error?.detail || "").trim();
+    /* Une video n'est pas une image : parler d'image devant un clip rate
+       laissait croire qu'on avait demande autre chose. Et la taille ne se regle
+       pas pour un clip : c'est le nombre d'images du pack qui decide. */
+    const video = Boolean(activeImagePack()?.video);
     /* Un refus explique deja ce qui se passe : on l'affiche tel quel, au lieu
        de le noyer dans « l'image n'a pas pu etre generee ». */
     const text = error?.fatal
@@ -5457,13 +5559,27 @@ async function requestImage(prompt) {
       : cancelled
       ? localizedText("Génération annulée.", "Generation cancelled.", "Generación cancelada.", "生成を中止しました。")
       : detail
-        ? localizedText(
+        ? video
+          ? localizedText(
+            `La vidéo n'a pas pu être générée. Le moteur a signalé : ${detail}`,
+            `The video could not be generated. The engine reported: ${detail}`,
+            `No se pudo generar el vídeo. El motor informó: ${detail}`,
+            `動画を生成できませんでした。エンジンからの報告: ${detail}`
+          )
+          : localizedText(
             `L'image n'a pas pu être générée. Le modèle d'image a signalé : ${detail}`,
             `The image could not be generated. The image model reported: ${detail}`,
             `No se pudo generar la imagen. El modelo de imagen informó: ${detail}`,
             `画像を生成できませんでした。画像モデルからの報告: ${detail}`
           )
-        : localizedText(
+        : video
+          ? localizedText(
+            "La vidéo n'a pas pu être générée, même après redémarrage du moteur. Un clip de 22 images demande beaucoup de mémoire : fermez les autres applications qui utilisent la carte graphique, puis réessayez.",
+            "The video could not be generated, even after restarting the engine. A 22-frame clip needs a lot of memory: close other applications using the graphics card, then try again.",
+            "No se pudo generar el vídeo, ni siquiera tras reiniciar el motor. Un clip de 22 imágenes necesita mucha memoria: cierra las otras aplicaciones que usan la tarjeta gráfica e inténtalo de nuevo.",
+            "エンジンを再起動しても動画を生成できませんでした。22フレームのクリップは多くのメモリを必要とします。GPUを使っている他のアプリを閉じて再試行してください。"
+          )
+          : localizedText(
             "L'image n'a pas pu être générée, même après redémarrage du moteur. Fermez les autres applications qui utilisent la carte graphique, puis réessayez avec une taille plus petite.",
             "The image could not be generated, even after restarting the engine. Close other applications using the graphics card, then try again with a smaller size.",
             "No se pudo generar la imagen, ni siquiera tras reiniciar el motor. Cierra las otras aplicaciones que usan la tarjeta gráfica e inténtalo de nuevo con un tamaño menor.",
@@ -5481,16 +5597,11 @@ async function requestImage(prompt) {
   }
 }
 
-function setImageMode(active) {
-  if (!imageUsable()) return;
-  state.imageMode = Boolean(active);
-  if (ui.imageToggle) {
-    ui.imageToggle.setAttribute("aria-pressed", String(state.imageMode));
-    ui.imageToggle.classList.toggle("is-active", state.imageMode);
-  }
-  if (ui.agentToggle) ui.agentToggle.classList.toggle("is-disabled", state.imageMode);
-  ui.composer?.setAttribute("data-image-mode", state.imageMode ? "true" : "false");
-  const videoPack = activeImagePack()?.video;
+/* Le bouton du composeur et l'invite du champ dependent du pack actif, pas
+   seulement du mode : en changeant de modele dans la bibliotheque, le bouton
+   continuait d'annoncer « Image » pour un modele video. */
+function paintImageModeLabels() {
+  const videoPack = Boolean(activeImagePack()?.video);
   if (ui.imageToggle) {
     ui.imageToggle.textContent = videoPack
       ? localizedText("Vidéo", "Video", "Vídeo", "動画")
@@ -5501,6 +5612,18 @@ function setImageMode(active) {
       ? localizedText("Décrivez la vidéo à générer…", "Describe the video to generate…", "Describe el vídeo a generar…", "生成する動画を説明してください…")
       : localizedText("Décrivez l'image à générer…", "Describe the image to generate…", "Describe la imagen a generar…", "生成する画像を説明してください…")
     : copy[state.language].placeholder;
+}
+
+function setImageMode(active) {
+  if (!imageUsable()) return;
+  state.imageMode = Boolean(active);
+  if (ui.imageToggle) {
+    ui.imageToggle.setAttribute("aria-pressed", String(state.imageMode));
+    ui.imageToggle.classList.toggle("is-active", state.imageMode);
+  }
+  if (ui.agentToggle) ui.agentToggle.classList.toggle("is-disabled", state.imageMode);
+  ui.composer?.setAttribute("data-image-mode", state.imageMode ? "true" : "false");
+  paintImageModeLabels();
   renderImageEngineUi();
   ui.prompt.focus();
 }
@@ -5555,9 +5678,12 @@ function imagePackNoteShort(pack) {
 
 function shortImageName(pack) {
   if (!pack) return "";
-  const parts = String(pack.name || "").split("·");
-  const tail = (parts.length > 1 ? parts[parts.length - 1] : parts[0]).trim();
-  return tail.replace(/^Stable Diffusion\b/i, "SD");
+  const parts = String(pack.name || "").split("·").map(part => part.trim()).filter(Boolean);
+  /* Un pack video s'appelle « MiniMax-H3 · vidéo et son » : c'est le nom du
+     modele qui le designe, pas la fin de la phrase. Une image garde la fin, qui
+     est son nom propre (« SD 1.5 · Gravure SIMIA » devient « Gravure SIMIA »). */
+  const chosen = pack.video || parts.length === 1 ? parts[0] : parts[parts.length - 1];
+  return String(chosen || "").replace(/^Stable Diffusion\b/i, "SD");
 }
 
 function renderImageEngineUi() {
@@ -5626,6 +5752,9 @@ function renderImageEngineUi() {
     }
   }
   renderComposerImageChip();
+  /* Le libelle du bouton « Image / Vidéo » suit le pack : appele ici, il se met
+     a jour des qu'on change de modele, sans passer par le bouton. */
+  paintImageModeLabels();
 }
 
 /* Pastille du modele d'image, a droite du prompt. Elle repond a une question
@@ -5648,7 +5777,12 @@ function renderComposerImageChip() {
     : "";
   chip.classList.toggle("is-warning", mismatch);
   chip.classList.toggle("is-ready", ready && !mismatch);
-  chip.innerHTML = `<svg class="composer-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><span class="composer-image-text">${escapeHtml(localizedText("Image", "Image", "Imagen", "画像"))} · ${escapeHtml(shortImageName(pack))}${pack.video ? ` <span class="engine-chip-tag">${escapeHtml(localizedText("vidéo", "video", "vídeo", "動画"))}</span>` : ""}</span>${stylePart}<span class="composer-chip-caret" aria-hidden="true">▾</span>`;
+  /* Le prefixe suit le media : « Video · MiniMax-H3 », pas « Image · vidéo et
+     son ». Le mot en fin de nom repete le prefixe et ne nomme aucun modele. */
+  const kind = pack.video
+    ? localizedText("Vidéo", "Video", "Vídeo", "動画")
+    : localizedText("Image", "Image", "Imagen", "画像");
+  chip.innerHTML = `<svg class="composer-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><span class="composer-image-text">${escapeHtml(kind)} · ${escapeHtml(shortImageName(pack))}</span>${stylePart}<span class="composer-chip-caret" aria-hidden="true">▾</span>`;
   const label = mismatch
     ? localizedText(
       `Modèle d'image : ${pack.name}, avec le style ${lora?.name || ""} qui ne correspond pas. Cliquez pour changer.`,
@@ -10858,13 +10992,59 @@ ui.chat.addEventListener("click", async event => {
   const frame = button.closest(".message-image");
   const id = frame?.dataset.imageId;
   if (!id) return;
+  if (action === "open-external") {
+    const record = await imageRecordLoad(id);
+    if (!record?.blob) return;
+    button.disabled = true;
+    /* Le conteneur reel decide de l'extension : le moteur annonce « video/webm »
+       et ecrit du Matroska. Un .webm qui contient du MKV s'ouvre mal ou pas. */
+    const extension = record?.video ? (record.container || "mkv") : "png";
+    fetch(new URL("/_simia/media/open", location.href).href, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "X-Simia-Filename": encodeURIComponent(`simia-${id.slice(0, 8)}.${extension}`)
+      },
+      body: record.blob
+    })
+      .then(response => response.json())
+      .then(payload => toast(
+        payload?.error
+          ? localizedText(
+            `Impossible d'ouvrir le lecteur : ${payload.error}`,
+            `Could not open the player: ${payload.error}`,
+            `No se pudo abrir el reproductor: ${payload.error}`,
+            `プレーヤーを開けません: ${payload.error}`
+          )
+          : localizedText(
+            "Clip ouvert dans le lecteur du système.",
+            "Clip opened in the system player.",
+            "Clip abierto en el reproductor del sistema.",
+            "クリップをシステムのプレーヤーで開きました。"
+          ),
+        payload?.error ? "error" : "info"
+      ))
+      .catch(() => toast(
+        localizedText("Impossible d'ouvrir le lecteur du système.", "Could not open the system player.", "No se pudo abrir el reproductor del sistema.", "システムのプレーヤーを開けませんでした。"),
+        "error"
+      ))
+      .finally(() => { button.disabled = false; });
+    return;
+  }
   if (action === "download") {
     const url = await imageObjectUrl(id);
     if (!url) return;
     const record = await imageRecordLoad(id);
+    /* L'extension suit le conteneur reellement recu, pas une supposition : le
+       moteur annonce « video/webm » et ecrit du Matroska avec une piste PCM, et
+       un fichier .webm qui contient du MKV s'ouvre mal ou pas du tout. */
+    const mime = String(record?.blob?.type || "").toLowerCase();
+    const extension = record?.video
+      ? (record.container || (mime.includes("mp4") ? "mp4" : mime.includes("matroska") ? "mkv" : "webm"))
+      : "png";
     const link = document.createElement("a");
     link.href = url;
-    link.download = `simia-${id.slice(0, 8)}.${record?.video ? "webm" : "png"}`;
+    link.download = `simia-${id.slice(0, 8)}.${extension}`;
     link.click();
     return;
   }

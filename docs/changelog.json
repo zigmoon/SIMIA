@@ -1,7 +1,18 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
-    "0.1.50": {
+    "0.1.51": {
+      "title": "Les videos sortent enfin, et le chat ne fait plus semblant de pouvoir les lire",
+      "highlights": [
+        "Mesure sur une RTX 2060 de 6 Go, avec le pack MiniMax-H3 complet (14,2 Go, quatre fichiers telecharges par la vraie route) : la premiere generation a produit un clip de 0,9 s en 640x384 ; la deuxieme echouait au decodage du VAE, faute de 709 Mo de memoire graphique, apres trois tentatives de tuilage (256, puis 128, puis 64).",
+        "Le moteur recoit desormais --temporal-tiling et --vae-tile-size 128 : le decodage traite quatre images a la fois au lieu de vingt-deux. Deux generations consecutives ont ensuite reussi (1,3 min et 1,7 min).",
+        "L'encodeur de texte video (4,88 Go) ne tient pas sur la carte avec le transformateur : l'encodage du prompt echouait (« LLM prompt encoding failed »). Il travaille maintenant sur le processeur (--backend te=cpu) ; il ne sert qu'une fois par clip.",
+        "Le clip produit est du Matroska avec une piste son PCM : aucun navigateur ne sait ouvrir ce conteneur, et le chat affichait un lecteur casse qui laissait croire a un echec. Le chat explique maintenant la cause et propose « Lire dans le lecteur du systeme », qui ecrit le clip dans un dossier temporaire et le confie a VLC, mpv ou au lecteur de Windows. Nouvelle route POST /_simia/media/open.",
+        "Le fichier telecharge porte la bonne extension : le conteneur est lu dans les premiers octets (Matroska, WebM, MP4) au lieu de croire l'etiquette « video/webm » annoncee par le moteur.",
+        "La fiche du modele annoncait 640x360 : le moteur ecrit 640x384, arrondi au multiple de 32. Corrige dans les quatre langues, sur la landing et dans le README, avec la duree reelle constatee (une a trois minutes par clip), et la mention du conteneur Matroska.",
+        "Libelles video partout : la pastille du composeur annoncait « Image · video et son », le bouton du composeur restait sur « Image » quand on changeait de modele, la preparation parlait de « modele d'image », un echec de clip parlait d'image, et le texte « image introuvable » restait en francais dans les quatre langues."
+      ]
+    },    "0.1.50": {
       "title": "Une image dit enfin avec quel style elle a ete dessinee",
       "highlights": [
         "La legende sous une image etait « SD 1.5 · Gravure SIMIA · 512×512 · 24 pas » : elle nommait le modele mais pas le style, alors que le style change tout le rendu. Deux images du meme modele avec deux styles etaient indiscernables dans la conversation, et l'on ne savait plus laquelle refaire.",

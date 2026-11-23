@@ -235,8 +235,17 @@ textarea::placeholder { color:#989e99; }
    sinon le lecteur se retrouve dans une boite au mauvais format. */
 .message-video .image-frame{aspect-ratio:auto;background:#0d1210}
 .message-video .image-frame video{width:100%;height:auto;display:block;background:#0d1210}
+/* Un clip que le navigateur ne peut pas ouvrir : le conteneur du moteur est du
+   Matroska avec son PCM. On le dit, et on propose le lecteur du systeme. */
+.video-unplayable{display:grid;gap:9px;padding:16px 14px;color:#e8ece3;text-align:center;justify-items:center}
+.video-unplayable p{margin:0;max-width:46ch;font:500 12px/1.6 "DM Mono",monospace;color:#c3cbc0}
+.video-unplayable button{border:1px solid #4b5b46;border-radius:8px;background:#1b2418;color:#e8ece3;padding:8px 13px;font:600 12px "DM Sans",sans-serif;cursor:pointer}
+.video-unplayable button:hover{background:#243020}
 .message-image[data-loading="true"] .image-frame::after{content:"";width:26px;height:26px;border:2px solid #c3cbc0;border-top-color:#7d8f6a;border-radius:50%;animation:imageSpin .9s linear infinite}
-.message-image[data-missing="true"] .image-frame::after{content:"image introuvable";font:500 11px "DM Mono",monospace;color:#8a948a;animation:none;border:0;width:auto;height:auto}
+.message-image[data-missing="true"] .image-frame::after{content:"";animation:none;border:0;width:0;height:0}
+/* Le texte du media manquant est ecrit par app.js : il doit suivre la langue de
+   l'interface et dire « video » devant un lecteur video. */
+.image-frame-missing{font:500 11px "DM Mono",monospace;color:#8a948a}
 @keyframes imageSpin{to{transform:rotate(360deg)}}
 .message-image figcaption{display:grid;gap:4px;padding:9px 11px 0}
 .message-image .image-prompt{font-size:12.5px;line-height:1.45;color:var(--ink)}
