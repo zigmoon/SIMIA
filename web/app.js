@@ -4390,6 +4390,14 @@ function imageMetaLine(image) {
   const stepsLabel = localizedText("pas", "steps", "pasos", "ステップ");
   const parts = [];
   if (image.model) parts.push(image.model);
+  /* Le style change tout le rendu : sans son nom, deux images du meme modele
+     dessinees avec deux styles sont indiscernables dans la conversation, et
+     l'on ne sait plus laquelle refaire. Meme graphie que la carte et la
+     pastille, sans l'extension du fichier. */
+  if (image.style) {
+    const name = String(image.style).replace(/\.(safetensors|gguf|ckpt|pt)$/i, "");
+    parts.push(localizedText(`style ${name}`, `style ${name}`, `estilo ${name}`, `スタイル ${name}`));
+  }
   parts.push(`${image.width}×${image.height}`);
   if (image.video) {
     const seconds = Number(image.seconds || 0);
@@ -5279,11 +5287,12 @@ async function imageGenerate(prompt, bubble) {
       seconds: result.seconds,
       pack: pack?.id || null,
       packName: pack?.name || "",
+      style: loraEntry?.name || "",
       createdAt: new Date().toISOString()
     };
     await imageRecordSave(record);
     imageUrls.set(id, URL.createObjectURL(result.blob));
-    return { id, prompt, width: px, height: videoHeight, steps, model: pack?.name || "", video: true, seconds: result.seconds };
+    return { id, prompt, width: px, height: videoHeight, steps, model: pack?.name || "", style: loraEntry?.name || "", video: true, seconds: result.seconds };
   }
 
   /* Endpoint synchrone volontairement. Le couple
@@ -5360,11 +5369,12 @@ async function imageGenerate(prompt, bubble) {
     cfg,
     pack: pack?.id || null,
     packName: pack?.name || "",
+    style: loraEntry?.name || "",
     createdAt: new Date().toISOString()
   };
   await imageRecordSave(record);
   imageUrls.set(id, URL.createObjectURL(blob));
-  return { id, prompt, width: px, height: px, steps, model: pack?.name || "" };
+  return { id, prompt, width: px, height: px, steps, model: pack?.name || "", style: loraEntry?.name || "" };
 }
 
 async function requestImage(prompt) {

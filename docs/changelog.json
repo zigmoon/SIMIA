@@ -1,7 +1,15 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
-    "0.1.49": {
+    "0.1.50": {
+      "title": "Une image dit enfin avec quel style elle a ete dessinee",
+      "highlights": [
+        "La legende sous une image etait « SD 1.5 · Gravure SIMIA · 512×512 · 24 pas » : elle nommait le modele mais pas le style, alors que le style change tout le rendu. Deux images du meme modele avec deux styles etaient indiscernables dans la conversation, et l'on ne savait plus laquelle refaire.",
+        "La legende dit desormais « SD 1.5 · Gravure SIMIA · style simia-gravure · 512×512 · 24 pas ». Le nom s'ecrit comme sur la carte et dans la pastille, sans l'extension du fichier.",
+        "Le style est aussi enregistre avec l'image : une conversation retrouvee plus tard garde la legende complete, et non un rendu orphelin.",
+        "Mesure a l'appui d'un LoRA importe : un style de la bonne famille change 99,19 % des pixels (difference moyenne 80/255) ; un style d'une autre famille n'en change aucun. La legende est donc le seul moyen de savoir ce qui a vraiment dessine."
+      ]
+    },    "0.1.49": {
       "title": "Le nom d'un style s'ecrit de la meme facon jusqu'a l'infobulle",
       "highlights": [
         "L'infobulle du bouton de modele d'image annoncait « Style : simia-gravure.safetensors » quand la pastille, la carte et la ligne « Actif maintenant » affichaient « simia-gravure ». Un lecteur d'ecran, lui, n'entendait que la premiere graphie : c'est desormais la meme partout.",
