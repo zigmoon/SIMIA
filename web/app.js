@@ -5580,12 +5580,16 @@ function renderImageEngineUi() {
         : "";
       ui.imageEngine.classList.toggle("is-warning", loraMismatch);
       ui.imageEngine.innerHTML = `<svg class="engine-chip-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M3.5 17.5 9 12l4 4 3-2.5 4.5 4"></path></svg><b>${escapeHtml(shortImageName(pack))}</b>${videoPart}${loraPart}`;
+      /* Le nom du style s'ecrit sans son extension partout ou il apparait : la
+         pastille, la carte, la ligne « actif maintenant » et cette infobulle
+         doivent designer le meme fichier de la meme facon. */
+      const loraLabel = lora ? lora.name.replace(/\.(safetensors|gguf|ckpt|pt)$/i, "") : "";
       const loraText = lora
         ? localizedText(
-          ` Style : ${lora.name}${loraMismatch ? " (ne correspond pas à ce modèle, le moteur l'ignorera)" : ""}.`,
-          ` Style: ${lora.name}${loraMismatch ? " (does not match this model, the engine will ignore it)" : ""}.`,
-          ` Estilo: ${lora.name}${loraMismatch ? " (no corresponde a este modelo, el motor lo ignorará)" : ""}.`,
-          ` スタイル: ${lora.name}${loraMismatch ? "（このモデルと不一致のため適用されません）" : ""}。`
+          ` Style : ${loraLabel}${loraMismatch ? " (ne correspond pas à ce modèle, le moteur l'ignorera)" : ""}.`,
+          ` Style: ${loraLabel}${loraMismatch ? " (does not match this model, the engine will ignore it)" : ""}.`,
+          ` Estilo: ${loraLabel}${loraMismatch ? " (no corresponde a este modelo, el motor lo ignorará)" : ""}.`,
+          ` スタイル: ${loraLabel}${loraMismatch ? "（このモデルと不一致のため適用されません）" : ""}。`
         )
         : "";
       ui.imageEngine.title = localizedText(
