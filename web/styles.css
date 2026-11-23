@@ -185,6 +185,7 @@ button { cursor:pointer; }
    note de bas de bloc ; au-dessus, elle annonce ce qui avance avant la barre. */
 .card-progress{display:grid;gap:7px;margin-top:8px;padding-top:9px;border-top:1px solid #e6ebdf}
 .card-progress[hidden]{display:none}
+.card-progress-stop[hidden]{display:none}
 .card-progress-text{margin:0;color:#43503f;font:600 10.5px "DM Mono",monospace;line-height:1.4}
 .card-progress-track{height:6px;border-radius:999px;background:#e8ece3;overflow:hidden}
 .card-progress-fill{display:block;width:0%;height:100%;border-radius:999px;background:var(--accent);transition:width .4s ease}

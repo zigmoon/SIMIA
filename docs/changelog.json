@@ -1,6 +1,15 @@
 {
   "_comment": "Nouveautes affichees en tete de chaque note de version. tools/release-body.mjs lit l'entree correspondant au tag publie. Ajouter une entree AVANT de pousser le tag : sans elle, la note de version ne dit pas ce qui change par rapport a la precedente.",
   "versions": {
+    "0.1.47": {
+      "title": "La barre de telechargement revient sous la carte du style, la ou l'on clique",
+      "highlights": [
+        "« Installer MiniMax-H3 » depuis la carte d'un style lance un telechargement de quatorze gigaoctets : sa barre de progression vit desormais sous cette carte. Elle n'existait que sous la carte du modele hote, et cette carte disparait des que l'on cherche un style ou que l'on change d'onglet — le telechargement se faisait alors sans le moindre signe de vie, parfois pendant vingt minutes.",
+        "Le bouton du style se desactive et affiche le pourcentage comme les autres, et « Arreter » se trouve dans la meme barre : impossible de croire que rien ne s'est lance.",
+        "Filet de securite : si la carte concernee n'est pas dans la liste au moment du clic (recherche en cours, autre onglet), la barre est posee sous la carte cliquee au lieu de nulle part.",
+        "Verifie dans le vrai lanceur : recherche « HMNSFW », clic sur « Installer MiniMax-H3 », barre a « 6 % · 902 Mo / 14,2 Go » sous la carte, bouton desactive, arret propre puis reprise — 873 Mo deja en place au deuxieme essai."
+      ]
+    },
     "0.1.46": {
       "title": "Le menu Modeles se remplit, l'accroche respire, les mentions legales suivent",
       "highlights": [

@@ -4827,7 +4827,7 @@ async function selectImagePack(id, options = {}) {
    on retient donc l'identifiant concerne et chaque carte affiche sa propre
    barre. Le DOM est mis a jour sur place : re-rendre la bibliotheque a chaque
    sondage ferait sauter le defilement et clignoter les cartes. */
-const downloadState = { id: "", downloaded: 0, total: 0, stage: "", error: "", startedAt: 0, webPercent: 0, webLabel: "" };
+const downloadState = { id: "", downloaded: 0, total: 0, stage: "", error: "", startedAt: 0, webPercent: 0, webLabel: "", cancellable: true };
 let downloadTicker = 0;
 let downloadFetching = false;
 
@@ -4861,6 +4861,11 @@ function downloadProgressText() {
     );
   }
   if (!downloadState.total) {
+    /* Taille inconnue (aucune source ne l'annonce) : le poids deja ecrit et le
+       temps ecoule disent que le travail avance, la barre pulse. */
+    if (downloadState.downloaded) {
+      return `${formatBytes(downloadState.downloaded)} · ${elapsed}`;
+    }
     return localizedText("Téléchargement…", "Downloading…", "Descargando…", "ダウンロード中…");
   }
   return `${percent} % · ${formatBytes(downloadState.downloaded)} / ${formatBytes(downloadState.total)} · ${elapsed}`;
@@ -4880,7 +4885,9 @@ function paintDownloadState() {
       box.hidden = !mine;
       if (mine) {
         const percent = downloadPercent();
-        const loading = downloadState.stage === "loading";
+        /* Sans total connu, un pourcentage n'a pas de sens : la barre pulse et
+           le bouton compte les secondes, comme pendant le chargement GPU. */
+        const loading = downloadState.stage === "loading" || (downloadState.stage !== "web" && !downloadState.total);
         const fill = box.querySelector(".card-progress-fill");
         const track = box.querySelector(".card-progress-track");
         if (track) {
@@ -4890,13 +4897,18 @@ function paintDownloadState() {
         if (fill) fill.style.width = loading ? "100%" : `${percent}%`;
         const text = box.querySelector(".card-progress-text");
         if (text) text.textContent = downloadProgressText();
+        /* « Arrêter » n'a de sens que si quelque chose peut s'arrêter : en web,
+           et pendant un chargement GPU, il n'y a aucun transfert a couper. */
+        const stop = box.querySelector("[data-download-cancel]");
+        if (stop) stop.hidden = !downloadState.cancellable;
       }
     }
     if (!button) return;
     if (button.dataset.idleLabel === undefined) button.dataset.idleLabel = button.textContent;
+    const indeterminate = downloadState.stage === "loading" || (downloadState.stage !== "web" && !downloadState.total);
     button.disabled = mine;
     button.textContent = mine
-      ? (downloadState.stage === "loading" ? `${downloadSeconds()} s` : `${downloadPercent()} %`)
+      ? (indeterminate ? `${downloadSeconds()} s` : `${downloadPercent()} %`)
       : button.dataset.idleLabel;
   });
 }
@@ -4917,7 +4929,7 @@ async function pollDownloadProgress() {
   finally { downloadFetching = false; }
 }
 
-function beginDownload(id, stage = "download") {
+function beginDownload(id, stage = "download", cancellable = true) {
   downloadState.id = id;
   downloadState.downloaded = 0;
   downloadState.total = 0;
@@ -4925,6 +4937,7 @@ function beginDownload(id, stage = "download") {
   downloadState.error = "";
   downloadState.webPercent = 0;
   downloadState.webLabel = "";
+  downloadState.cancellable = cancellable;
   downloadState.startedAt = Date.now();
   paintDownloadState();
   /* Le suivi par /_simia/progress est propre au lanceur de bureau : en web il
@@ -4940,6 +4953,7 @@ function endDownload() {
   downloadState.startedAt = 0;
   downloadState.webPercent = 0;
   downloadState.webLabel = "";
+  downloadState.cancellable = true;
   if (downloadTicker) { clearInterval(downloadTicker); downloadTicker = 0; }
   renderModelLibrary();
 }
@@ -4954,7 +4968,7 @@ async function startWebModelDownload(modelId) {
   const model = MODELS.find(candidate => candidate.id === modelId);
   if (!model || !modelIsCompatible(model)) return;
   webDownloadId = modelId;
-  beginDownload(modelId, "web");
+  beginDownload(modelId, "web", false);
   renderModelLibrary();
   try {
     await selectModelById(modelId, false, { keepConversation: true });
@@ -4985,6 +4999,23 @@ function downloadBlock(id) {
     </div>`;
 }
 
+/* Filet de securite : une carte peut etre absente de la liste au moment du clic
+   (recherche en cours, autre onglet, modele hote d'un style). Sans emplacement,
+   la progression n'aurait aucun support et le telechargement se ferait sans le
+   moindre signe de vie. On pose alors la barre sous la carte cliquee. */
+function ensureDownloadBox(id, anchor) {
+  if (!id) return;
+  const existing = ui.modelCards?.querySelector(`[data-download="${CSS.escape(id)}"]`);
+  if (existing) {
+    paintDownloadState();
+    return;
+  }
+  const card = anchor?.closest?.(".model-card");
+  if (!card || card.querySelector("[data-download]")) return;
+  card.insertAdjacentHTML("beforeend", downloadBlock(id));
+  paintDownloadState();
+}
+
 /* Arreter un telechargement de 14 Go : le partiel est garde, relancer reprend
    ou l'on s'est arrete. Sans ce bouton, la seule issue etait de fermer SIMIA. */
 async function cancelImageDownload() {
@@ -5004,12 +5035,13 @@ async function cancelImageDownload() {
   }
 }
 
-async function downloadImagePack(id) {
+async function downloadImagePack(id, anchor) {
   if (!IMAGE || !id) return;
   const pack = state.imagePacks.find(item => item.id === id);
   toast(localizedText(`Téléchargement de ${pack?.name || id}…`, `Downloading ${pack?.name || id}…`, `Descargando ${pack?.name || id}…`, `${pack?.name || id} をダウンロード中…`));
   beginDownload(id);
   renderModelLibrary();
+  ensureDownloadBox(id, anchor);
   let cancelled = false;
   try {
     const response = await fetch(IMAGE.downloadPackUrl, {
@@ -7908,6 +7940,7 @@ async function selectNativeModel(model) {
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     model.nativeLocal = true;
     activateNativeModel();
+    return true;
   } catch (error) {
     console.error(error);
     setStatus(copy[state.language].error, "error");
@@ -7917,6 +7950,7 @@ async function selectNativeModel(model) {
       `No se pudo activar ${model.name}. ${modelLoadFailureDetail(error)}`
     );
     activateNativeModel();
+    return false;
   } finally {
     polling = false;
     ui.topbar.style.setProperty("--model-load-progress", "0%");
@@ -9291,10 +9325,10 @@ async function selectModelById(modelId, customModel = false, options = {}) {
     ui.downloadInfo.textContent = NATIVE && !nextModel.nativeLocal
       ? localizedText(`${nextModel.name} n'est pas encore sur ce disque : SIMIA le téléchargera une seule fois.`, `${nextModel.name} is not on this disk yet: SIMIA will download it once.`, `${nextModel.name} aún no está en este disco: SIMIA lo descargará una sola vez.`)
       : "";
-    await selectNativeModel(nextModel);
+    const loaded = await selectNativeModel(nextModel);
     renderActiveConversation();
     saveState();
-    return;
+    return loaded;
   }
   if (nextModel.engine === "transformers") {
     ui.downloadInfo.textContent = localizedText("Modèle vision sélectionné. Cliquez sur Télécharger le modèle pour analyser des images dans le navigateur.", "Vision model selected. Click Download model to analyze images in the browser.", "Modelo de visión seleccionado. Haz clic en Descargar modelo para analizar imágenes en el navegador.");
@@ -9821,7 +9855,13 @@ function renderModelLibrary() {
           /* Pas de badge « autre famille » : la phrase et le bouton grise le
              disent deja, et la carte n'a pas besoin de trois fois la meme
              information. */
-          card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("STYLE", "STYLE", "ESTILO", "スタイル"))}</p></div><div><h3>${escapeHtml(base)}</h3><p>${escapeHtml(note)}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(`${Math.round(lora.bytes / (1024 * 1024))} MB`))} · ${escapeHtml(familyLabel)}</span>${action}</div>`;
+          /* « Installer <modele hote> » lance un telechargement de plusieurs
+             giga-octets depuis cette carte. Sa barre doit donc vivre ici, sous
+             le bouton clique : la carte du modele hote peut tres bien etre
+             filtree hors de la liste (recherche, onglet), et l'on regardait
+             alors un bouton immobile pendant vingt minutes. */
+          const hostDownload = !fits && host && !hostReady && host.downloadable ? downloadBlock(host.id) : "";
+          card.innerHTML = `<div class="model-card-head"><p class="model-category">${escapeHtml(localizedText("STYLE", "STYLE", "ESTILO", "スタイル"))}</p></div><div><h3>${escapeHtml(base)}</h3><p>${escapeHtml(note)}</p></div><div class="model-card-footer"><span>${escapeHtml(displaySize(`${Math.round(lora.bytes / (1024 * 1024))} MB`))} · ${escapeHtml(familyLabel)}</span>${action}</div>${hostDownload}`;
           return card;
         } });
       });
@@ -11240,7 +11280,7 @@ ui.modelLibrary.addEventListener("click", event => {
   }
   const packDownload = event.target.closest("button[data-image-pack-download]");
   if (packDownload) {
-    downloadImagePack(packDownload.dataset.imagePackDownload);
+    downloadImagePack(packDownload.dataset.imagePackDownload, packDownload);
     return;
   }
   const openImageFolder = event.target.closest("button[data-open-image-folder]");
@@ -11358,11 +11398,33 @@ ui.modelLibrary.addEventListener("click", event => {
      fermer la fenetre priverait le visiteur de la seule indication de
      progression. Un modele deja actif se contente de fermer, comme avant. */
   const pending = Boolean(NATIVE) && Boolean(target) && target.id !== state.selectedModel;
+  const previousId = state.selectedModel;
   if (!pending) ui.modelLibrary.close();
-  else beginDownload(choice.dataset.modelId, target.nativeLocal === false ? "download" : "loading");
-  selectModelById(choice.dataset.modelId).finally(() => {
+  else beginDownload(choice.dataset.modelId, target.nativeLocal === false ? "download" : "loading", target.nativeLocal === false);
+  selectModelById(choice.dataset.modelId).then(loaded => {
     if (!pending) return;
     endDownload();
+    /* Un echec ou un arret ne doit pas s'annoncer comme un succes : la carte
+       affichait « est pret » meme quand le transfert venait d'etre coupe. Le
+       modele precedent est remis en place, sinon l'application designait un
+       modele qui ne repond pas. */
+    if (loaded === false) {
+      toast(localizedText(
+        `${target.name} n'a pas été chargé.`,
+        `${target.name} was not loaded.`,
+        `${target.name} no se ha cargado.`,
+        `${target.name} を読み込めませんでした。`
+      ), "error");
+      /* Le modele precedent est remis en place, sinon l'application designerait
+         un modele qui ne repond pas. La liste est redessinee ensuite : sans
+         cela, elle annoncait encore le modele abandonne comme actif. */
+      if (previousId && previousId !== target.id) {
+        selectModelById(previousId).then(() => renderModelLibrary());
+      } else {
+        renderModelLibrary();
+      }
+      return;
+    }
     toast(localizedText(
       `${target.name} est prêt.`,
       `${target.name} is ready.`,

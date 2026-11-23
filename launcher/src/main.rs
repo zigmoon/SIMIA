@@ -1260,6 +1260,9 @@ struct AppState {
     catalog_base: String,
     catalog_version: u32,
     remote: Option<RemoteVersion>,
+    /// Un modele de texte pese plusieurs giga-octets : lui aussi doit pouvoir
+    /// s'arreter. Le drapeau est lu par la boucle de transfert.
+    model_cancel: Arc<AtomicBool>,
 }
 
 type Shared = Arc<Mutex<AppState>>;
@@ -1528,7 +1531,7 @@ fn main() {
                 human_size(total)
             );
             let _ = std::io::stdout().flush();
-        }) {
+        }, &|| false) {
             fail(&format!("Telechargement impossible : {err}"));
         }
         println!();
@@ -1641,6 +1644,7 @@ fn main() {
         catalog_base: catalog_base.clone(),
         catalog_version,
         remote: None,
+        model_cancel: Arc::new(AtomicBool::new(false)),
     }));
 
     println!(
@@ -2321,7 +2325,12 @@ fn choose_default(models: &[ModelEntry]) -> ModelEntry {
 
 /// Telecharge un modele avec curl (present sur Windows 10+, macOS et Linux).
 /// Plusieurs sources sont essayees dans l'ordre : serveur zigmoon.com puis CDN.
-fn download_model<F>(model: &ModelEntry, dir: &Path, mut on_progress: F) -> Result<(), String>
+fn download_model<F>(
+    model: &ModelEntry,
+    dir: &Path,
+    mut on_progress: F,
+    cancelled: &dyn Fn() -> bool,
+) -> Result<(), String>
 where
     F: FnMut(u64, u64),
 {
@@ -2349,7 +2358,14 @@ where
 
     let mut last_error = String::new();
     for url in urls {
-        match fetch_to_partial(&url, &partial, &mut on_progress, &|_| {}, &|| false) {
+        /* Le flux rapporte les octets ecrits mais pas la taille attendue (il ne
+           la connait qu'a la fin). Le transmettre tel quel remettait la
+           progression a « Téléchargement… » sans pourcentage pendant tout le
+           transfert : on rapporte ici la taille connue du catalogue. */
+        let mut report = |written: u64, _total: u64| on_progress(written, total);
+        let outcome = fetch_to_partial(&url, &partial, &mut report, &|_| {}, cancelled);
+        drop(report);
+        match outcome {
             Ok(()) => {
                 fs::rename(&partial, &target)
                     .map_err(|err| format!("fichier non deplacable : {err}"))?;
@@ -3652,11 +3668,24 @@ fn switch_model(state: &Shared, bin: &Path, model_id: &str) -> Result<(), String
         set_progress(state, model_id, 0, total_size, "download", None);
         let state_for_progress = Arc::clone(state);
         let id = model.id.clone();
+        /* Le drapeau d'arret est remis a zero avant chaque transfert : sans
+           cela, une annulation resterait collee au modele suivant. */
+        let flag = match state.lock() {
+            Ok(guard) => {
+                guard.model_cancel.store(false, Ordering::SeqCst);
+                Arc::clone(&guard.model_cancel)
+            }
+            Err(_) => Arc::new(AtomicBool::new(false)),
+        };
+        let watch_flag = Arc::clone(&flag);
         let result = download_model(&model, &dir, |downloaded, total| {
             set_progress(&state_for_progress, &id, downloaded, total, "download", None);
-        });
+        }, &|| watch_flag.load(Ordering::SeqCst));
         if let Err(error) = result {
-            set_progress(state, model_id, 0, total_size, "error", Some(error.clone()));
+            /* « Arreter » n'est pas une panne : la barre doit le dire sans
+               afficher une erreur rouge. */
+            let stage = if error == CANCELLED { "cancelled" } else { "error" };
+            set_progress(state, model_id, 0, total_size, stage, Some(error.clone()));
             return Err(error);
         }
         model.local = true;
@@ -4101,6 +4130,9 @@ fn handle(state: Shared, llama_bin: PathBuf, mut request: tiny_http::Request) {
         let killed = match state.lock() {
             Ok(mut guard) => {
                 guard.image.download_cancel.store(true, Ordering::SeqCst);
+                /* Le meme bouton « Arreter » sert aux deux familles de
+                   telechargement : un pack d'images et un modele de texte. */
+                guard.model_cancel.store(true, Ordering::SeqCst);
                 match guard.image.download_pid {
                     Some(pid) => {
                         kill_pid(pid);
